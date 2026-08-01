@@ -1,6 +1,12 @@
 import type { CommitRecord, GitHubConfig, KeyChange } from '../types'
 
 const GH = 'https://api.github.com'
+/**
+ * SHA-1 of the empty Git tree object — identical in every Git repo
+ * (`git hash-object -t tree /dev/null`). Not project-specific.
+ * GitHub often 404s GET on this tree; we omit it as base_tree instead.
+ */
+const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
 const ghRequest = async (token: string, path: string, opts?: RequestInit) => {
   return fetch(`${GH}${path}`, {
@@ -22,6 +28,9 @@ const ghFetch = async (token: string, path: string, opts?: RequestInit) => {
   }
   return res.json()
 }
+
+const encodeJsonContent = (content: unknown): string =>
+  btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 4))))
 
 const decodeContent = (data: { content: string }) =>
   JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))))
@@ -54,17 +63,55 @@ export type JsonFileChange = {
   content: unknown
 }
 
+/** Create or update one JSON file at `path` via Contents API (works on empty / missing files). */
+export const putJsonFile = async (
+  config: GitHubConfig,
+  path: string,
+  content: unknown,
+  sha: string,
+  message: string,
+): Promise<string> => {
+  const body: Record<string, string> = {
+    message,
+    content: encodeJsonContent(content),
+    branch: config.branch,
+  }
+  if (sha) body.sha = sha
+
+  const data = await ghFetch(
+    config.token,
+    `/repos/${config.owner}/${config.repo}/contents/${path}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  )
+  return data.content.sha as string
+}
+
 /**
- * Creates a single Git commit that updates one or more JSON files on the branch.
- * Returns a map of path → blob SHA (same as Contents API content.sha).
+ * Fallback when Git Data API cannot build a multi-file commit (empty repo, etc.).
+ * Creates each missing/updated file at its exact path (one commit per file).
  */
-export const commitJsonFiles = async (
+const commitJsonFilesViaContents = async (
   config: GitHubConfig,
   files: JsonFileChange[],
   message: string,
 ): Promise<Record<string, string>> => {
-  if (files.length === 0) return {}
+  const pathShas: Record<string, string> = {}
+  for (const file of files) {
+    // Re-read sha in case a previous PUT in this batch advanced the branch
+    const { sha } = await loadJsonFile(config, file.path, null)
+    const label = files.length === 1
+      ? message
+      : `${message} (${file.path})`
+    pathShas[file.path] = await putJsonFile(config, file.path, file.content, sha, label)
+  }
+  return pathShas
+}
 
+const commitJsonFilesGitData = async (
+  config: GitHubConfig,
+  files: JsonFileChange[],
+  message: string,
+): Promise<Record<string, string>> => {
   const { owner, repo, branch, token } = config
   const refPath = `/repos/${owner}/${repo}/git/ref/heads/${branch}`
   const ref = await ghFetch(token, refPath)
@@ -91,12 +138,14 @@ export const commitJsonFiles = async (
     }),
   )
 
+  const treePayload =
+    !baseTreeSha || baseTreeSha === EMPTY_TREE_SHA
+      ? { tree: treeItems }
+      : { base_tree: baseTreeSha, tree: treeItems }
+
   const newTree = await ghFetch(token, `/repos/${owner}/${repo}/git/trees`, {
     method: 'POST',
-    body: JSON.stringify({
-      base_tree: baseTreeSha,
-      tree: treeItems,
-    }),
+    body: JSON.stringify(treePayload),
   })
 
   const newCommit = await ghFetch(token, `/repos/${owner}/${repo}/git/commits`, {
@@ -116,6 +165,34 @@ export const commitJsonFiles = async (
   return Object.fromEntries(treeItems.map(item => [item.path, item.sha]))
 }
 
+/**
+ * Creates a single Git commit that creates/updates one or more JSON files on the branch
+ * at the given paths (including when the remote file is missing).
+ * Falls back to Contents API (per-file commits) if the Git database API rejects the repo state.
+ */
+export const commitJsonFiles = async (
+  config: GitHubConfig,
+  files: JsonFileChange[],
+  message: string,
+): Promise<Record<string, string>> => {
+  if (files.length === 0) return {}
+
+  try {
+    return await commitJsonFilesGitData(config, files, message)
+  } catch (e) {
+    const msg = ((e as Error).message ?? '').toLowerCase()
+    // Empty tree / Git DB unavailable / permission quirks often surface as Not Found or Conflict
+    if (
+      msg.includes('not found')
+      || msg.includes('conflict')
+      || msg.includes('git repository is empty')
+    ) {
+      return commitJsonFilesViaContents(config, files, message)
+    }
+    throw e
+  }
+}
+
 export const loadFile = async (config: GitHubConfig, path: string) => {
   return loadJsonFile<Record<string, string>>(config, path, {})
 }
@@ -131,10 +208,19 @@ const asDiffString = (value: unknown): string => {
 }
 
 export const fetchFileCommits = async (config: GitHubConfig, path: string): Promise<CommitRecord[]> => {
-  const commits = await ghFetch(
-    config.token,
-    `/repos/${config.owner}/${config.repo}/commits?path=${encodeURIComponent(path)}&sha=${config.branch}&per_page=20`,
-  )
+  let commits: Array<{
+    sha: string
+    commit: { message: string; author?: { name?: string; date?: string } }
+    author?: { login?: string }
+  }>
+  try {
+    commits = await ghFetch(
+      config.token,
+      `/repos/${config.owner}/${config.repo}/commits?path=${encodeURIComponent(path)}&sha=${config.branch}&per_page=20`,
+    )
+  } catch {
+    return []
+  }
   const records: CommitRecord[] = []
   for (let i = 0; i < commits.length; i++) {
     const c = commits[i]

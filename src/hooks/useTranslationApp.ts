@@ -368,6 +368,7 @@ export const useTranslationApp = () => {
         const files = langs.flatMap(lang => {
           const file = config.files.find(f => f.lang === lang)
           if (!file) return []
+          // Missing remote file (empty sha) → create `{}` (or current edits) at file.path
           return [{ path: file.path, content: translations[lang] ?? {} }]
         })
         if (files.length === 0) {
@@ -383,7 +384,13 @@ export const useTranslationApp = () => {
         setShas(newShas)
         setOriginal(cloneTranslations(translations))
         setStaleLangs([])
-        showToast(t(ui.toast.commitPushed, { branch: config.branch, count: modifiedKeys.length }), 'success')
+        showToast(
+          t(ui.toast.commitPushed, {
+            branch: config.branch,
+            count: Math.max(modifiedKeys.length, files.length),
+          }),
+          'success',
+        )
         for (const lang of langs) handleLoadHistory(lang)
       } else {
         const langs = configCommitLangs
@@ -393,6 +400,7 @@ export const useTranslationApp = () => {
             : []),
           ...langs.map(lang => ({
             path: configPathForLang(lang),
+            // Missing remote config file → create at template path
             content: configs[lang] ?? {},
           })),
         ]
