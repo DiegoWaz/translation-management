@@ -13,27 +13,43 @@ import { ui } from '../i18n/ui'
 
 const HIDDEN_COLUMNS = new Set([PATH_COLUMN, DEPTH_COLUMN, KIND_COLUMN, '_parent'])
 
-const columnLabel = (col: string): string => {
-  if (col === FIELD_COLUMN) return ui.configs.excelFieldColumn
-  if (col === VALUE_COLUMN) return ui.configs.excelValueColumn
-  if (col === BASE_COLUMN) return ui.configs.excelBaseColumn
-  return col
+export type ExcelSheetLabels = {
+  field?: string
+  value?: string
+  base?: string
+  diffHint?: string
+  missingInValue?: string
+  missingInBase?: string
 }
 
-/** field | value [| base] on the same row; tree via depth + group headers for nested children. */
+/** field | value [| base] — or field | base | value in compare layout. */
 export const ExcelSheetTable = ({
   sheet,
   editable = false,
   onCellChange,
   compact = false,
+  /** Diffchecker-style: original (base) then changed (value) */
+  compareLayout = false,
+  labels,
+  hideDiffHint = false,
 }: {
   sheet: ExcelSheet
   editable?: boolean
   onCellChange?: (rowIndex: number, colIndex: number, value: string) => void
-  /** retained for call-site compatibility */
   compact?: boolean
+  compareLayout?: boolean
+  labels?: ExcelSheetLabels
+  hideDiffHint?: boolean
 }) => {
   void compact
+
+  const columnLabel = (col: string): string => {
+    if (col === FIELD_COLUMN) return labels?.field ?? ui.configs.excelFieldColumn
+    if (col === VALUE_COLUMN) return labels?.value ?? ui.configs.excelValueColumn
+    if (col === BASE_COLUMN) return labels?.base ?? ui.configs.excelBaseColumn
+    return col
+  }
+
   const visible = useMemo(() => {
     const indexes: number[] = []
     sheet.columns.forEach((col, i) => {
@@ -42,13 +58,18 @@ export const ExcelSheetTable = ({
     return indexes.sort((a, b) => {
       const order = (c: string) => {
         if (c === FIELD_COLUMN) return 0
-        if (c === VALUE_COLUMN) return 1
-        if (c === BASE_COLUMN) return 2
+        if (compareLayout) {
+          if (c === BASE_COLUMN) return 1
+          if (c === VALUE_COLUMN) return 2
+        } else {
+          if (c === VALUE_COLUMN) return 1
+          if (c === BASE_COLUMN) return 2
+        }
         return 3
       }
       return order(sheet.columns[a]) - order(sheet.columns[b])
     })
-  }, [sheet.columns])
+  }, [sheet.columns, compareLayout])
 
   const valueIdx = sheet.columns.indexOf(VALUE_COLUMN)
   const baseIdx = sheet.columns.indexOf(BASE_COLUMN)
@@ -67,19 +88,21 @@ export const ExcelSheetTable = ({
       depth: Number.isFinite(depth) && depth > 0 ? depth : 0,
       isGroup,
       isDiff,
-      kind,
     }
   }
 
   const isProperties = sheet.kind === 'properties'
     || (sheet.columns.includes(FIELD_COLUMN) && sheet.columns.includes(VALUE_COLUMN))
   const hasBaseColumn = baseIdx >= 0
+  const diffHint = labels?.diffHint ?? ui.configs.excelDiffHint
+  const missingInValue = labels?.missingInValue ?? ui.configs.excelMissingInLocale
+  const missingInBase = labels?.missingInBase ?? ui.configs.excelOnlyInLocale
 
   return (
-    <div className="overflow-auto w-full max-w-full">
-      {hasBaseColumn && (
-        <div className="px-2 py-1.5 text-[10px] text-fg-muted border-b border-border bg-surface">
-          {ui.configs.excelDiffHint}
+    <div className="overflow-auto w-full max-w-full h-full">
+      {hasBaseColumn && !hideDiffHint && (
+        <div className="px-2 py-1.5 text-[10px] text-fg-muted border-b border-border bg-surface sticky top-0 z-20">
+          {diffHint}
         </div>
       )}
       <table className="border-collapse text-[11px] font-mono w-full table-fixed">
@@ -134,9 +157,9 @@ export const ExcelSheetTable = ({
                   const isBase = col === BASE_COLUMN
                   const indent = isField && depth > 0 ? depth * 14 : 0
                   const emptyHint = isDiff && isValue && cell === ''
-                    ? ui.configs.excelMissingInLocale
+                    ? missingInValue
                     : isDiff && isBase && cell === ''
-                      ? ui.configs.excelOnlyInLocale
+                      ? missingInBase
                       : null
 
                   return (
@@ -188,7 +211,7 @@ export const ExcelSheetTable = ({
                               {'│ '.repeat(Math.max(0, depth - 1))}{'└ '}
                             </span>
                           )}
-                          {cell || emptyHint || (isBase || isValue ? '' : cell)}
+                          {cell || emptyHint || ''}
                         </div>
                       )}
                     </td>

@@ -49,20 +49,21 @@ export const TopBar = ({
 
       <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden shrink-0">
         {([
-          ['translations', ui.topBar.workspaceTranslations],
-          ['configs', ui.topBar.workspaceConfigs],
-        ] as const).map(([mode, label]) => (
+          ['translations', ui.topBar.workspaceTranslations, 'i18n'],
+          ['configs', ui.topBar.workspaceConfigs, 'cfg'],
+          ['schema', ui.topBar.workspaceSchema, 'dto'],
+        ] as const).map(([mode, label, short], index) => (
           <button
             key={mode}
             type="button"
             onClick={() => onWorkspaceChange(mode)}
             className={cn(
               'px-2.5 py-1 border-none text-[11px] cursor-pointer font-inherit whitespace-nowrap',
-              mode === 'translations' && 'border-r border-border-strong',
+              index < 2 && 'border-r border-border-strong',
               workspace === mode ? 'bg-brand-soft-bg text-fg-brand-strong font-semibold' : 'bg-transparent text-fg-muted font-normal',
             )}
           >
-            {isMobile ? (mode === 'translations' ? 'i18n' : 'cfg') : label}
+            {isMobile ? short : label}
           </button>
         ))}
       </div>

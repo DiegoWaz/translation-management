@@ -10,7 +10,7 @@ export type UiMessages = {
     disconnected: string; demo: string; loadGithub: string; loadGithubTitle: string
     history: string; historyTitle: string; commit: string; commitTitle: string; settings: string
     uiLang: string
-    workspaceTranslations: string; workspaceConfigs: string
+    workspaceTranslations: string; workspaceConfigs: string; workspaceSchema: string
   }
   filters: {
     all: string; allKeys: string; missing: string; missingShort: string
@@ -78,6 +78,15 @@ export type UiMessages = {
     valuesToImport: string; valuesToImportPlural: string
     assignAtLeastOne: string; applyJson: string; apply: string; applyWithCount: string
     detected: string; keysInLang: string
+    configsTitle: string; configsSubtitle: string
+    configsModeFiles: string; configsModePaste: string
+    configsPickFiles: string; configsFilesHint: string
+    configsPlaceholderJson: string; configsPasteHint: string
+    configsAddKeys: string; configsEmpty: string
+    configsInvalid: string; configsNoLocales: string; configsParseError: string
+    configsPreview: string; configsSkippedKeys: string
+    configsUnmatchedFiles: string; configsUnknownLangs: string
+    configsApply: string; configsApplyDisabled: string
   }
   export: {
     title: string; titleConfigs: string; summary: string; format: string
@@ -92,7 +101,7 @@ export type UiMessages = {
     loadedFromGithub: string; draftRestored: string; error: string; historyError: string
     nothingToCommit: string; commitPushed: string
     keyRestored: string; keyAdded: string; configKeyAdded: string
-    valuesImported: string; valuesImportedJson: string
+    valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
   }
   configs: {
@@ -111,6 +120,17 @@ export type UiMessages = {
   }
   time: {
     justNow: string; minutesAgo: string; hoursAgo: string; daysAgo: string
+  }
+  schema: {
+    title: string; subtitle: string
+    targetSchema: string; autoValidate: string; validate: string; loadExample: string
+    valid: string; issueCount: string
+    dtoPane: string; jsonPane: string; results: string
+    schemasFound: string; dtoEmpty: string; dtoNoSchema: string; dtoCompileError: string
+    dtoPlaceholder: string; dtoHint: string
+    jsonValid: string; jsonEmpty: string; jsonError: string
+    waiting: string; validMessage: string
+    colPath: string; colMessage: string; colCode: string
   }
 }
 

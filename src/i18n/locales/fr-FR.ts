@@ -37,7 +37,8 @@ export const frFR: UiMessages = {
     "settings": "⚙",
     "uiLang": "Langue de l'interface",
     "workspaceTranslations": "Traductions",
-    "workspaceConfigs": "Configs"
+    "workspaceConfigs": "Configs",
+    "workspaceSchema": "DTO"
   },
   "filters": {
     "all": "Toutes",
@@ -191,7 +192,26 @@ export const frFR: UiMessages = {
     "apply": "↓ Appliquer",
     "applyWithCount": "↓ Appliquer ({count})",
     "detected": "{langs} langue{langsSuffix} · {keys} clé{keysSuffix} détectées",
-    "keysInLang": "({count} clés)"
+    "keysInLang": "({count} clés)",
+    "configsTitle": "Importer des configs",
+    "configsSubtitle": "Importez plusieurs fichiers de config par locale, ou collez un JSON multi-locales.",
+    "configsModeFiles": "Fichiers",
+    "configsModePaste": "Coller JSON",
+    "configsPickFiles": "Choisir un ou plusieurs fichiers .json…",
+    "configsFilesHint": "Nommez les fichiers comme fr-FR.json (ou incluez le code locale dans le chemin). Un seul JSON multi-locales fonctionne aussi.",
+    "configsPlaceholderJson": "{\n  \"en-UK\": { \"maxRetryCount\": 3 },\n  \"fr-FR\": { \"maxRetryCount\": 5 }\n}",
+    "configsPasteHint": "Objet indexé par locale. Champ optionnel \"schema\" : { \"clé\": \"text\" | \"number\" | \"json\" }.",
+    "configsAddKeys": "Ajouter les clés camelCase manquantes au schéma (type déduit des valeurs)",
+    "configsEmpty": "Sélectionnez des fichiers ou collez du JSON pour prévisualiser",
+    "configsInvalid": "JSON invalide — objet de locales attendu",
+    "configsNoLocales": "Aucune locale correspondante parmi les langues configurées",
+    "configsParseError": "Erreur d’analyse : {message}",
+    "configsPreview": "{langs} locale(s) · {values} valeur(s) · {keys} nouvelle(s) clé(s)",
+    "configsSkippedKeys": "Clés ignorées (pas camelCase ou ajout désactivé) : {keys}",
+    "configsUnmatchedFiles": "Fichiers non reconnus : {files}",
+    "configsUnknownLangs": "Locales inconnues ignorées : {langs}",
+    "configsApply": "↓ Importer ({count})",
+    "configsApplyDisabled": "↓ Importer"
   },
   "export": {
     "title": "Exporter les traductions",
@@ -228,6 +248,7 @@ export const frFR: UiMessages = {
     "configKeyAdded": "Clé config \"{key}\" ajoutée",
     "valuesImported": "{count} valeurs importées",
     "valuesImportedJson": "{count} valeurs importées (JSON)",
+    "configsImported": "{values} valeur(s) config importée(s) sur {langs} locale(s)",
     "copiedClipboard": "Copié dans le presse-papiers",
     "fileDownloaded": "Fichier .{ext} téléchargé"
   },
@@ -274,5 +295,32 @@ export const frFR: UiMessages = {
     "minutesAgo": "il y a {count}min",
     "hoursAgo": "il y a {count}h",
     "daysAgo": "il y a {count}j"
+  },
+  "schema": {
+    "title": "Validation DTO / Zod",
+    "subtitle": "Collez un schéma Zod et un JSON pour détecter les erreurs de format",
+    "targetSchema": "Valider comme",
+    "autoValidate": "Live",
+    "validate": "Valider",
+    "loadExample": "Exemple",
+    "valid": "Valide",
+    "issueCount": "{count} erreur(s)",
+    "dtoPane": "DTO Zod",
+    "jsonPane": "JSON",
+    "results": "Erreurs",
+    "schemasFound": "{count} schéma(s)",
+    "dtoEmpty": "Collez un schéma Zod",
+    "dtoNoSchema": "Aucune const de schéma Zod trouvée",
+    "dtoCompileError": "Erreur de compilation : {message}",
+    "dtoPlaceholder": "const MyDTO = z.object({ … })",
+    "dtoHint": "Snippet autonome (sans imports). Incluez les schémas parents utilisés par .extend(). `z` est fourni.",
+    "jsonValid": "JSON ok",
+    "jsonEmpty": "Collez du JSON",
+    "jsonError": "JSON : {message}",
+    "waiting": "Corrigez le schéma et le JSON pour voir le résultat",
+    "validMessage": "Le JSON correspond au DTO sélectionné — aucune erreur",
+    "colPath": "chemin",
+    "colMessage": "message",
+    "colCode": "code"
   }
 }

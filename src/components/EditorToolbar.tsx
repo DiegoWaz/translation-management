@@ -97,11 +97,9 @@ export const EditorToolbar = ({
               : ui.toolbar.varsOff}
           </button>
         )}
-        {!isConfigs && (
           <button onClick={onImport} title={ui.toolbar.importTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border-strong rounded-md text-fg-brand text-xs cursor-pointer whitespace-nowrap shrink-0">
             {ui.toolbar.import}
           </button>
-        )}
         <button onClick={onExport} title={ui.toolbar.exportTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border-success rounded-md text-fg-success text-xs cursor-pointer whitespace-nowrap shrink-0">
           {ui.toolbar.export}
         </button>

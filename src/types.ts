@@ -22,7 +22,7 @@ export interface GitHubConfig {
   configSchemaPath: string
 }
 
-export type WorkspaceMode = 'translations' | 'configs'
+export type WorkspaceMode = 'translations' | 'configs' | 'schema'
 export type ConfigValueType = 'text' | 'number' | 'json'
 export type ConfigValue =
   | string

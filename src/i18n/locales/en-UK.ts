@@ -37,7 +37,8 @@ export const enUK: UiMessages = {
     "settings": "⚙",
     "uiLang": "Interface language",
     "workspaceTranslations": "Translations",
-    "workspaceConfigs": "Configs"
+    "workspaceConfigs": "Configs",
+    "workspaceSchema": "DTO"
   },
   "filters": {
     "all": "All",
@@ -191,7 +192,26 @@ export const enUK: UiMessages = {
     "apply": "↓ Apply",
     "applyWithCount": "↓ Apply ({count})",
     "detected": "{langs} language{langsSuffix} · {keys} key{keysSuffix} detected",
-    "keysInLang": "({count} keys)"
+    "keysInLang": "({count} keys)",
+    "configsTitle": "Import configs",
+    "configsSubtitle": "Import several locale config files at once, or paste a multi-locale JSON.",
+    "configsModeFiles": "Files",
+    "configsModePaste": "Paste JSON",
+    "configsPickFiles": "Choose one or more .json files…",
+    "configsFilesHint": "Name files like fr-FR.json (or include the locale code in the path). A single multi-locale JSON file also works.",
+    "configsPlaceholderJson": "{\n  \"en-UK\": { \"maxRetryCount\": 3 },\n  \"fr-FR\": { \"maxRetryCount\": 5 }\n}",
+    "configsPasteHint": "Object keyed by locale. Optional \"schema\" field: { \"key\": \"text\" | \"number\" | \"json\" }.",
+    "configsAddKeys": "Add missing camelCase keys to the schema (infer type from values)",
+    "configsEmpty": "Select files or paste JSON to preview the import",
+    "configsInvalid": "Invalid JSON — expected an object of locales",
+    "configsNoLocales": "No matching locales found for the configured languages",
+    "configsParseError": "Parse error: {message}",
+    "configsPreview": "{langs} locale(s) · {values} value(s) · {keys} new key(s)",
+    "configsSkippedKeys": "Skipped keys (not camelCase or add-keys off): {keys}",
+    "configsUnmatchedFiles": "Unmatched files: {files}",
+    "configsUnknownLangs": "Unknown locales ignored: {langs}",
+    "configsApply": "↓ Import ({count})",
+    "configsApplyDisabled": "↓ Import"
   },
   "export": {
     "title": "Export translations",
@@ -228,6 +248,7 @@ export const enUK: UiMessages = {
     "configKeyAdded": "Config key \"{key}\" added",
     "valuesImported": "{count} values imported",
     "valuesImportedJson": "{count} values imported (JSON)",
+    "configsImported": "{values} config value(s) imported across {langs} locale(s)",
     "copiedClipboard": "Copied to clipboard",
     "fileDownloaded": "File .{ext} downloaded"
   },
@@ -274,5 +295,32 @@ export const enUK: UiMessages = {
     "minutesAgo": "{count}m ago",
     "hoursAgo": "{count}h ago",
     "daysAgo": "{count}d ago"
+  },
+  "schema": {
+    "title": "DTO / Zod validation",
+    "subtitle": "Paste a Zod schema and a JSON payload to see format errors",
+    "targetSchema": "Validate as",
+    "autoValidate": "Live",
+    "validate": "Validate",
+    "loadExample": "Example",
+    "valid": "Valid",
+    "issueCount": "{count} issue(s)",
+    "dtoPane": "Zod DTO",
+    "jsonPane": "JSON",
+    "results": "Issues",
+    "schemasFound": "{count} schema(s)",
+    "dtoEmpty": "Paste a Zod schema",
+    "dtoNoSchema": "No z.object / schema const found",
+    "dtoCompileError": "Compile error: {message}",
+    "dtoPlaceholder": "const MyDTO = z.object({ … })",
+    "dtoHint": "Self-contained snippet only (no imports). Include parent schemas used by .extend(). `z` is provided.",
+    "jsonValid": "JSON ok",
+    "jsonEmpty": "Paste JSON",
+    "jsonError": "JSON: {message}",
+    "waiting": "Fix the schema and JSON to see validation results",
+    "validMessage": "JSON matches the selected DTO — no issues",
+    "colPath": "path",
+    "colMessage": "message",
+    "colCode": "code"
   }
 }

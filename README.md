@@ -36,9 +36,10 @@ Contexte agents / IA : [AGENTS.md](AGENTS.md) · règles Cursor : [`.cursor/rule
 
 ## Fonctionnalités (aperçu)
 
-- **Deux workspaces** : Traductions ↔ Configs
+- **Deux workspaces** : Traductions ↔ Configs + **DTO** (validation Zod)
 - **Édition** : inline, mode clé (toutes locales), import / export
 - **Configs** : schéma camelCase, valeurs optionnelles par locale, vues Excel (arbre) et JSON
+- **DTO** : coller un schéma Zod + JSON → liste des erreurs de format
 - **Brouillon** : persistance `localStorage` tant qu’il n’y a pas de commit / rechargement GitHub
 - **Commit** : **un seul** commit Git listant uniquement les locales modifiées
 - Thème clair / sombre, UI fr / en / es

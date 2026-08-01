@@ -62,7 +62,11 @@ export const useTranslationApp = () => {
   const [initialDraft] = useState(() => loadDraft(loadConfig()))
 
   const [workspace, setWorkspace] = useState<WorkspaceMode>(
-    () => initialDraft?.workspace ?? 'translations',
+    () => {
+      const w = initialDraft?.workspace
+      if (w === 'configs' || w === 'schema' || w === 'translations') return w
+      return 'translations'
+    },
   )
   const [translations, setTranslations] = useState(() => {
     if (initialDraft) return initialDraft.translations
@@ -510,6 +514,25 @@ export const useTranslationApp = () => {
     showToast(t(ui.toast.valuesImportedJson, { count }), 'success')
   }
 
+  const handleConfigImport = (next: {
+    schema: ConfigSchema
+    configs: Record<string, ConfigMap>
+    valueCount: number
+    keysAdded: number
+    langsTouched: number
+  }) => {
+    setConfigSchema(next.schema)
+    setConfigs(next.configs)
+    setShowBulkImport(false)
+    showToast(
+      t(ui.toast.configsImported, {
+        values: next.valueCount,
+        langs: next.langsTouched,
+      }),
+      'success',
+    )
+  }
+
   const setWorkspaceMode = (mode: WorkspaceMode) => {
     setWorkspace(mode)
     setSearch('')
@@ -613,7 +636,7 @@ export const useTranslationApp = () => {
       if (!isDemoMode && !fileHistory[activeLang]?.length) handleLoadHistory(activeLang)
     },
     updateValue, updateConfigValue, restoreKey, deleteKey, clearConfigOnLang,
-    handleBulkApply, handleJsonApply,
+    handleBulkApply, handleJsonApply, handleConfigImport,
   }
 }
 

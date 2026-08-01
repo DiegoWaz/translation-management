@@ -292,6 +292,53 @@ export const excelLocalFieldCount = (sheet: ExcelSheet): number => {
   }).length
 }
 
+/** Keep only groups that still have a differing descendant, plus differing leaves. */
+export const filterExcelSheetDiffs = (sheet: ExcelSheet): ExcelSheet => {
+  const valueIdx = sheet.columns.indexOf(VALUE_COLUMN)
+  const baseIdx = sheet.columns.indexOf(BASE_COLUMN)
+  const kindIdx = sheet.columns.indexOf(KIND_COLUMN)
+  const pathIdx = sheet.columns.indexOf(PATH_COLUMN)
+  if (valueIdx < 0 || baseIdx < 0) return sheet
+
+  const isDiffRow = (row: string[]) => {
+    const kind = kindIdx >= 0 ? row[kindIdx] : 'leaf'
+    if (kind === 'group') return false
+    return (row[valueIdx] ?? '') !== (row[baseIdx] ?? '')
+  }
+
+  const diffPaths = new Set(
+    sheet.rows.filter(isDiffRow).map(row => (pathIdx >= 0 ? row[pathIdx] : '')).filter(Boolean),
+  )
+
+  const rows = sheet.rows.filter(row => {
+    const kind = kindIdx >= 0 ? row[kindIdx] : 'leaf'
+    const path = pathIdx >= 0 ? row[pathIdx] ?? '' : ''
+    if (kind === 'group') {
+      // keep group if any diff path is under it
+      return [...diffPaths].some(p => p === path || p.startsWith(`${path}.`))
+    }
+    return isDiffRow(row)
+  })
+
+  return { ...sheet, rows }
+}
+
+/** Build a compare sheet: left = original (base col), right = changed (value col). */
+export const jsonDiffToExcelSheet = (
+  original: ConfigValue,
+  changed: ConfigValue,
+): ExcelSheet => {
+  const sheets = jsonToExcelSheets(changed, original)
+  return sheets[0] ?? {
+    id: 'properties',
+    title: 'data',
+    arrayPath: null,
+    kind: 'properties',
+    columns: [PATH_COLUMN, DEPTH_COLUMN, KIND_COLUMN, FIELD_COLUMN, VALUE_COLUMN, BASE_COLUMN],
+    rows: [],
+  }
+}
+
 /** Apply an edited sheet matrix back onto the JSON value. */
 export const applyExcelSheet = (
   root: ConfigValue,

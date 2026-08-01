@@ -12,17 +12,20 @@ import { ConfigTable } from './components/ConfigTable'
 import { HistoryPanel } from './components/HistoryPanel'
 import { HistoryDrawer } from './components/HistoryDrawer'
 import { BulkImportModal } from './components/BulkImportModal'
+import { ConfigBulkImportModal } from './components/ConfigBulkImportModal'
 import { ExportModal } from './components/ExportModal'
 import { SettingsModal } from './components/SettingsModal'
 import { CommitDialog } from './components/CommitDialog'
 import { defaultPath } from './helpers/lang'
 import { configMapsToStringMaps } from './helpers/exportGenerators'
+import { SchemaValidateWorkspace } from './components/SchemaValidateWorkspace'
 import { ToastStack } from './components/ToastStack'
 import { ui } from './i18n/ui'
 
 const App = () => {
   const app = useTranslationApp()
   const isConfigs = app.workspace === 'configs'
+  const isSchema = app.workspace === 'schema'
   const configColTemplate = app.isMobile
     ? 'minmax(0,1fr) minmax(0,1fr) 28px'
     : app.showBase
@@ -62,6 +65,10 @@ const App = () => {
       />
 
       <div className="flex flex-1 overflow-hidden h-[calc(100vh-56px)] flex-col">
+        {isSchema ? (
+          <SchemaValidateWorkspace isMobile={app.isMobile} />
+        ) : (
+          <>
         {app.isMobile && (
           <MobileLangStrip
             langs={app.langStats}
@@ -178,7 +185,7 @@ const App = () => {
             )}
           </main>
 
-          {app.showHistory && !app.isMobile && (
+          {app.showHistory && !app.isMobile && !isSchema && (
             <HistoryPanel
               lang={app.activeLang}
               langFile={app.activeLangFile}
@@ -191,9 +198,11 @@ const App = () => {
             />
           )}
         </div>
+          </>
+        )}
       </div>
 
-      {app.showHistory && app.isMobile && (
+      {app.showHistory && app.isMobile && !isSchema && (
         <HistoryDrawer
           lang={app.activeLang}
           langFile={app.activeLangFile}
@@ -232,6 +241,16 @@ const App = () => {
           configFiles={app.config.files}
           onApplyParsed={app.handleBulkApply}
           onApplyJson={app.handleJsonApply}
+          onClose={() => app.setShowBulkImport(false)}
+          isMobile={app.isMobile}
+        />
+      )}
+      {app.showBulkImport && isConfigs && (
+        <ConfigBulkImportModal
+          schema={app.configSchema}
+          configs={app.configs}
+          configFiles={app.config.files}
+          onApply={app.handleConfigImport}
           onClose={() => app.setShowBulkImport(false)}
           isMobile={app.isMobile}
         />

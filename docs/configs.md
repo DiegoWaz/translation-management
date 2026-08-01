@@ -30,6 +30,24 @@ En mode clé (recherche), édition multi-locales comme pour les traductions.
 - Suppression : retire du schéma et de toutes les locales
 - **Effacer sur la locale** : retire la valeur locale sans toucher au schéma
 
+## Validation DTO (Zod)
+
+Workspace **DTO** dans la barre du haut :
+
+1. Collez un snippet Zod **autonome** (sans `import` — `z` est fourni)
+2. Incluez les schémas parents (ex. `ExtendedProductDTO`) ou recopiez-les
+3. Collez le JSON à contrôler
+4. Choisissez le schéma cible dans la liste — les erreurs s’affichent (chemin, message, code)
+
+## Import
+
+Bouton **↓ Importer** dans le workspace Configs :
+
+- **Plusieurs fichiers** `.json` (ex. `en-UK.json`, `fr-FR.json`) — la locale est déduite du nom
+- **Coller un JSON** multi-locales : `{ "en-UK": { … }, "fr-FR": { … } }`
+- Schéma optionnel dans le JSON : `{ "schema": { "maxRetry": "number" }, … }`
+- Option pour **ajouter au schéma** les clés camelCase manquantes (type déduit)
+
 ## Commit configs
 
 Un **seul** commit peut inclure :
