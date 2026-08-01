@@ -31,6 +31,8 @@ export const SettingsModal = ({
     { label: ui.settings.fields.branch, value: config.branch || ui.settings.missingValue },
     { label: ui.settings.fields.baseLang, value: config.baseLang || ui.settings.missingValue },
     { label: ui.settings.pathTemplateLabel, value: pathTemplate },
+    { label: ui.settings.configPathTemplateLabel, value: config.configPathTemplate },
+    { label: ui.settings.configSchemaPathLabel, value: config.configSchemaPath },
   ]
 
   return (

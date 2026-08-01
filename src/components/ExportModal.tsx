@@ -1,38 +1,93 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ExportFormat, LangFile, ToastType } from '../types'
 import { cn } from '../helpers/cn'
-import { generateJsonExport, generateTsvExport } from '../helpers/exportGenerators'
+import {
+  buildSheetMatrix,
+  generateCsvExport,
+  generateJsonExport,
+  generateTsvExport,
+} from '../helpers/exportGenerators'
 import { btnPrimaryClass, btnSecClass } from '../helpers/styles'
 import { ui, t, localeSuffix } from '../i18n/ui'
 import { Overlay } from './Overlay'
 
-export const ExportModal = ({ translations, baseKeys, filteredKeys, configFiles, onClose, showToast, isMobile }: {
-  translations: Record<string, Record<string, string>>; baseKeys: string[]; filteredKeys: string[]
-  configFiles: LangFile[]; onClose: () => void; showToast: (m: string, t: ToastType) => void; isMobile: boolean
+export const ExportModal = ({
+  data,
+  baseKeys,
+  filteredKeys,
+  configFiles,
+  title,
+  downloadBasename,
+  onClose,
+  showToast,
+  isMobile,
+}: {
+  data: Record<string, Record<string, string>>
+  baseKeys: string[]
+  filteredKeys: string[]
+  configFiles: LangFile[]
+  title?: string
+  downloadBasename?: string
+  onClose: () => void
+  showToast: (m: string, t: ToastType) => void
+  isMobile: boolean
 }) => {
-  const [format, setFormat] = useState<ExportFormat>('json')
+  const [format, setFormat] = useState<ExportFormat>('csv')
+  const [previewMode, setPreviewMode] = useState<'table' | 'raw'>('table')
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set(configFiles.map(f => f.lang)))
   const [keyScope, setKeyScope] = useState<'all' | 'filtered'>('all')
   const [copied, setCopied] = useState(false)
 
-  const langs = [...selectedLangs]
+  const langs = configFiles.map(f => f.lang).filter(l => selectedLangs.has(l))
   const keys = keyScope === 'all' ? baseKeys : filteredKeys
-  const output = format === 'json' ? generateJsonExport(translations, langs, keys) : generateTsvExport(translations, langs, keys, configFiles)
-  const ext = format === 'json' ? 'json' : 'tsv'
 
-  const toggleLang = (l: string) => setSelectedLangs(prev => { const next = new Set(prev); next.has(l) ? next.delete(l) : next.add(l); return next })
+  const output = useMemo(() => {
+    if (format === 'json') return generateJsonExport(data, langs, keys)
+    if (format === 'csv') return generateCsvExport(data, langs, keys)
+    return generateTsvExport(data, langs, keys)
+  }, [format, data, langs, keys])
 
-  const handleCopy = () => { navigator.clipboard.writeText(output).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); showToast(ui.toast.copiedClipboard, 'success') }) }
+  const matrix = useMemo(
+    () => (format === 'json' ? [] : buildSheetMatrix(data, langs, keys)),
+    [format, data, langs, keys],
+  )
+
+  const ext = format === 'json' ? 'json' : format === 'csv' ? 'csv' : 'tsv'
+  const mime =
+    format === 'json'
+      ? 'application/json'
+      : format === 'csv'
+        ? 'text/csv;charset=utf-8'
+        : 'text/tab-separated-values'
+
+  const toggleLang = (l: string) => setSelectedLangs(prev => {
+    const next = new Set(prev)
+    next.has(l) ? next.delete(l) : next.add(l)
+    return next
+  })
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(output).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      showToast(ui.toast.copiedClipboard, 'success')
+    })
+  }
+
   const handleDownload = () => {
-    const blob = new Blob([output], { type: format === 'json' ? 'application/json' : 'text/tab-separated-values' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
-    a.download = `translations.${ext}`; a.click()
+    const blob = new Blob([output], { type: mime })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `${downloadBasename ?? 'export'}.${ext}`
+    a.click()
+    URL.revokeObjectURL(a.href)
     showToast(t(ui.toast.fileDownloaded, { ext }), 'success')
   }
 
   const formatOptions = [
-    { key: 'json' as const, label: ui.export.formatJson, hint: ui.export.formatJsonHint },
+    { key: 'csv' as const, label: ui.export.formatCsv, hint: ui.export.formatCsvHint },
     { key: 'tsv' as const, label: ui.export.formatTsv, hint: ui.export.formatTsvHint },
+    { key: 'json' as const, label: ui.export.formatJson, hint: ui.export.formatJsonHint },
   ]
 
   const keyScopeOptions = [
@@ -40,18 +95,20 @@ export const ExportModal = ({ translations, baseKeys, filteredKeys, configFiles,
     { key: 'filtered' as const, label: t(ui.export.keysFiltered, { count: filteredKeys.length }) },
   ]
 
+  const showTable = format !== 'json' && previewMode === 'table'
+
   return (
     <Overlay onClick={onClose}>
       <div
         onClick={e => e.stopPropagation()}
         className={cn(
           'bg-card flex flex-col overflow-hidden',
-          isMobile ? 'w-screen h-dvh max-h-dvh rounded-none border-none' : 'w-[720px] max-h-[85vh] rounded-xl border border-border',
+          isMobile ? 'w-screen h-dvh max-h-dvh rounded-none border-none' : 'w-[860px] max-h-[85vh] rounded-xl border border-border',
         )}
       >
         <div className="px-6 py-[18px] border-b border-border flex justify-between items-center shrink-0">
           <div>
-            <h2 className="m-0 mb-0.5 text-[15px] font-semibold text-fg">{ui.export.title}</h2>
+            <h2 className="m-0 mb-0.5 text-[15px] font-semibold text-fg">{title ?? ui.export.title}</h2>
             <p className="m-0 text-xs text-fg-muted">
               {t(ui.export.summary, {
                 langs: langs.length,
@@ -121,14 +178,71 @@ export const ExportModal = ({ translations, baseKeys, filteredKeys, configFiles,
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0">
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0 gap-2">
               <span className="text-[11px] text-fg-muted">{ui.export.preview}</span>
-              <span className="text-[11px] text-fg-muted font-mono">{t(ui.common.characters, { count: output.length.toLocaleString() })}</span>
+              <div className="flex items-center gap-2">
+                {format !== 'json' && (
+                  <div className="flex bg-elevated border border-border rounded-md overflow-hidden">
+                    {(['table', 'raw'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setPreviewMode(mode)}
+                        className={cn(
+                          'px-2 py-0.5 text-[10px] border-none cursor-pointer font-inherit',
+                          previewMode === mode ? 'bg-brand-soft-bg text-fg-brand font-semibold' : 'bg-transparent text-fg-muted',
+                        )}
+                      >
+                        {mode === 'table' ? ui.export.tableView : ui.export.rawView}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <span className="text-[11px] text-fg-muted font-mono">{t(ui.common.characters, { count: output.length.toLocaleString() })}</span>
+              </div>
             </div>
-            <pre className="flex-1 m-0 px-4 py-3.5 overflow-y-auto text-[11px] font-mono text-fg-tertiary leading-relaxed bg-row-even whitespace-pre break-all">
-              {output.slice(0, 3000)}{output.length > 3000 && '\n…'}
-            </pre>
+
+            {showTable ? (
+              <div className="flex-1 overflow-auto bg-row-even">
+                <table className="border-collapse text-[11px] font-mono min-w-full">
+                  <thead className="sticky top-0 bg-surface">
+                    <tr>
+                      {matrix[0]?.map(cell => (
+                        <th
+                          key={cell}
+                          className="text-left px-2.5 py-1.5 border-b border-r border-border text-fg-muted font-semibold whitespace-nowrap"
+                        >
+                          {cell}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.slice(1, 201).map((row, i) => (
+                      <tr key={row[0] || i} className={i % 2 === 0 ? 'bg-row-odd' : 'bg-row-even'}>
+                        {row.map((cell, j) => (
+                          <td
+                            key={`${i}-${j}`}
+                            className="px-2.5 py-1 border-b border-r border-border-subtle text-fg-tertiary max-w-[220px] truncate"
+                            title={cell}
+                          >
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {matrix.length > 201 && (
+                  <div className="px-3 py-2 text-[10px] text-fg-muted">… +{matrix.length - 201} rows</div>
+                )}
+              </div>
+            ) : (
+              <pre className="flex-1 m-0 px-4 py-3.5 overflow-y-auto text-[11px] font-mono text-fg-tertiary leading-relaxed bg-row-even whitespace-pre break-all">
+                {output.slice(0, 3000)}{output.length > 3000 && '\n…'}
+              </pre>
+            )}
           </div>
         </div>
 

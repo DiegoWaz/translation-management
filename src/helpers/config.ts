@@ -1,5 +1,5 @@
-import type { GitHubConfig, LangFile } from '../types'
-import { DEFAULT_PATH_TEMPLATE } from './defaults'
+import type { ConfigMap, ConfigSchema, ConfigValue, ConfigValueType, GitHubConfig, LangFile } from '../types'
+import { DEFAULT_CONFIG_PATH_TEMPLATE, DEFAULT_CONFIG_SCHEMA_PATH, DEFAULT_PATH_TEMPLATE } from './defaults'
 import { buildLangFile } from './lang'
 
 const envString = (key: keyof ImportMetaEnv): string | undefined => {
@@ -24,8 +24,12 @@ export const loadConfig = (): GitHubConfig => {
     branch: envString('VITE_GH_BRANCH') ?? 'main',
     baseLang: envString('VITE_GH_BASE_LANG') ?? files[0]?.lang ?? '',
     files,
+    configPathTemplate: envString('VITE_GH_CONFIG_PATH_TEMPLATE') ?? DEFAULT_CONFIG_PATH_TEMPLATE,
+    configSchemaPath: envString('VITE_GH_CONFIG_SCHEMA_PATH') ?? DEFAULT_CONFIG_SCHEMA_PATH,
   }
 }
 
 export const isGithubConfigured = (config: GitHubConfig): boolean =>
   Boolean(config.token && config.owner && config.repo)
+
+export type { ConfigMap, ConfigSchema, ConfigValue, ConfigValueType }

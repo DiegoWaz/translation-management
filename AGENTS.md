@@ -1,41 +1,50 @@
-# figma-make-app
+# Context for agents — LocaleHub
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+This repo is **LocaleHub**: a SPA to manage **i18n translations** and **per-locale JSON configs** on GitHub (not a generic Figma Make demo). Prefer `docs/` over outdated assumptions.
 
-## Development Server
+## Product facts (do not contradict)
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+- Product name: **LocaleHub** (`package.json` → `locale-hub`)
+- Two workspaces: **translations** and **configs**
+- GitHub config is **env-only** (`.env` / `VITE_GH_*`) — see `docs/setup.md`
+- Uncommitted work is persisted in **localStorage** (`src/helpers/draftStorage.ts`, prefix `localehub:draft:v1`)
+- Commits are **one Git commit** for all changed locale files via Git Data API (`commitJsonFiles` in `src/helpers/github.ts`)
+- Config keys must be **camelCase**; values may be unset per locale
+- UI strings live in `src/i18n/` (en-UK, fr-FR, es-ES); brand strings `ui.app.name` / `ui.app.logo`
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+## Read first by task
 
-## Project Structure
+| Task | Start here |
+|---|---|
+| Setup / env | `docs/setup.md`, `src/helpers/config.ts`, `.env.example` |
+| Translations UX | `docs/translations.md`, `src/components/TranslationTable.tsx` |
+| Configs UX | `docs/configs.md`, `src/helpers/configValues.ts`, `ConfigTable.tsx` |
+| Load / commit / draft | `docs/workflow.md`, `src/hooks/useTranslationApp.ts`, `src/helpers/github.ts` |
+| Architecture | `docs/architecture.md` |
+| UI entry | `src/App.tsx` |
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+## Development server
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+Vite may already be running on `$PORT` (default **8443**). Hot reload applies to `src/` edits. Do not assume you must start the server unless it is down.
 
-## Dependencies
+## Stack & styling
 
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
-
-## Styling
-
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
-
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
+- React 19, Vite 8, TypeScript 5.7, Tailwind CSS v4 (`@import 'tailwindcss'` in `src/index.css`)
+- `@` alias → `src`
+- Theme tokens in CSS variables — prefer existing semantic classes (`bg-page`, `text-fg`, …)
+- No Tailwind config / PostCSS file required
 
 ## Code quality
 
-- Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
-- Ensure JSX tags are closed and braces are balanced.
-- Export components as default exports.
+- Prefer matching existing patterns in the touched folder (named vs default exports).
+- Escape apostrophes in single-quoted strings or use double quotes.
+- Do not invent a backend; all persistence is GitHub API + `localStorage`.
+- Do not commit `.env` or tokens.
+- Keep changes scoped; update `docs/` when behavior users rely on changes.
+- Keep product naming **LocaleHub** in user-facing copy and docs.
+
+## Doc map
+
+- Human entry: `README.md`
+- Doc index: `docs/README.md`
+- Cursor rules: `.cursor/rules/`

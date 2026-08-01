@@ -18,7 +18,21 @@ export interface GitHubConfig {
   branch: string
   baseLang: string
   files: LangFile[]
+  configPathTemplate: string
+  configSchemaPath: string
 }
+
+export type WorkspaceMode = 'translations' | 'configs'
+export type ConfigValueType = 'text' | 'number' | 'json'
+export type ConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ConfigValue[]
+  | { [key: string]: ConfigValue }
+export type ConfigSchema = Record<string, ConfigValueType>
+export type ConfigMap = Record<string, ConfigValue>
 
 export type FilterMode = 'all' | 'missing' | 'modified' | 'var-issues'
 export type SearchMode = 'locale' | 'key'
@@ -52,7 +66,7 @@ export interface ParsedImport {
 }
 
 export type ImportFormat = 'text' | 'table' | 'json'
-export type ExportFormat = 'json' | 'tsv'
+export type ExportFormat = 'json' | 'csv' | 'tsv'
 
 export interface JsonImportResult {
   type: 'multi'

@@ -1,0 +1,13 @@
+---
+description: GitHub helpers and commit/draft conventions
+globs: src/helpers/github.ts,src/helpers/draftStorage.ts,src/hooks/useTranslationApp.ts
+alwaysApply: false
+---
+
+# GitHub load / commit / draft
+
+- Load files with `loadJsonFile` / `loadFile` (Contents API).
+- Push changes only through `commitJsonFiles` (Git Data: blobs → tree → one commit → update ref). Never one commit per file.
+- Commit message should list modified locale codes only (schema-only configs may use the schema message).
+- Persist working state with `saveDraft` / restore with `loadDraft`; key includes owner/repo/branch/langs.
+- After successful commit or Load from GitHub, keep shas + originals in sync so “modified” filters stay correct.

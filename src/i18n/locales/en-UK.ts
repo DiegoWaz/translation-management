@@ -2,8 +2,8 @@ import type { UiMessages } from '../types'
 
 export const enUK: UiMessages = {
   "app": {
-    "name": "TranslationHub",
-    "logo": "i18n"
+    "name": "LocaleHub",
+    "logo": "LH"
   },
   "common": {
     "close": "×",
@@ -35,7 +35,9 @@ export const enUK: UiMessages = {
     "commit": "Commit",
     "commitTitle": "Commit",
     "settings": "⚙",
-    "uiLang": "Interface language"
+    "uiLang": "Interface language",
+    "workspaceTranslations": "Translations",
+    "workspaceConfigs": "Configs"
   },
   "filters": {
     "all": "All",
@@ -60,6 +62,7 @@ export const enUK: UiMessages = {
   "toolbar": {
     "searchByKey": "Search by key…",
     "searchAllLocales": "Search across all languages…",
+    "searchConfigs": "Search config keys…",
     "modeLocale": "🌐 Locale",
     "modeKey": "🔑 Key",
     "varsOk": "✓ vars",
@@ -73,7 +76,9 @@ export const enUK: UiMessages = {
     "import": "↓ Import",
     "importTitle": "Import",
     "addKey": "+ Key",
-    "addKeyTitle": "Add a key"
+    "addKeyTitle": "Add a key",
+    "addConfigKey": "+ Config",
+    "addConfigKeyTitle": "Add a config key"
   },
   "table": {
     "key": "Key",
@@ -127,7 +132,10 @@ export const enUK: UiMessages = {
     "messagePlaceholder": "feat(i18n): update translations",
     "pushTo": "Push to {branch}",
     "defaultMessage": "feat(i18n): update {langs} translations",
-    "newFile": "New file"
+    "configDefaultMessage": "feat(config): update {langs}",
+    "configSchemaMessage": "feat(config): update schema",
+    "newFile": "New file",
+    "schemaFile": "Schema"
   },
   "settings": {
     "title": "Settings",
@@ -148,7 +156,9 @@ export const enUK: UiMessages = {
     "placeholders": {
       "pathTemplate": "locales/{lang}.json"
     },
-    "pathTemplateLabel": "File path (template)",
+    "pathTemplateLabel": "Translations path (template)",
+    "configPathTemplateLabel": "Configs path (template)",
+    "configSchemaPathLabel": "Config schema path",
     "activeLanguages": "Active languages",
     "done": "Close"
   },
@@ -185,12 +195,17 @@ export const enUK: UiMessages = {
   },
   "export": {
     "title": "Export translations",
+    "titleConfigs": "Export configs",
     "summary": "{langs} language{langsSuffix} · {keys} key{keysSuffix}",
     "format": "Format",
     "formatJson": "JSON",
     "formatJsonHint": "{\"en\":{…}}",
+    "formatCsv": "CSV / Excel",
+    "formatCsvHint": "key,en-UK,fr-FR,…",
     "formatTsv": "Table (TSV)",
-    "formatTsvHint": "EN\\tval1\\tval2",
+    "formatTsvHint": "key\\ten-UK\\tfr-FR",
+    "tableView": "Table",
+    "rawView": "Raw",
     "keys": "Keys",
     "keysAll": "All ({count})",
     "keysFiltered": "Current view ({count})",
@@ -203,16 +218,56 @@ export const enUK: UiMessages = {
   },
   "toast": {
     "loadedFromGithub": "Files loaded from GitHub",
+    "draftRestored": "Uncommitted draft restored from this browser",
     "error": "Error: {message}",
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",
     "commitPushed": "Commit pushed to {branch} — {count} keys changed",
     "keyRestored": "Key \"{key}\" restored",
     "keyAdded": "Key \"{key}\" added",
+    "configKeyAdded": "Config key \"{key}\" added",
     "valuesImported": "{count} values imported",
     "valuesImportedJson": "{count} values imported (JSON)",
     "copiedClipboard": "Copied to clipboard",
     "fileDownloaded": "File .{ext} downloaded"
+  },
+  "configs": {
+    "empty": "No config keys yet",
+    "clickToEdit": "Click to edit…",
+    "deleteKey": "Delete config key",
+    "keyPlaceholder": "featureMaxItems",
+    "invalidNumber": "Enter a valid number",
+    "errorDuplicate": "This config key already exists",
+    "errorCamelCase": "Config keys must be camelCase (e.g. featureMaxItems)",
+    "notSet": "Not set on this locale…",
+    "clearOnLocale": "Remove from this locale",
+    "unsetInLang": "{label}: not set",
+    "openModal": "Open",
+    "modalEdit": "Edit JSON · Excel or raw view",
+    "modalViewOnly": "Base locale · read only",
+    "sheets": "sheets",
+    "fieldsCount": "{count} fields",
+    "useBaseStructure": "Use base structure",
+    "formatJson": "Format JSON",
+    "excelView": "Excel view",
+    "jsonView": "JSON view",
+    "excelEmpty": "Nothing to show as a table",
+    "excelHint": "field | value on one row · groups ▸ and [n] for nested levels · Save when done",
+    "excelFieldColumn": "field",
+    "excelValueColumn": "value",
+    "excelBaseColumn": "base",
+    "excelDiffHint": "Rows highlighted differ from the base locale",
+    "excelMissingInLocale": "(missing in this locale)",
+    "excelOnlyInLocale": "(only in this locale)",
+    "excelDiffBadge": "diff",
+    "excelDiffCount": "{count} diffs",
+    "shapeMismatch": "Type mismatch vs base locale (omitted or extra fields are fine):",
+    "jsonHint": "Ctrl/⌘+Enter to save · Escape to cancel · click ▾/▸ in the gutter to fold",
+    "types": {
+      "text": "text",
+      "number": "number",
+      "json": "json"
+    }
   },
   "time": {
     "justNow": "just now",

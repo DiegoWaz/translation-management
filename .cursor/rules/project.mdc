@@ -1,0 +1,25 @@
+---
+description: LocaleHub — product & architecture context for agents
+alwaysApply: true
+---
+
+# LocaleHub
+
+SPA React (Vite + Tailwind v4) to edit i18n JSON and per-locale config JSON on GitHub.
+
+## Hard facts
+
+- Product: **LocaleHub** (npm `locale-hub`). UI brand via `ui.app.name` / `ui.app.logo`.
+- Config: `.env` only (`VITE_GH_*`). See `docs/setup.md`.
+- Drafts: `localStorage` via `src/helpers/draftStorage.ts` — reload must keep uncommitted edits.
+- Commit: single multi-file commit via `commitJsonFiles` (`src/helpers/github.ts`), message lists **only modified locales**.
+- Workspaces: translations | configs. Config keys = camelCase; optional per locale.
+- State hub: `src/hooks/useTranslationApp.ts`. UI shell: `src/App.tsx`.
+
+## Docs
+
+`README.md` → `docs/` (`setup`, `translations`, `configs`, `workflow`, `architecture`). Agent map: `AGENTS.md`.
+
+## When changing behavior
+
+Update the matching file under `docs/` (and README links if needed). Do not reintroduce per-file Contents API commits or drop draft persistence.

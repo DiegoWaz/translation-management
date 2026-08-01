@@ -51,6 +51,16 @@
 
   --shadow-toast: 0 4px 20px hsl(0, 0%, 0%, 0.12);
   --color-scheme: light;
+
+  /* JSON syntax highlighting */
+  --json-key: #0550ae;
+  --json-string: #0a3069;
+  --json-number: #0550ae;
+  --json-boolean: #cf222e;
+  --json-null: #8250df;
+  --json-punct: #656d76;
+  --json-bracket: #24292f;
+  --json-invalid: #cf222e;
 }
 
 [data-theme='dark'] {
@@ -103,4 +113,14 @@
 
   --shadow-toast: 0 4px 20px hsl(0, 0%, 0%, 0.4);
   --color-scheme: dark;
+
+  /* JSON syntax highlighting */
+  --json-key: #7ee787;
+  --json-string: #a5d6ff;
+  --json-number: #79c0ff;
+  --json-boolean: #ff7b72;
+  --json-null: #d2a8ff;
+  --json-punct: #8b949e;
+  --json-bracket: #c9d1d9;
+  --json-invalid: #ff7b72;
 }

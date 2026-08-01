@@ -11,6 +11,8 @@ export const CommitDialog = ({
   onMsgChange,
   modifiedKeys,
   newFileLangs,
+  schemaDirty,
+  resolvePath,
   config,
   onConfirm,
   onClose,
@@ -20,6 +22,8 @@ export const CommitDialog = ({
   onMsgChange: (m: string) => void
   modifiedKeys: Array<{ lang: string; key: string }>
   newFileLangs: string[]
+  schemaDirty?: boolean
+  resolvePath?: (lang: string) => string
   config: GitHubConfig
   onConfirm: () => void
   onClose: () => void
@@ -49,15 +53,22 @@ export const CommitDialog = ({
           </div>
           <button onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-xl">{ui.common.close}</button>
         </div>
-        <div className="bg-elevated border border-border rounded-lg p-3">
+        <div className="bg-elevated border border-border rounded-lg p-3 max-h-56 overflow-y-auto">
+          {schemaDirty && (
+            <div className="mb-2 text-xs text-fg-tertiary">
+              <code className="font-mono text-[11px] text-fg-muted">{config.configSchemaPath}</code>
+              <span className="ml-1.5 text-fg-brand">{ui.commit.schemaFile}</span>
+            </div>
+          )}
           {[...langsShown].map(lang => {
             const file = config.files.find(f => f.lang === lang)
+            const path = resolvePath?.(lang) ?? file?.path
             const keys = byLang[lang] ?? []
             const isNew = newFileLangs.includes(lang)
             return (
               <div key={lang} className="mb-2">
                 <div className="text-xs text-fg-tertiary mb-1">
-                  {file?.flag} {file?.label ?? lang} — <code className="font-mono text-[11px] text-fg-muted">{file?.path}</code>
+                  {file?.flag} {file?.label ?? lang} — <code className="font-mono text-[11px] text-fg-muted">{path}</code>
                   {isNew && <span className="ml-1.5 text-fg-brand">{ui.commit.newFile}</span>}
                 </div>
                 {keys.length > 0 && (

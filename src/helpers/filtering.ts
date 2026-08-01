@@ -99,13 +99,18 @@ export const buildLangStats = (
 export const getModifiedKeys = (
   translations: Record<string, Record<string, string>>,
   original: Record<string, Record<string, string>>,
-  baseLang: string,
+  _baseLang: string,
 ): Array<{ lang: string; key: string }> => {
   const modified: Array<{ lang: string; key: string }> = []
   for (const lang of Object.keys(translations)) {
-    if (lang === baseLang) continue
     for (const key of Object.keys(translations[lang] ?? {})) {
       if ((translations[lang][key] ?? '') !== (original[lang]?.[key] ?? '')) {
+        modified.push({ lang, key })
+      }
+    }
+    // Keys removed from a locale vs original
+    for (const key of Object.keys(original[lang] ?? {})) {
+      if (!(key in (translations[lang] ?? {}))) {
         modified.push({ lang, key })
       }
     }

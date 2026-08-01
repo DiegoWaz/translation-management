@@ -1,9 +1,10 @@
-import type { SearchMode } from '../types'
+import type { SearchMode, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
 import { ui, t, plural } from '../i18n/ui'
 import { SearchIcon } from './Icons'
 
 export const EditorToolbar = ({
+  workspace,
   search,
   onSearchChange,
   searchMode,
@@ -18,6 +19,7 @@ export const EditorToolbar = ({
   onImport,
   onAddKey,
 }: {
+  workspace: WorkspaceMode
   search: string
   onSearchChange: (v: string) => void
   searchMode: SearchMode
@@ -34,6 +36,7 @@ export const EditorToolbar = ({
 }) => {
   const searchModeLabels: Record<SearchMode, string> = { locale: ui.toolbar.modeLocale, key: ui.toolbar.modeKey }
   const hasVarIssues = varValidation && varIssuesCount > 0
+  const isConfigs = workspace === 'configs'
 
   return (
     <div className="border-b border-border bg-surface flex flex-col">
@@ -42,7 +45,13 @@ export const EditorToolbar = ({
         <input
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          placeholder={searchMode === 'key' ? ui.toolbar.searchByKey : ui.toolbar.searchAllLocales}
+          placeholder={
+            searchMode === 'key'
+              ? ui.toolbar.searchByKey
+              : isConfigs
+                ? ui.toolbar.searchConfigs
+                : ui.toolbar.searchAllLocales
+          }
           className="flex-1 bg-transparent border-none outline-none text-fg text-[13px] font-inherit min-w-0"
         />
         {search && (
@@ -70,30 +79,38 @@ export const EditorToolbar = ({
           })}
         </div>
         <div className="flex-1" />
-        <button
-          onClick={onToggleVarValidation}
-          title={varValidation ? ui.toolbar.varsDisableTitle : ui.toolbar.varsEnableTitle}
-          className={cn(
-            'flex items-center gap-1 px-2.5 py-1 rounded-md text-xs cursor-pointer whitespace-nowrap shrink-0 border',
-            !varValidation && 'bg-elevated border-border-strong text-fg-muted',
-            varValidation && !hasVarIssues && 'bg-success-bg border-border-success text-fg-success',
-            hasVarIssues && 'bg-warning-bg border-fg-warning/25 text-fg-warning',
-          )}
-        >
-          {varValidation
-            ? (hasVarIssues
-              ? t(plural(varIssuesCount, ui.toolbar.varsIssues, ui.toolbar.varsIssuesPlural), { count: varIssuesCount })
-              : ui.toolbar.varsOk)
-            : ui.toolbar.varsOff}
-        </button>
+        {!isConfigs && (
+          <button
+            onClick={onToggleVarValidation}
+            title={varValidation ? ui.toolbar.varsDisableTitle : ui.toolbar.varsEnableTitle}
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1 rounded-md text-xs cursor-pointer whitespace-nowrap shrink-0 border',
+              !varValidation && 'bg-elevated border-border-strong text-fg-muted',
+              varValidation && !hasVarIssues && 'bg-success-bg border-border-success text-fg-success',
+              hasVarIssues && 'bg-warning-bg border-fg-warning/25 text-fg-warning',
+            )}
+          >
+            {varValidation
+              ? (hasVarIssues
+                ? t(plural(varIssuesCount, ui.toolbar.varsIssues, ui.toolbar.varsIssuesPlural), { count: varIssuesCount })
+                : ui.toolbar.varsOk)
+              : ui.toolbar.varsOff}
+          </button>
+        )}
+        {!isConfigs && (
+          <button onClick={onImport} title={ui.toolbar.importTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border-strong rounded-md text-fg-brand text-xs cursor-pointer whitespace-nowrap shrink-0">
+            {ui.toolbar.import}
+          </button>
+        )}
         <button onClick={onExport} title={ui.toolbar.exportTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border-success rounded-md text-fg-success text-xs cursor-pointer whitespace-nowrap shrink-0">
           {ui.toolbar.export}
         </button>
-        <button onClick={onImport} title={ui.toolbar.importTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border-strong rounded-md text-fg-brand text-xs cursor-pointer whitespace-nowrap shrink-0">
-          {ui.toolbar.import}
-        </button>
-        <button onClick={onAddKey} title={ui.toolbar.addKeyTitle} className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border rounded-md text-fg-tertiary text-xs cursor-pointer shrink-0">
-          {ui.toolbar.addKey}
+        <button
+          onClick={onAddKey}
+          title={isConfigs ? ui.toolbar.addConfigKeyTitle : ui.toolbar.addKeyTitle}
+          className="flex items-center gap-1 px-2.5 py-1 bg-elevated border border-border rounded-md text-fg-tertiary text-xs cursor-pointer shrink-0"
+        >
+          {isConfigs ? ui.toolbar.addConfigKey : ui.toolbar.addKey}
         </button>
       </div>
     </div>

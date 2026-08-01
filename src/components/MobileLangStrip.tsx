@@ -15,12 +15,14 @@ export const MobileLangStrip = ({
   onSelectLang,
   filter,
   onFilterChange,
+  hideVarIssues,
 }: {
   langs: LangStat[]
   activeLang: string
   onSelectLang: (l: string) => void
   filter: FilterMode
   onFilterChange: (f: FilterMode) => void
+  hideVarIssues?: boolean
 }) => {
   return (
     <div className="bg-surface border-b border-border-muted shrink-0">
@@ -45,7 +47,9 @@ export const MobileLangStrip = ({
         })}
       </div>
       <div className="flex px-3 pb-2 gap-1.5">
-        {(['all', 'missing', 'modified', 'var-issues'] as FilterMode[]).map(f => {
+        {((hideVarIssues
+          ? ['all', 'missing', 'modified']
+          : ['all', 'missing', 'modified', 'var-issues']) as FilterMode[]).map(f => {
           const active = filter === f
           return (
             <button

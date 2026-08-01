@@ -1,4 +1,4 @@
-import type { GitHubConfig } from '../types'
+import type { GitHubConfig, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
 import { ui, UI_LOCALES, type UiLocale } from '../i18n/ui'
 import { GithubIcon, HistoryIcon } from './Icons'
@@ -12,6 +12,8 @@ export const TopBar = ({
   isMobile,
   isDark,
   uiLocale,
+  workspace,
+  onWorkspaceChange,
   onUiLocaleChange,
   onLoad,
   onCommit,
@@ -27,6 +29,8 @@ export const TopBar = ({
   isMobile: boolean
   isDark: boolean
   uiLocale: UiLocale
+  workspace: WorkspaceMode
+  onWorkspaceChange: (mode: WorkspaceMode) => void
   onUiLocaleChange: (locale: UiLocale) => void
   onLoad: () => void
   onCommit: () => void
@@ -41,6 +45,26 @@ export const TopBar = ({
       <div className="flex items-center gap-1.5">
         <div className="size-[26px] bg-linear-to-br from-brand to-brand-soft rounded-md flex items-center justify-center text-[10px] font-bold text-fg-on-brand shrink-0">{ui.app.logo}</div>
         {!isMobile && <span className="text-[13px] font-semibold text-fg tracking-tight whitespace-nowrap">{ui.app.name}</span>}
+      </div>
+
+      <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden shrink-0">
+        {([
+          ['translations', ui.topBar.workspaceTranslations],
+          ['configs', ui.topBar.workspaceConfigs],
+        ] as const).map(([mode, label]) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => onWorkspaceChange(mode)}
+            className={cn(
+              'px-2.5 py-1 border-none text-[11px] cursor-pointer font-inherit whitespace-nowrap',
+              mode === 'translations' && 'border-r border-border-strong',
+              workspace === mode ? 'bg-brand-soft-bg text-fg-brand-strong font-semibold' : 'bg-transparent text-fg-muted font-normal',
+            )}
+          >
+            {isMobile ? (mode === 'translations' ? 'i18n' : 'cfg') : label}
+          </button>
+        ))}
       </div>
 
       {!isMobile && (

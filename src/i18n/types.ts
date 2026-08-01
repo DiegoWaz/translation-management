@@ -10,6 +10,7 @@ export type UiMessages = {
     disconnected: string; demo: string; loadGithub: string; loadGithubTitle: string
     history: string; historyTitle: string; commit: string; commitTitle: string; settings: string
     uiLang: string
+    workspaceTranslations: string; workspaceConfigs: string
   }
   filters: {
     all: string; allKeys: string; missing: string; missingShort: string
@@ -22,12 +23,12 @@ export type UiMessages = {
     modifiedCount: string; modifiedCountPlural: string
   }
   toolbar: {
-    searchByKey: string; searchAllLocales: string
+    searchByKey: string; searchAllLocales: string; searchConfigs: string
     modeLocale: string; modeKey: string
     varsOk: string; varsIssues: string; varsIssuesPlural: string; varsOff: string
     varsDisableTitle: string; varsEnableTitle: string
     export: string; exportTitle: string; import: string; importTitle: string
-    addKey: string; addKeyTitle: string
+    addKey: string; addKeyTitle: string; addConfigKey: string; addConfigKeyTitle: string
   }
   table: {
     key: string; allLanguages: string; lastModified: string; empty: string
@@ -53,7 +54,8 @@ export type UiMessages = {
   }
   commit: {
     title: string; messageLabel: string; messagePlaceholder: string
-    pushTo: string; defaultMessage: string; newFile: string
+    pushTo: string; defaultMessage: string; configDefaultMessage: string; configSchemaMessage: string
+    newFile: string; schemaFile: string
   }
   settings: {
     title: string; envConfigured: string; envMissing: string; envOnlyHint: string
@@ -61,7 +63,8 @@ export type UiMessages = {
     tokenPermRepo: string; tokenPermWrite: string
     fields: { token: string; owner: string; repo: string; branch: string; baseLang: string }
     placeholders: { pathTemplate: string }
-    pathTemplateLabel: string; activeLanguages: string; done: string
+    pathTemplateLabel: string; configPathTemplateLabel: string; configSchemaPathLabel: string
+    activeLanguages: string; done: string
   }
   import: {
     title: string; subtitle: string
@@ -77,17 +80,34 @@ export type UiMessages = {
     detected: string; keysInLang: string
   }
   export: {
-    title: string; summary: string; format: string
-    formatJson: string; formatJsonHint: string; formatTsv: string; formatTsvHint: string
+    title: string; titleConfigs: string; summary: string; format: string
+    formatJson: string; formatJsonHint: string
+    formatCsv: string; formatCsvHint: string
+    formatTsv: string; formatTsvHint: string
+    tableView: string; rawView: string
     keys: string; keysAll: string; keysFiltered: string; languages: string
     preview: string; close: string; copy: string; copied: string; download: string
   }
   toast: {
-    loadedFromGithub: string; error: string; historyError: string
+    loadedFromGithub: string; draftRestored: string; error: string; historyError: string
     nothingToCommit: string; commitPushed: string
-    keyRestored: string; keyAdded: string
+    keyRestored: string; keyAdded: string; configKeyAdded: string
     valuesImported: string; valuesImportedJson: string
     copiedClipboard: string; fileDownloaded: string
+  }
+  configs: {
+    empty: string; clickToEdit: string; deleteKey: string; keyPlaceholder: string
+    invalidNumber: string; errorDuplicate: string; errorCamelCase: string
+    notSet: string; clearOnLocale: string; unsetInLang: string
+    openModal: string; modalEdit: string; modalViewOnly: string; sheets: string
+    fieldsCount: string
+    useBaseStructure: string; formatJson: string
+    excelView: string; jsonView: string; excelEmpty: string; excelHint: string
+    excelFieldColumn: string; excelValueColumn: string; excelBaseColumn: string
+    excelDiffHint: string; excelMissingInLocale: string; excelOnlyInLocale: string
+    excelDiffBadge: string; excelDiffCount: string
+    shapeMismatch: string; jsonHint: string
+    types: { text: string; number: string; json: string }
   }
   time: {
     justNow: string; minutesAgo: string; hoursAgo: string; daysAgo: string

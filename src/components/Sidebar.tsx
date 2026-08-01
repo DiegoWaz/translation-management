@@ -44,6 +44,7 @@ export const Sidebar = ({
   onFilterChange,
   baseKeys,
   compact,
+  hideVarIssues,
 }: {
   langs: LangStat[]
   activeLang: string
@@ -52,6 +53,7 @@ export const Sidebar = ({
   onFilterChange: (f: FilterMode) => void
   baseKeys: string[]
   compact?: boolean
+  hideVarIssues?: boolean
 }) => {
   const s = langs.find(l => l.lang === activeLang)
   const missing = s ? s.total - s.filled : 0
@@ -102,7 +104,9 @@ export const Sidebar = ({
 
       <SidebarSection title={ui.sidebar.filter} compact={compact}>
         <div className={cn('flex flex-col gap-0.5', compact ? 'px-2 pb-2 pt-1' : 'px-2.5 pb-2.5 pt-1')}>
-          {(['all', 'missing', 'modified', 'var-issues'] as FilterMode[]).map(f => {
+          {((hideVarIssues
+            ? ['all', 'missing', 'modified']
+            : ['all', 'missing', 'modified', 'var-issues']) as FilterMode[]).map(f => {
             const active = filter === f
             return (
               <button

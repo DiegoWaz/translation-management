@@ -117,7 +117,7 @@ export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLa
                   <span className={cn('text-[10px] font-mono', isModified ? 'text-fg-brand' : 'text-fg-muted')}>{f.lang}</span>
                   {isBase && <span className="text-[8px] text-fg-muted bg-elevated px-1 py-px rounded-sm tracking-wide">{ui.common.baseBadge}</span>}
                 </div>
-                <div className="flex-1 min-w-0" onClick={() => !isBase && !isEditing && setEditingLang(f.lang)}>
+                <div className="flex-1 min-w-0" onClick={() => !isEditing && setEditingLang(f.lang)}>
                   {isEditing ? (
                     <textarea
                       ref={inputRef}
@@ -130,10 +130,10 @@ export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLa
                     />
                   ) : (
                     <span className={cn(
-                      'block text-xs whitespace-nowrap overflow-hidden text-ellipsis px-2 py-1 rounded border border-solid',
-                      isBase ? 'text-fg-muted bg-transparent border-transparent cursor-default' : isMissing ? 'text-fg-faint italic bg-row-even border-border-warning cursor-text' : isModified ? 'text-fg-brand-strong bg-row-even border-border-accent cursor-text' : 'text-fg-secondary bg-row-even border-border cursor-text',
+                      'block text-xs whitespace-nowrap overflow-hidden text-ellipsis px-2 py-1 rounded border border-solid cursor-text',
+                      isMissing ? 'text-fg-faint italic bg-row-even border-border-warning' : isModified ? 'text-fg-brand-strong bg-row-even border-border-accent' : isBase ? 'text-fg-muted bg-row-even border-border' : 'text-fg-secondary bg-row-even border-border',
                     )}>
-                      {val || (isBase ? ui.common.emptyDash : ui.table.clickToTranslateEllipsis)}
+                      {val || ui.table.clickToTranslateEllipsis}
                     </span>
                   )}
                 </div>

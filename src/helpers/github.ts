@@ -23,13 +23,20 @@ const ghFetch = async (token: string, path: string, opts?: RequestInit) => {
   return res.json()
 }
 
-export const loadFile = async (config: GitHubConfig, path: string) => {
+const decodeContent = (data: { content: string }) =>
+  JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))))
+
+export const loadJsonFile = async <T>(
+  config: GitHubConfig,
+  path: string,
+  empty: T,
+): Promise<{ content: T; sha: string }> => {
   const res = await ghRequest(
     config.token,
     `/repos/${config.owner}/${config.repo}/contents/${path}?ref=${config.branch}`,
   )
   if (res.status === 404) {
-    return { content: {} as Record<string, string>, sha: '' }
+    return { content: empty, sha: '' }
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -37,30 +44,90 @@ export const loadFile = async (config: GitHubConfig, path: string) => {
   }
   const data = await res.json()
   return {
-    content: JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))))) as Record<string, string>,
+    content: decodeContent(data) as T,
     sha: data.sha as string,
   }
 }
 
-export const pushFile = async (
-  config: GitHubConfig,
-  path: string,
-  content: Record<string, string>,
-  sha: string,
-  message: string,
-) => {
-  const body: Record<string, string> = {
-    message,
-    content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
-    branch: config.branch,
-  }
-  if (sha) body.sha = sha
+export type JsonFileChange = {
+  path: string
+  content: unknown
+}
 
-  const data = await ghFetch(config.token, `/repos/${config.owner}/${config.repo}/contents/${path}`, {
-    method: 'PUT',
-    body: JSON.stringify(body),
+/**
+ * Creates a single Git commit that updates one or more JSON files on the branch.
+ * Returns a map of path → blob SHA (same as Contents API content.sha).
+ */
+export const commitJsonFiles = async (
+  config: GitHubConfig,
+  files: JsonFileChange[],
+  message: string,
+): Promise<Record<string, string>> => {
+  if (files.length === 0) return {}
+
+  const { owner, repo, branch, token } = config
+  const refPath = `/repos/${owner}/${repo}/git/ref/heads/${branch}`
+  const ref = await ghFetch(token, refPath)
+  const parentSha = ref.object.sha as string
+
+  const parentCommit = await ghFetch(token, `/repos/${owner}/${repo}/git/commits/${parentSha}`)
+  const baseTreeSha = parentCommit.tree.sha as string
+
+  const treeItems = await Promise.all(
+    files.map(async ({ path, content }) => {
+      const blob = await ghFetch(token, `/repos/${owner}/${repo}/git/blobs`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: JSON.stringify(content, null, 4),
+          encoding: 'utf-8',
+        }),
+      })
+      return {
+        path,
+        mode: '100644' as const,
+        type: 'blob' as const,
+        sha: blob.sha as string,
+      }
+    }),
+  )
+
+  const newTree = await ghFetch(token, `/repos/${owner}/${repo}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({
+      base_tree: baseTreeSha,
+      tree: treeItems,
+    }),
   })
-  return data.content.sha as string
+
+  const newCommit = await ghFetch(token, `/repos/${owner}/${repo}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({
+      message,
+      tree: newTree.sha,
+      parents: [parentSha],
+    }),
+  })
+
+  await ghFetch(token, refPath, {
+    method: 'PATCH',
+    body: JSON.stringify({ sha: newCommit.sha }),
+  })
+
+  return Object.fromEntries(treeItems.map(item => [item.path, item.sha]))
+}
+
+export const loadFile = async (config: GitHubConfig, path: string) => {
+  return loadJsonFile<Record<string, string>>(config, path, {})
+}
+
+const asDiffString = (value: unknown): string => {
+  if (value === undefined || value === null) return ''
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
 }
 
 export const fetchFileCommits = async (config: GitHubConfig, path: string): Promise<CommitRecord[]> => {
@@ -74,14 +141,14 @@ export const fetchFileCommits = async (config: GitHubConfig, path: string): Prom
     let changedKeys: Record<string, KeyChange> = {}
     try {
       const [curr, prev] = await Promise.all([
-        loadFile({ ...config, branch: c.sha }, path).then(r => r.content),
+        loadJsonFile<Record<string, unknown>>({ ...config, branch: c.sha }, path, {}).then(r => r.content),
         i + 1 < commits.length
-          ? loadFile({ ...config, branch: commits[i + 1].sha }, path).then(r => r.content)
-          : Promise.resolve({} as Record<string, string>),
+          ? loadJsonFile<Record<string, unknown>>({ ...config, branch: commits[i + 1].sha }, path, {}).then(r => r.content)
+          : Promise.resolve({} as Record<string, unknown>),
       ])
       for (const key of new Set([...Object.keys(curr), ...Object.keys(prev)])) {
-        const before = prev[key] ?? ''
-        const after = curr[key] ?? ''
+        const before = asDiffString(prev[key])
+        const after = asDiffString(curr[key])
         if (before !== after) {
           changedKeys[key] = { before, after, type: !before ? 'added' : !after ? 'deleted' : 'modified' }
         }

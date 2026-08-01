@@ -1,6 +1,8 @@
-import type { CommitRecord } from '../types'
+import type { CommitRecord, ConfigMap, ConfigSchema } from '../types'
 
 export const DEFAULT_PATH_TEMPLATE = 'locales/{lang}.json'
+export const DEFAULT_CONFIG_PATH_TEMPLATE = 'configs/{lang}.json'
+export const DEFAULT_CONFIG_SCHEMA_PATH = 'configs/schema.json'
 
 const DEMO_KEYS = [
   'app.title', 'app.subtitle', 'nav.home', 'nav.dashboard', 'nav.settings', 'nav.logout',
@@ -14,7 +16,7 @@ const DEMO_KEYS = [
 
 /** Sample base-language strings for offline demo (not tied to a specific locale code). */
 const SAMPLE_BASE: Record<string, string> = {
-  'app.title': 'Translation manager',
+  'app.title': 'LocaleHub',
   'app.subtitle': 'Manage your translations',
   'nav.home': 'Home',
   'nav.dashboard': 'Dashboard',
@@ -76,6 +78,37 @@ export const buildDemoTranslations = (
     if (lang === baseLang) acc[lang] = { ...SAMPLE_BASE }
     else if (lang === targetLang) acc[lang] = { ...SAMPLE_TARGET }
     else acc[lang] = emptyKeys()
+    return acc
+  }, {})
+}
+
+export const DEMO_CONFIG_SCHEMA: ConfigSchema = {
+  supportEmail: 'text',
+  featureMaxItems: 'number',
+  themeColors: 'json',
+}
+
+const DEMO_CONFIG_BASE: ConfigMap = {
+  supportEmail: 'support@example.com',
+  featureMaxItems: 12,
+  themeColors: { primary: '#3b82f6', danger: '#ef4444' },
+}
+
+const DEMO_CONFIG_TARGET: ConfigMap = {
+  // Intentionally partial: configs may exist on some locales only
+  supportEmail: 'support@example.fr',
+  featureMaxItems: 10,
+}
+
+export const buildDemoConfigs = (
+  langs: string[],
+  baseLang: string,
+): Record<string, ConfigMap> => {
+  const targetLang = langs.find(l => l !== baseLang)
+  return langs.reduce<Record<string, ConfigMap>>((acc, lang) => {
+    if (lang === baseLang) acc[lang] = { ...DEMO_CONFIG_BASE }
+    else if (lang === targetLang) acc[lang] = { ...DEMO_CONFIG_TARGET }
+    else acc[lang] = {}
     return acc
   }, {})
 }

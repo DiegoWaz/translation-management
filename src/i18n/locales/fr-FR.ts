@@ -2,8 +2,8 @@ import type { UiMessages } from '../types'
 
 export const frFR: UiMessages = {
   "app": {
-    "name": "TranslationHub",
-    "logo": "i18n"
+    "name": "LocaleHub",
+    "logo": "LH"
   },
   "common": {
     "close": "×",
@@ -35,7 +35,9 @@ export const frFR: UiMessages = {
     "commit": "Committer",
     "commitTitle": "Committer",
     "settings": "⚙",
-    "uiLang": "Langue de l'interface"
+    "uiLang": "Langue de l'interface",
+    "workspaceTranslations": "Traductions",
+    "workspaceConfigs": "Configs"
   },
   "filters": {
     "all": "Toutes",
@@ -60,6 +62,7 @@ export const frFR: UiMessages = {
   "toolbar": {
     "searchByKey": "Rechercher par clé…",
     "searchAllLocales": "Rechercher dans toutes les langues…",
+    "searchConfigs": "Rechercher des clés config…",
     "modeLocale": "🌐 Locale",
     "modeKey": "🔑 Clé",
     "varsOk": "✓ vars",
@@ -73,7 +76,9 @@ export const frFR: UiMessages = {
     "import": "↓ Importer",
     "importTitle": "Importer",
     "addKey": "+ Clé",
-    "addKeyTitle": "Ajouter une clé"
+    "addKeyTitle": "Ajouter une clé",
+    "addConfigKey": "+ Config",
+    "addConfigKeyTitle": "Ajouter une clé config"
   },
   "table": {
     "key": "Clé",
@@ -127,7 +132,10 @@ export const frFR: UiMessages = {
     "messagePlaceholder": "feat(i18n): update translations",
     "pushTo": "Pousser sur {branch}",
     "defaultMessage": "feat(i18n): update {langs} translations",
-    "newFile": "Nouveau fichier"
+    "configDefaultMessage": "feat(config): update {langs}",
+    "configSchemaMessage": "feat(config): update schema",
+    "newFile": "Nouveau fichier",
+    "schemaFile": "Schéma"
   },
   "settings": {
     "title": "Configuration",
@@ -148,7 +156,9 @@ export const frFR: UiMessages = {
     "placeholders": {
       "pathTemplate": "locales/{lang}.json"
     },
-    "pathTemplateLabel": "Chemin des fichiers (modèle)",
+    "pathTemplateLabel": "Chemin traductions (modèle)",
+    "configPathTemplateLabel": "Chemin configs (modèle)",
+    "configSchemaPathLabel": "Chemin schéma config",
     "activeLanguages": "Langues actives",
     "done": "Fermer"
   },
@@ -185,12 +195,17 @@ export const frFR: UiMessages = {
   },
   "export": {
     "title": "Exporter les traductions",
+    "titleConfigs": "Exporter les configs",
     "summary": "{langs} langue{langsSuffix} · {keys} clé{keysSuffix}",
     "format": "Format",
     "formatJson": "JSON",
     "formatJsonHint": "{\"en\":{…}}",
+    "formatCsv": "CSV / Excel",
+    "formatCsvHint": "key,en-UK,fr-FR,…",
     "formatTsv": "Tableau (TSV)",
-    "formatTsvHint": "EN\\tval1\\tval2",
+    "formatTsvHint": "key\\ten-UK\\tfr-FR",
+    "tableView": "Tableau",
+    "rawView": "Brut",
     "keys": "Clés",
     "keysAll": "Toutes ({count})",
     "keysFiltered": "Vue courante ({count})",
@@ -203,16 +218,56 @@ export const frFR: UiMessages = {
   },
   "toast": {
     "loadedFromGithub": "Fichiers chargés depuis GitHub",
+    "draftRestored": "Brouillon non commité restauré depuis ce navigateur",
     "error": "Erreur: {message}",
     "historyError": "Erreur historique: {message}",
     "nothingToCommit": "Aucune modification à committer",
     "commitPushed": "Commit poussé sur {branch} — {count} clés modifiées",
     "keyRestored": "Clé \"{key}\" restaurée",
     "keyAdded": "Clé \"{key}\" ajoutée",
+    "configKeyAdded": "Clé config \"{key}\" ajoutée",
     "valuesImported": "{count} valeurs importées",
     "valuesImportedJson": "{count} valeurs importées (JSON)",
     "copiedClipboard": "Copié dans le presse-papiers",
     "fileDownloaded": "Fichier .{ext} téléchargé"
+  },
+  "configs": {
+    "empty": "Aucune clé config pour l'instant",
+    "clickToEdit": "Cliquer pour éditer…",
+    "deleteKey": "Supprimer la clé config",
+    "keyPlaceholder": "featureMaxItems",
+    "invalidNumber": "Entrez un nombre valide",
+    "errorDuplicate": "Cette clé config existe déjà",
+    "errorCamelCase": "Les clés config doivent être en camelCase (ex. featureMaxItems)",
+    "notSet": "Non définie sur cette locale…",
+    "clearOnLocale": "Retirer de cette locale",
+    "unsetInLang": "{label} : non définie",
+    "openModal": "Ouvrir",
+    "modalEdit": "Édition JSON · vue Excel ou brute",
+    "modalViewOnly": "Locale de base · lecture seule",
+    "sheets": "feuilles",
+    "fieldsCount": "{count} champs",
+    "useBaseStructure": "Structure de la base",
+    "formatJson": "Formater le JSON",
+    "excelView": "Vue Excel",
+    "jsonView": "Vue JSON",
+    "excelEmpty": "Rien à afficher en tableau",
+    "excelHint": "field | value sur une ligne · groupes ▸ et [n] pour chaque niveau · Enregistrer pour valider",
+    "excelFieldColumn": "champ",
+    "excelValueColumn": "valeur",
+    "excelBaseColumn": "base",
+    "excelDiffHint": "Les lignes surlignées diffèrent de la locale de base",
+    "excelMissingInLocale": "(absent dans cette locale)",
+    "excelOnlyInLocale": "(uniquement dans cette locale)",
+    "excelDiffBadge": "diff",
+    "excelDiffCount": "{count} écarts",
+    "shapeMismatch": "Type incompatible avec la locale de base (champs omis ou en plus = OK) :",
+    "jsonHint": "Ctrl/⌘+Entrée pour sauver · Échap pour annuler · ▾/▸ dans la gouttière pour plier",
+    "types": {
+      "text": "texte",
+      "number": "nombre",
+      "json": "json"
+    }
   },
   "time": {
     "justNow": "à l'instant",

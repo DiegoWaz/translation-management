@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_GH_BASE_LANG?: string
   readonly VITE_GH_PATH_TEMPLATE?: string
   readonly VITE_GH_LANGS?: string
+  readonly VITE_GH_CONFIG_PATH_TEMPLATE?: string
+  readonly VITE_GH_CONFIG_SCHEMA_PATH?: string
 }
 
 interface ImportMeta {
