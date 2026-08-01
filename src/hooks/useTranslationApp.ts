@@ -180,10 +180,16 @@ export const useTranslationApp = () => {
     try {
       const langs = [...new Set([...modifiedKeys.map(m => m.lang), ...langsNeedingFile])]
       const newShas = { ...shas }
+      const customMsg = commitMsg.trim()
       for (const lang of langs) {
         const file = config.files.find(f => f.lang === lang)
         if (!file) continue
-        newShas[lang] = await pushFile(config, file.path, translations[lang] ?? {}, shas[lang] ?? '', commitMsg)
+        // Contents API = one GitHub commit per file → message must name that locale only
+        const message =
+          langs.length === 1 && customMsg
+            ? customMsg
+            : t(ui.commit.defaultMessage, { langs: lang })
+        newShas[lang] = await pushFile(config, file.path, translations[lang] ?? {}, shas[lang] ?? '', message)
       }
       setShas(newShas)
       setOriginal(cloneTranslations(translations))
