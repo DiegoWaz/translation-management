@@ -1,0 +1,106 @@
+/* Semantic tokens — reference primitives only */
+
+:root,
+[data-theme='light'] {
+  --background-page: var(--color-lightgray-400);
+  --background-surface: var(--color-lightgray-50);
+  --background-card: var(--color-lightgray-50);
+  --background-elevated: var(--color-lightgray-300);
+  --background-row-even: var(--color-lightgray-100);
+  --background-row-odd: var(--color-lightgray-200);
+  --background-row-hover: var(--color-neutral-150);
+  --background-input: var(--color-lightgray-50);
+  --background-overlay: hsl(0, 0%, 0%, 0.4);
+
+  --background-brand-soft: var(--color-indigo-50);
+  --background-success: var(--color-green-50);
+  --background-warning: var(--color-amber-50);
+  --background-danger: var(--color-red-50);
+  --background-accent: var(--color-indigo-50);
+
+  --border-subtle: var(--color-neutral-300);
+  --border-muted: var(--color-lightgray-600);
+  --border-default: var(--color-lightgray-700);
+  --border-strong: var(--color-lightgray-800);
+  --border-brand: var(--color-indigo-600);
+  --border-brand-soft: hsl(232, 67%, 54%, 0.38);
+  --border-success: var(--color-green-100);
+  --border-warning: var(--color-amber-100);
+  --border-accent: var(--color-indigo-100);
+
+  --text-primary: var(--color-neutral-850);
+  --text-secondary: var(--color-neutral-700);
+  --text-tertiary: var(--color-neutral-600);
+  --text-muted: var(--color-neutral-550);
+  --text-faint: var(--color-neutral-500);
+  --text-key: var(--color-indigo-800);
+  --text-brand: var(--color-indigo-300);
+  --text-brand-strong: hsl(232, 60%, 38%);
+  --text-success: var(--color-green-300);
+  --text-warning: var(--color-amber-200);
+  --text-danger: var(--color-red-400);
+  --text-on-brand: var(--color-neutral-0);
+  --text-demo: var(--color-amber-200);
+  --text-stale: var(--color-bronze-500);
+  --text-stale-muted: hsl(48, 100%, 21%);
+
+  --brand: var(--color-indigo-600);
+  --brand-hover: var(--color-indigo-500);
+  --brand-soft: var(--color-indigo-300);
+  --brand-gradient-end: var(--color-indigo-700);
+
+  --shadow-toast: 0 4px 20px hsl(0, 0%, 0%, 0.12);
+  --color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --background-page: var(--color-neutral-1000);
+  --background-surface: var(--color-neutral-975);
+  --background-card: var(--color-neutral-950);
+  --background-elevated: var(--color-darkgray-400);
+  --background-row-even: var(--color-darkgray-100);
+  --background-row-odd: var(--color-darkgray-50);
+  --background-row-hover: var(--color-neutral-950);
+  --background-input: var(--color-darkgray-200);
+  --background-overlay: hsl(0, 0%, 0%, 0.75);
+
+  --background-brand-soft: var(--color-darkgray-400);
+  --background-success: var(--color-green-900);
+  --background-warning: var(--color-amber-900);
+  --background-danger: var(--color-red-900);
+  --background-accent: var(--color-darkgray-400);
+
+  --border-subtle: var(--color-neutral-925);
+  --border-muted: var(--color-neutral-900);
+  --border-default: var(--color-darkgray-700);
+  --border-strong: var(--color-darkgray-900);
+  --border-brand: var(--color-indigo-600);
+  --border-brand-soft: hsl(232, 67%, 54%, 0.38);
+  --border-success: var(--color-green-800);
+  --border-warning: var(--color-amber-800);
+  --border-accent: var(--color-darkgray-800);
+
+  --text-primary: var(--color-neutral-300);
+  --text-secondary: var(--color-indigo-950);
+  --text-tertiary: var(--color-neutral-650);
+  --text-muted: var(--color-neutral-750);
+  --text-faint: var(--color-neutral-800);
+  --text-key: var(--color-indigo-900);
+  --text-brand: var(--color-indigo-300);
+  --text-brand-strong: var(--color-indigo-950);
+  --text-success: var(--color-green-200);
+  --text-warning: var(--color-amber-200);
+  --text-danger: var(--color-red-400);
+  --text-on-brand: var(--color-neutral-0);
+  --text-demo: var(--color-amber-200);
+  --text-stale: var(--color-bronze-500);
+  --text-stale-muted: hsl(48, 100%, 21%);
+
+  --brand: var(--color-indigo-600);
+  --brand-hover: var(--color-indigo-500);
+  --brand-soft: var(--color-indigo-300);
+  --brand-gradient-end: var(--color-indigo-700);
+
+  --shadow-toast: 0 4px 20px hsl(0, 0%, 0%, 0.4);
+  --color-scheme: dark;
+}

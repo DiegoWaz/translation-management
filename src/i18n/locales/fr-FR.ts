@@ -1,0 +1,223 @@
+import type { UiMessages } from '../types'
+
+export const frFR: UiMessages = {
+  "app": {
+    "name": "TranslationHub",
+    "logo": "i18n"
+  },
+  "common": {
+    "close": "×",
+    "cancel": "Annuler",
+    "save": "Sauvegarder",
+    "add": "Ajouter",
+    "all": "Tous",
+    "base": "Base",
+    "baseBadge": "BASE",
+    "emptyDash": "—",
+    "check": "✓",
+    "moreCount": "+{count}",
+    "moreOthers": "+{count} autres",
+    "characters": "{count} caractères"
+  },
+  "theme": {
+    "toLight": "Passer en mode clair",
+    "toDark": "Passer en mode sombre",
+    "lightIcon": "☀",
+    "darkIcon": "☾"
+  },
+  "topBar": {
+    "disconnected": "non connecté",
+    "demo": "DÉMO",
+    "loadGithub": "↓ GitHub",
+    "loadGithubTitle": "Charger depuis GitHub",
+    "history": "Historique",
+    "historyTitle": "Historique",
+    "commit": "Committer",
+    "commitTitle": "Committer",
+    "settings": "⚙",
+    "uiLang": "Langue de l'interface"
+  },
+  "filters": {
+    "all": "Toutes",
+    "allKeys": "Toutes les clés",
+    "missing": "Manquantes",
+    "missingShort": "Manq.",
+    "modified": "Modifiées",
+    "modifiedShort": "Modif.",
+    "varIssues": "⚠ Variables",
+    "varIssuesLong": "⚠ Variables manquantes",
+    "varIssuesShort": "⚠ Vars"
+  },
+  "sidebar": {
+    "languages": "Langues",
+    "filter": "Filtrer",
+    "keysCount": "{count} clés",
+    "missingCount": "{count} manquante",
+    "missingCountPlural": "{count} manquantes",
+    "modifiedCount": "{count} modifiée",
+    "modifiedCountPlural": "{count} modifiées"
+  },
+  "toolbar": {
+    "searchByKey": "Rechercher par clé…",
+    "searchAllLocales": "Rechercher dans toutes les langues…",
+    "modeLocale": "🌐 Locale",
+    "modeKey": "🔑 Clé",
+    "varsOk": "✓ vars",
+    "varsIssues": "⚠ {count} var",
+    "varsIssuesPlural": "⚠ {count} vars",
+    "varsOff": "{x}",
+    "varsDisableTitle": "Désactiver la validation des variables",
+    "varsEnableTitle": "Activer la validation des variables",
+    "export": "↑ Exporter",
+    "exportTitle": "Exporter",
+    "import": "↓ Importer",
+    "importTitle": "Importer",
+    "addKey": "+ Clé",
+    "addKeyTitle": "Ajouter une clé"
+  },
+  "table": {
+    "key": "Clé",
+    "allLanguages": "Toutes les langues",
+    "lastModified": "Dernière modification",
+    "empty": "vide",
+    "clickToTranslate": "Cliquer pour traduire...",
+    "clickToTranslateEllipsis": "Cliquer pour traduire…",
+    "missingVar": "{var} manquant",
+    "missingVarsTitle": "Variable manquante : {vars}",
+    "missingVarsTitlePlural": "Variables manquantes : {vars}",
+    "foundInLang": "{label}: trouvé",
+    "missingInLang": "{label}: manquant",
+    "missingShortBadge": "{count} manq.",
+    "modifiedShortBadge": "{count} modif."
+  },
+  "empty": {
+    "noMissing": "Aucune clé manquante",
+    "noModified": "Aucune modification",
+    "noResult": "Aucun résultat pour \"{query}\"",
+    "noKey": "Aucune clé",
+    "iconMissing": "✓",
+    "iconSearch": "🔍"
+  },
+  "addKey": {
+    "placeholder": "nouvelle.cle"
+  },
+  "stale": {
+    "icon": "⚠️",
+    "changedSingular": "a été modifié",
+    "changedPlural": "ont été modifiés",
+    "bySomeoneElse": "par quelqu'un d'autre depuis votre chargement.",
+    "reload": "Recharger"
+  },
+  "history": {
+    "title": "Historique",
+    "demoBanner": "Données de démonstration — connectez GitHub pour l'historique réel",
+    "loading": "Chargement...",
+    "empty": "Aucun commit trouvé",
+    "keysCount": "{count} clé",
+    "keysCountPlural": "{count} clés",
+    "typeAdded": "+ AJOUT",
+    "typeDeleted": "− SUPPRIMÉ",
+    "typeModified": "~ MODIFIÉ",
+    "restore": "↩ Restaurer",
+    "restored": "✓ restaurée"
+  },
+  "commit": {
+    "title": "Committer",
+    "messageLabel": "Message de commit",
+    "messagePlaceholder": "feat(i18n): update translations",
+    "pushTo": "Pousser sur {branch}",
+    "defaultMessage": "feat(i18n): update {langs} translations",
+    "newFile": "Nouveau fichier"
+  },
+  "settings": {
+    "title": "Configuration",
+    "envConfigured": "Configuration chargée depuis les variables d'environnement.",
+    "envMissing": "GitHub non configuré — copiez .env.example vers .env et renseignez les variables, puis redémarrez le serveur.",
+    "envOnlyHint": "Toute la configuration équipe passe uniquement par le fichier .env (gitignored). Ne modifiez rien dans l'UI.",
+    "envInstallCommands": "cp .env.example .env\n# éditer VITE_GH_TOKEN, VITE_GH_OWNER, VITE_GH_REPO, …\npnpm install && pnpm run dev",
+    "missingValue": "— non défini —",
+    "tokenPermRepo": "repo",
+    "tokenPermWrite": "contents:write",
+    "fields": {
+      "token": "GitHub Token",
+      "owner": "Owner",
+      "repo": "Repository",
+      "branch": "Branche",
+      "baseLang": "Langue de base"
+    },
+    "placeholders": {
+      "pathTemplate": "locales/{lang}.json"
+    },
+    "pathTemplateLabel": "Chemin des fichiers (modèle)",
+    "activeLanguages": "Langues actives",
+    "done": "Fermer"
+  },
+  "import": {
+    "title": "Import en masse",
+    "subtitle": "Choisissez le format, collez vos données, puis assignez chaque colonne à une clé.",
+    "formatText": "Texte libre",
+    "formatTable": "Excel / Tableau",
+    "formatJson": "JSON",
+    "hintText": "EN\n\nBonjour !\n\nCTA\n\nFR\n\n…",
+    "hintTable": "EN\tBonjour !\tCTA\nFR\tHello!\tGet started",
+    "hintJson": "{\"en\":{\"clé\":\"val\"},\"fr\":{\"clé\":\"val\"}}",
+    "placeholderText": "EN\n\nHello {name}!\n\n10% off\n\nFR\n\nBonjour {name} !\n\n10% de réduction",
+    "placeholderTable": "EN\tBonjour {prenom} !\t10% de réduction\nFR\tHello {prenom}!\t10% off",
+    "placeholderJson": "{\n  \"en\": { \"clé\": \"valeur\" },\n  \"fr\": { \"clé\": \"valeur\" }\n}",
+    "jsonInvalid": "JSON invalide — attendu : { \"en\": { \"clé\": \"valeur\" }, … }",
+    "emptyHint": "Collez vos données pour commencer",
+    "emptyArrow": "⬅",
+    "assignmentSummary": "{locales} locale{localesSuffix} · {columns} colonne{columnsSuffix} — assignez chaque colonne à une clé",
+    "column": "Colonne {index}",
+    "targetKey": "Clé cible",
+    "choose": "— choisir —",
+    "newKeyPlaceholder": "ma.nouvelle.cle",
+    "localesAssigned": "{count} locale",
+    "localesAssignedPlural": "{count} locales",
+    "valuesToImport": "{count} valeur à importer",
+    "valuesToImportPlural": "{count} valeurs à importer",
+    "assignAtLeastOne": "Assignez au moins une clé",
+    "applyJson": "↓ Appliquer le JSON",
+    "apply": "↓ Appliquer",
+    "applyWithCount": "↓ Appliquer ({count})",
+    "detected": "{langs} langue{langsSuffix} · {keys} clé{keysSuffix} détectées",
+    "keysInLang": "({count} clés)"
+  },
+  "export": {
+    "title": "Exporter les traductions",
+    "summary": "{langs} langue{langsSuffix} · {keys} clé{keysSuffix}",
+    "format": "Format",
+    "formatJson": "JSON",
+    "formatJsonHint": "{\"en\":{…}}",
+    "formatTsv": "Tableau (TSV)",
+    "formatTsvHint": "EN\\tval1\\tval2",
+    "keys": "Clés",
+    "keysAll": "Toutes ({count})",
+    "keysFiltered": "Vue courante ({count})",
+    "languages": "Langues",
+    "preview": "Aperçu",
+    "close": "Fermer",
+    "copy": "⎘ Copier",
+    "copied": "✓ Copié !",
+    "download": "↓ Télécharger .{ext}"
+  },
+  "toast": {
+    "loadedFromGithub": "Fichiers chargés depuis GitHub",
+    "error": "Erreur: {message}",
+    "historyError": "Erreur historique: {message}",
+    "nothingToCommit": "Aucune modification à committer",
+    "commitPushed": "Commit poussé sur {branch} — {count} clés modifiées",
+    "keyRestored": "Clé \"{key}\" restaurée",
+    "keyAdded": "Clé \"{key}\" ajoutée",
+    "valuesImported": "{count} valeurs importées",
+    "valuesImportedJson": "{count} valeurs importées (JSON)",
+    "copiedClipboard": "Copié dans le presse-papiers",
+    "fileDownloaded": "Fichier .{ext} téléchargé"
+  },
+  "time": {
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {count}min",
+    "hoursAgo": "il y a {count}h",
+    "daysAgo": "il y a {count}j"
+  }
+}

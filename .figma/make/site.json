@@ -1,0 +1,10 @@
+{
+  "description": "Manage translations for multiple languages with collaborative editing, seamless GitHub integration, and a comprehensive history tracking for teams.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
