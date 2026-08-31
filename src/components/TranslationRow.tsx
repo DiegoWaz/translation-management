@@ -37,10 +37,26 @@ export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, 
       style={{ gridTemplateColumns: colTemplate }}
     >
       <div className={cn('flex items-center gap-1.5 min-w-0', isMobile ? 'px-2.5 py-2' : 'px-3 py-2')}>
-        {isModified && <span className="size-1 rounded-full bg-brand shrink-0" />}
-        {isMissing && !isModified && <span className="size-1 rounded-full bg-fg-warning shrink-0" />}
+        {isModified && (
+          <span 
+            className="text-fg-brand font-bold shrink-0 text-sm" 
+            title="Translation modified but not yet committed"
+            aria-label="Modified"
+          >
+            ◆
+          </span>
+        )}
+        {isMissing && !isModified && (
+          <span 
+            className="text-fg-warning font-bold shrink-0 text-sm" 
+            title="Translation is empty"
+            aria-label="Missing translation"
+          >
+            ⊘
+          </span>
+        )}
         {missing.length > 0 && (
-          <span title={missingVarsTitle} className="text-[11px] shrink-0">⚠️</span>
+          <span title={missingVarsTitle} className="text-[11px] shrink-0 flex-none">⚠️</span>
         )}
         <span className={cn('font-mono text-fg-key whitespace-nowrap overflow-hidden text-ellipsis', isMobile ? 'text-[11px]' : 'text-xs')}>{highlight(rowKey, q)}</span>
       </div>
