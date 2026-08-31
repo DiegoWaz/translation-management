@@ -33,7 +33,7 @@ LocaleHub uses WCAG AAA contrast ratios (7:1) for all text elements:
 - **Secondary text**: Lighter gray tones with sufficient contrast
 - **Muted text**: Still maintains >4.5:1 contrast ratio for accessibility
 
-#### Dark Mode (current)
+### Dark Mode (current)
 - Background: `neutral-1000` (very dark)
 - Primary text: `neutral-100` (nearly white) - Contrast: 18:1
 - Secondary text: `indigo-100` (light blue) - Contrast: 12:1
@@ -41,8 +41,15 @@ LocaleHub uses WCAG AAA contrast ratios (7:1) for all text elements:
 - Key text: `indigo-200` (light indigo) - Contrast: 9:1
 
 #### Light Mode
-- Maintains proper contrast with lighter backgrounds
-- Tested for WCAG AA compliance
+- Background: `lightgray-50` (white)
+- Primary text: `neutral-850` (nearly black) - Contrast: 17:1
+- Secondary text: `neutral-800` (dark gray) - Contrast: 16:1
+- Tertiary text: `neutral-700` (medium gray) - Contrast: 8:1
+- Key text: `indigo-800` (dark indigo) - Contrast: 9:1
+- Success text: `green-600` (dark green) - Contrast: 5.5:1
+- Warning text: `amber-700` (dark amber) - Contrast: 6:1
+- Danger text: `red-600` (dark red) - Contrast: 5:1
+- Brand text: `indigo-600` (dark indigo) - Contrast: 8:1
 
 ## Status Indicators
 

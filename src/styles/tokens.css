@@ -29,16 +29,16 @@
   --border-accent: var(--color-indigo-100);
 
   --text-primary: var(--color-neutral-850);
-  --text-secondary: var(--color-neutral-700);
-  --text-tertiary: var(--color-neutral-600);
-  --text-muted: var(--color-neutral-550);
-  --text-faint: var(--color-neutral-500);
+  --text-secondary: var(--color-neutral-800);
+  --text-tertiary: var(--color-neutral-700);
+  --text-muted: var(--color-neutral-600);
+  --text-faint: var(--color-neutral-550);
   --text-key: var(--color-indigo-800);
-  --text-brand: var(--color-indigo-300);
-  --text-brand-strong: hsl(232, 60%, 38%);
-  --text-success: var(--color-green-300);
-  --text-warning: var(--color-amber-200);
-  --text-danger: var(--color-red-400);
+  --text-brand: var(--color-indigo-600);
+  --text-brand-strong: var(--color-indigo-700);
+  --text-success: var(--color-green-600);
+  --text-warning: var(--color-amber-700);
+  --text-danger: var(--color-red-600);
   --text-on-brand: var(--color-neutral-0);
   --text-demo: var(--color-amber-200);
   --text-stale: var(--color-bronze-500);
