@@ -5,6 +5,8 @@ import {
   buildSheetMatrix,
   generateCsvExport,
   generateJsonExport,
+  generateNamespacedJsonPreview,
+  generateNamespacedZip,
   generateTsvExport,
 } from '../helpers/exportGenerators'
 import { btnPrimaryClass, btnSecClass } from '../helpers/styles'
@@ -43,22 +45,20 @@ export const ExportModal = ({
 
   const output = useMemo(() => {
     if (format === 'json') return generateJsonExport(data, langs, keys)
+    if (format === 'json-ns') return generateNamespacedJsonPreview(data, langs, keys)
     if (format === 'csv') return generateCsvExport(data, langs, keys)
     return generateTsvExport(data, langs, keys)
   }, [format, data, langs, keys])
 
   const matrix = useMemo(
-    () => (format === 'json' ? [] : buildSheetMatrix(data, langs, keys)),
+    () => (format === 'json' || format === 'json-ns' ? [] : buildSheetMatrix(data, langs, keys)),
     [format, data, langs, keys],
   )
 
-  const ext = format === 'json' ? 'json' : format === 'csv' ? 'csv' : 'tsv'
-  const mime =
-    format === 'json'
-      ? 'application/json'
-      : format === 'csv'
-        ? 'text/csv;charset=utf-8'
-        : 'text/tab-separated-values'
+  const extMap = { json: 'json', 'json-ns': 'zip', csv: 'csv', tsv: 'tsv' } as const
+  const mimeMap = { json: 'application/json', 'json-ns': 'application/zip', csv: 'text/csv;charset=utf-8', tsv: 'text/tab-separated-values' } as const
+  const ext = extMap[format]
+  const mime = mimeMap[format]
 
   const toggleLang = (l: string) => setSelectedLangs(prev => {
     const next = new Set(prev)
@@ -75,6 +75,17 @@ export const ExportModal = ({
   }
 
   const handleDownload = () => {
+    if (format === 'json-ns') {
+      generateNamespacedZip(data, langs, keys).then(blob => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `${downloadBasename ?? 'export'}.zip`
+        a.click()
+        URL.revokeObjectURL(a.href)
+        showToast(t(ui.toast.fileDownloaded, { ext: 'zip' }), 'success')
+      })
+      return
+    }
     const blob = new Blob([output], { type: mime })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -88,6 +99,7 @@ export const ExportModal = ({
     { key: 'csv' as const, label: ui.export.formatCsv, hint: ui.export.formatCsvHint },
     { key: 'tsv' as const, label: ui.export.formatTsv, hint: ui.export.formatTsvHint },
     { key: 'json' as const, label: ui.export.formatJson, hint: ui.export.formatJsonHint },
+    { key: 'json-ns' as const, label: ui.export.formatJsonNs, hint: ui.export.formatJsonNsHint },
   ]
 
   const keyScopeOptions = [
@@ -95,7 +107,7 @@ export const ExportModal = ({
     { key: 'filtered' as const, label: t(ui.export.keysFiltered, { count: filteredKeys.length }) },
   ]
 
-  const showTable = format !== 'json' && previewMode === 'table'
+  const showTable = format !== 'json' && format !== 'json-ns' && previewMode === 'table'
 
   return (
     <Overlay onClick={onClose}>
@@ -182,7 +194,7 @@ export const ExportModal = ({
             <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0 gap-2">
               <span className="text-[11px] text-fg-muted">{ui.export.preview}</span>
               <div className="flex items-center gap-2">
-                {format !== 'json' && (
+                {format !== 'json' && format !== 'json-ns' && (
                   <div className="flex bg-elevated border border-border rounded-md overflow-hidden">
                     {(['table', 'raw'] as const).map(mode => (
                       <button

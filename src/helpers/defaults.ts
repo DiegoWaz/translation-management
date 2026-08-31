@@ -1,8 +1,25 @@
-import type { CommitRecord, ConfigMap, ConfigSchema } from '../types'
+import type { CommitRecord, ConfigMap, ConfigSchema, GitHubConfig, LangFile } from '../types'
 
 export const DEFAULT_PATH_TEMPLATE = 'locales/{lang}.json'
 export const DEFAULT_CONFIG_PATH_TEMPLATE = 'configs/{lang}.json'
 export const DEFAULT_CONFIG_SCHEMA_PATH = 'configs/schema.json'
+
+// Default demo configuration when no GitHub config is available
+export const DEFAULT_DEMO_CONFIG: GitHubConfig = {
+  token: '',
+  owner: '',
+  repo: '',
+  branch: 'main',
+  baseLang: 'en-UK',
+  files: [
+    { lang: 'en-UK', label: 'English (UK)', flag: '🇬🇧', path: 'locales/en-UK.json' },
+    { lang: 'fr-FR', label: 'Français', flag: '🇫🇷', path: 'locales/fr-FR.json' },
+    { lang: 'es-ES', label: 'Español', flag: '🇪🇸', path: 'locales/es-ES.json' },
+  ] as LangFile[],
+  configPathTemplate: DEFAULT_CONFIG_PATH_TEMPLATE,
+  configSchemaPath: DEFAULT_CONFIG_SCHEMA_PATH,
+  alwaysNestJson: true,
+}
 
 const DEMO_KEYS = [
   'app.title', 'app.subtitle', 'nav.home', 'nav.dashboard', 'nav.settings', 'nav.logout',

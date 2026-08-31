@@ -16,6 +16,7 @@ import { ConfigBulkImportModal } from './components/ConfigBulkImportModal'
 import { ExportModal } from './components/ExportModal'
 import { SettingsModal } from './components/SettingsModal'
 import { CommitDialog } from './components/CommitDialog'
+import { SetupWizard } from './components/SetupWizard'
 import { defaultPath } from './helpers/lang'
 import { configMapsToStringMaps } from './helpers/exportGenerators'
 import { SchemaValidateWorkspace } from './components/SchemaValidateWorkspace'
@@ -61,6 +62,7 @@ const App = () => {
         onCommit={app.handleCommit}
         onHistory={app.handleToggleHistory}
         onSettings={() => app.setShowSettings(true)}
+        onSetup={() => app.setShowSetup(true)}
         onToggleTheme={() => app.setIsDark(v => !v)}
       />
 
@@ -181,6 +183,7 @@ const App = () => {
                 varIssuesMap={app.varIssuesMap}
                 onUpdate={app.updateValue}
                 onDelete={app.deleteKey}
+                onShowKeyHistory={(key) => { app.setKeyHistoryFilter(key); app.setShowHistory(true) }}
               />
             )}
           </main>
@@ -192,9 +195,12 @@ const App = () => {
               commits={app.fileHistory[app.activeLang] ?? []}
               loading={app.historyLoading}
               isDemoMode={app.isDemoMode}
-              onClose={() => app.setShowHistory(false)}
+              onClose={() => { app.setShowHistory(false); app.setKeyHistoryFilter(null) }}
               onRestoreKey={app.restoreKey}
               compact={app.isTablet}
+              keyFilter={app.keyHistoryFilter}
+              onKeyFilterChange={app.setKeyHistoryFilter}
+              onReturnToEdit={() => { app.setShowHistory(false); app.setKeyHistoryFilter(null) }}
             />
           )}
         </div>
@@ -218,6 +224,8 @@ const App = () => {
         <SettingsModal
           config={app.config}
           onClose={() => app.setShowSettings(false)}
+          onSetup={() => app.setShowSetup(true)}
+          onDisconnect={app.handleDisconnect}
           isMobile={app.isMobile}
         />
       )}
@@ -230,6 +238,7 @@ const App = () => {
           schemaDirty={isConfigs ? app.schemaDirty : false}
           resolvePath={isConfigs ? resolveConfigPath : undefined}
           config={app.config}
+          original={isConfigs ? (app.configsOriginal as Record<string, Record<string, string>>) : app.original}
           onConfirm={app.doCommit}
           onClose={() => app.setShowCommit(false)}
           isMobile={app.isMobile}
@@ -265,6 +274,15 @@ const App = () => {
           downloadBasename={isConfigs ? 'configs' : 'translations'}
           onClose={() => app.setShowExport(false)}
           showToast={app.showToast}
+          isMobile={app.isMobile}
+        />
+      )}
+
+      {app.showSetup && (
+        <SetupWizard
+          oauthToken={app.oauthToken}
+          onComplete={app.handleSetupComplete}
+          onSkip={() => app.setShowSetup(false)}
           isMobile={app.isMobile}
         />
       )}

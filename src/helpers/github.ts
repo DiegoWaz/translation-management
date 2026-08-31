@@ -1,4 +1,5 @@
 import type { CommitRecord, GitHubConfig, KeyChange } from '../types'
+import { flattenJson, unflattenJson, isNestedJson, applyChangesToNested } from './flattenJson'
 
 const GH = 'https://api.github.com'
 /**
@@ -30,7 +31,7 @@ const ghFetch = async (token: string, path: string, opts?: RequestInit) => {
 }
 
 const encodeJsonContent = (content: unknown): string =>
-  btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 4))))
+  btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 4) + '\n')))
 
 const decodeContent = (data: { content: string }) =>
   JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))))
@@ -125,7 +126,7 @@ const commitJsonFilesGitData = async (
       const blob = await ghFetch(token, `/repos/${owner}/${repo}/git/blobs`, {
         method: 'POST',
         body: JSON.stringify({
-          content: JSON.stringify(content, null, 4),
+          content: JSON.stringify(content, null, 4) + '\n',
           encoding: 'utf-8',
         }),
       })
@@ -194,7 +195,98 @@ export const commitJsonFiles = async (
 }
 
 export const loadFile = async (config: GitHubConfig, path: string) => {
-  return loadJsonFile<Record<string, string>>(config, path, {})
+  const { content: raw, sha } = await loadJsonFile<Record<string, unknown>>(config, path, {})
+  const nested = isNestedJson(raw)
+  const flat = nested ? flattenJson(raw) : raw as Record<string, string>
+  return { content: flat, sha, nested, rawContent: raw }
+}
+
+/** Load and merge multiple files (from different translation folders) for the same language. */
+export const loadMergedFiles = async (
+  config: GitHubConfig,
+  paths: string[],
+): Promise<{ content: Record<string, string>; shas: string[]; nested: boolean; originalFlat: Record<string, string>; rawContent: Record<string, unknown> }> => {
+  const results = await Promise.all(
+    paths.map(path => loadFile(config, path)),
+  )
+  
+  const merged: Record<string, string> = {}
+  const mergedRaw: Record<string, unknown> = {}
+  const shas: string[] = []
+  let wasNested = false
+  
+  results.forEach(result => {
+    if (result.nested) wasNested = true
+    Object.assign(merged, result.content)
+    Object.assign(mergedRaw, result.rawContent)
+    if (result.sha) shas.push(result.sha)
+  })
+  
+  return { content: merged, shas, nested: wasNested, originalFlat: { ...merged }, rawContent: mergedRaw }
+}
+
+/**
+ * Prepare translation content for commit.
+ * When rawContent + originalFlat are provided, applies only the actual changes
+ * onto the original nested structure, preserving key order and untouched sections.
+ */
+export const prepareCommitContent = (
+  currentFlat: Record<string, string>,
+  wasNested: boolean,
+  forceNest: boolean = false,
+  originalFlat?: Record<string, string>,
+  rawContent?: Record<string, unknown>,
+): unknown => {
+  if (wasNested && rawContent && originalFlat) {
+    // Original was nested — apply diffs onto the original structure
+    return applyChangesToNested(rawContent, originalFlat, currentFlat)
+  }
+  if (forceNest && originalFlat) {
+    // Original was flat but we want nested output — unflatten original, then apply diffs
+    const nestedBase = unflattenJson(originalFlat) as Record<string, unknown>
+    return applyChangesToNested(nestedBase, originalFlat, currentFlat)
+  }
+  return currentFlat
+}
+
+/** Create a new branch from the tip of the base branch, commit files, and open a PR. */
+export const commitJsonFilesAsPR = async (
+  config: GitHubConfig,
+  files: JsonFileChange[],
+  commitMessage: string,
+  prTitle: string,
+  customBranchName?: string,
+): Promise<{ prUrl: string; prNumber: number }> => {
+  if (files.length === 0) throw new Error('No files to commit')
+
+  const { owner, repo, branch: baseBranch, token } = config
+  const branchName = customBranchName || `localehub/${Date.now()}`
+
+  // Get the SHA of the base branch tip
+  const baseRef = await ghFetch(token, `/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`)
+  const baseSha = baseRef.object.sha as string
+
+  // Create the new branch
+  await ghFetch(token, `/repos/${owner}/${repo}/git/refs`, {
+    method: 'POST',
+    body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
+  })
+
+  // Commit files to the new branch
+  await commitJsonFiles({ ...config, branch: branchName }, files, commitMessage)
+
+  // Create the PR
+  const pr = await ghFetch(token, `/repos/${owner}/${repo}/pulls`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: prTitle,
+      head: branchName,
+      base: baseBranch,
+      body: `Translations updated via LocaleHub.\n\n${commitMessage}`,
+    }),
+  })
+
+  return { prUrl: pr.html_url as string, prNumber: pr.number as number }
 }
 
 const asDiffString = (value: unknown): string => {

@@ -4,10 +4,10 @@ import { cn } from '../helpers/cn'
 import { ui, t } from '../i18n/ui'
 import { highlight } from './highlight'
 
-export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLang, isEven, isMobile, onUpdate, onDelete, searchQuery }: {
+export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLang, isEven, isMobile, onUpdate, onDelete, onShowKeyHistory, searchQuery }: {
   rowKey: string; translations: Record<string, Record<string, string>>; original: Record<string, Record<string, string>>
   configFiles: LangFile[]; baseLang: string; isEven: boolean; isMobile: boolean
-  onUpdate: (lang: string, key: string, value: string) => void; onDelete: () => void; searchQuery?: string
+  onUpdate: (lang: string, key: string, value: string) => void; onDelete: () => void; onShowKeyHistory?: (key: string) => void; searchQuery?: string
 }) => {
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState(false)

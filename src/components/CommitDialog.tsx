@@ -1,10 +1,14 @@
+import { useState, useMemo } from 'react'
 import type { GitHubConfig } from '../types'
 import { cn } from '../helpers/cn'
 import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
 import { ui, t } from '../i18n/ui'
+import { detectCommitType, generateBranchName, generatePrTitle } from '../helpers/commitHelpers'
 import { Overlay } from './Overlay'
 import { Field } from './Field'
 import { GithubIcon } from './Icons'
+
+export type CommitMode = 'pr' | 'direct'
 
 export const CommitDialog = ({
   commitMsg,
@@ -14,6 +18,7 @@ export const CommitDialog = ({
   schemaDirty,
   resolvePath,
   config,
+  original,
   onConfirm,
   onClose,
   isMobile,
@@ -25,10 +30,23 @@ export const CommitDialog = ({
   schemaDirty?: boolean
   resolvePath?: (lang: string) => string
   config: GitHubConfig
-  onConfirm: () => void
+  original: Record<string, Record<string, string>>
+  onConfirm: (mode: CommitMode, prTitle?: string, branchName?: string) => void
   onClose: () => void
   isMobile: boolean
 }) => {
+  const [mode, setMode] = useState<CommitMode>('pr')
+  
+  // Auto-detect commit type
+  const commitType = useMemo(() => detectCommitType(modifiedKeys, original), [modifiedKeys, original])
+  
+  // Auto-generate branch name and PR title
+  const defaultBranchName = useMemo(() => generateBranchName(commitType), [commitType])
+  const defaultPrTitle = useMemo(() => generatePrTitle(commitType, commitMsg), [commitType, commitMsg])
+  
+  const [branchName, setBranchName] = useState(defaultBranchName)
+  const [prTitle, setPrTitle] = useState(defaultPrTitle)
+
   const byLang = modifiedKeys.reduce<Record<string, string[]>>((acc, { lang, key }) => {
     acc[lang] = acc[lang] ?? []
     acc[lang].push(key)
@@ -51,8 +69,42 @@ export const CommitDialog = ({
             <GithubIcon size={16} />
             <h2 className="m-0 text-[15px] font-semibold text-fg">{ui.commit.title}</h2>
           </div>
-          <button onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-xl">{ui.common.close}</button>
+          <button type="button" onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-xl">{ui.common.close}</button>
         </div>
+
+        {/* Commit type badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-fg-tertiary">{ui.commit.type}:</span>
+          <span className={cn(
+            'px-2 py-1 rounded text-xs font-semibold',
+            commitType === 'feat' 
+              ? 'bg-brand-soft-bg text-fg-brand'
+              : 'bg-warning-bg text-fg-warning'
+          )}>
+            {commitType === 'feat' ? '✨ feat' : '🔧 fix'}
+          </span>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMode('pr')}
+            className={cn(
+              'flex-1 px-3 py-1.5 text-xs cursor-pointer font-inherit border-none border-r border-border-strong',
+              mode === 'pr' ? 'bg-brand-soft-bg text-fg-brand font-semibold' : 'bg-transparent text-fg-muted',
+            )}
+          >{ui.commit.modePr}</button>
+          <button
+            type="button"
+            onClick={() => setMode('direct')}
+            className={cn(
+              'flex-1 px-3 py-1.5 text-xs cursor-pointer font-inherit border-none',
+              mode === 'direct' ? 'bg-brand-soft-bg text-fg-brand font-semibold' : 'bg-transparent text-fg-muted',
+            )}
+          >{ui.commit.modeDirect}</button>
+        </div>
+
         <div className="bg-elevated border border-border rounded-lg p-3 max-h-56 overflow-y-auto">
           {schemaDirty && (
             <div className="mb-2 text-xs text-fg-tertiary">
@@ -83,14 +135,43 @@ export const CommitDialog = ({
             )
           })}
         </div>
+
+        {mode === 'pr' && (
+          <>
+            <Field label={ui.commit.branchNameLabel}>
+              <input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="fix/1234567890" className={inputClass} />
+            </Field>
+            <Field label={ui.commit.prTitleLabel}>
+              <input value={prTitle} onChange={e => setPrTitle(e.target.value)} placeholder={ui.commit.prTitlePlaceholder} className={inputClass} />
+            </Field>
+          </>
+        )}
+
         <Field label={ui.commit.messageLabel}>
           <input value={commitMsg} onChange={e => onMsgChange(e.target.value)} placeholder={ui.commit.messagePlaceholder} className={inputClass} />
         </Field>
+
         <div className="flex gap-2.5 justify-end">
-          <button onClick={onClose} className={btnSecClass}>{ui.common.cancel}</button>
-          <button onClick={onConfirm} disabled={!commitMsg.trim()} className={btnPrimaryClass}>
-            <GithubIcon size={13} /> {t(ui.commit.pushTo, { branch: config.branch })}
-          </button>
+          <button type="button" onClick={onClose} className={btnSecClass}>{ui.common.cancel}</button>
+          {mode === 'pr' ? (
+            <button
+              type="button"
+              onClick={() => onConfirm('pr', prTitle, branchName)}
+              disabled={!commitMsg.trim() || !prTitle.trim() || !branchName.trim()}
+              className={cn(btnPrimaryClass, 'bg-success-bg border-border-success text-fg-success')}
+            >
+              <GithubIcon size={13} /> {ui.commit.createPr}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onConfirm('direct')}
+              disabled={!commitMsg.trim()}
+              className={btnPrimaryClass}
+            >
+              <GithubIcon size={13} /> {t(ui.commit.pushTo, { branch: config.branch })}
+            </button>
+          )}
         </div>
       </div>
     </Overlay>

@@ -6,13 +6,17 @@ import { ui, keysLabel } from '../i18n/ui'
 import { Avatar } from './Avatar'
 import { HistoryIcon } from './Icons'
 
-export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onClose, onRestoreKey, compact }: {
+export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onClose, onRestoreKey, compact, keyFilter, onKeyFilterChange, onReturnToEdit }: {
   lang: string; langFile?: LangFile; commits: CommitRecord[]; loading: boolean; isDemoMode: boolean
   onClose: () => void; onRestoreKey: (lang: string, key: string, value: string) => void; compact?: boolean
+  keyFilter?: string | null; onKeyFilterChange?: (key: string | null) => void; onReturnToEdit?: () => void
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [restoredKeys, setRestoredKeys] = useState<Set<string>>(new Set())
   const handleRestore = (key: string, value: string) => { onRestoreKey(lang, key, value); setRestoredKeys(prev => new Set([...prev, `${expanded}:${key}`])) }
+  
+  // Filter commits by key if specified
+  const filteredCommits = keyFilter ? commits.filter(c => keyFilter in c.changedKeys) : commits
 
   return (
     <aside className={cn(
@@ -24,7 +28,30 @@ export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onC
           <div className="text-[13px] font-semibold text-fg flex items-center gap-1.5">
             <HistoryIcon size={13} /> {ui.history.title} {langFile ? `${langFile.flag} ${langFile.label}` : lang}
           </div>
-          {langFile && <div className="text-[10px] text-fg-muted font-mono mt-0.5">{langFile.path}</div>}
+          {keyFilter && (
+            <div className="text-[10px] text-fg-brand font-mono mt-0.5 flex items-center gap-1.5">
+              🔍 {keyFilter}
+              {onKeyFilterChange && (
+                <>
+                  <button
+                    onClick={() => onReturnToEdit ? onReturnToEdit() : onKeyFilterChange(null)}
+                    className="text-fg-muted hover:text-fg-brand cursor-pointer"
+                    title="Return to editing this key"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={() => onKeyFilterChange(null)}
+                    className="text-fg-muted hover:text-fg-brand cursor-pointer"
+                    title="Clear filter"
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {langFile && !keyFilter && <div className="text-[10px] text-fg-muted font-mono mt-0.5">{langFile.path}</div>}
         </div>
         <button onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-lg">{ui.common.close}</button>
       </div>
@@ -33,16 +60,16 @@ export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onC
           {ui.history.demoBanner}
         </div>
       )}
-      {loading ? (
+       {loading ? (
         <div className="flex items-center justify-center h-[120px] text-fg-muted text-[13px]">{ui.history.loading}</div>
-      ) : commits.length === 0 ? (
+      ) : filteredCommits.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-40 text-fg-muted gap-2">
           <HistoryIcon size={24} />
-          <div className="text-[13px]">{ui.history.empty}</div>
+          <div className="text-[13px]">{keyFilter ? 'No changes for this key' : ui.history.empty}</div>
         </div>
       ) : (
         <div className="flex-1">
-          {commits.map((commit, i) => {
+          {filteredCommits.map((commit, i) => {
             const isExpanded = expanded === commit.sha, keyCount = Object.keys(commit.changedKeys).length
             return (
               <div key={commit.sha} className="border-b border-border-subtle">

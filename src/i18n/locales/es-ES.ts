@@ -128,7 +128,7 @@ export const esES: UiMessages = {
     "restored": "✓ restaurada"
   },
   "commit": {
-    "title": "Confirmar",
+    "title": "Publicar cambios",
     "messageLabel": "Mensaje del commit",
     "messagePlaceholder": "feat(i18n): update translations",
     "pushTo": "Enviar a {branch}",
@@ -136,7 +136,14 @@ export const esES: UiMessages = {
     "configDefaultMessage": "feat(config): update {langs}",
     "configSchemaMessage": "feat(config): update schema",
     "newFile": "Archivo nuevo",
-    "schemaFile": "Esquema"
+    "schemaFile": "Esquema",
+    "modePr": "Pull Request",
+    "modeDirect": "Push directo",
+    "type": "Tipo",
+    "branchNameLabel": "Nombre de la rama",
+    "prTitleLabel": "Título de la PR",
+    "prTitlePlaceholder": "feat(i18n): update translations",
+    "createPr": "Crear Pull Request"
   },
   "settings": {
     "title": "Configuración",
@@ -158,8 +165,6 @@ export const esES: UiMessages = {
       "pathTemplate": "locales/{lang}.json"
     },
     "pathTemplateLabel": "Ruta traducciones (plantilla)",
-    "configPathTemplateLabel": "Ruta configs (plantilla)",
-    "configSchemaPathLabel": "Ruta esquema config",
     "activeLanguages": "Idiomas activos",
     "done": "Cerrar"
   },
@@ -218,8 +223,10 @@ export const esES: UiMessages = {
     "titleConfigs": "Exportar configs",
     "summary": "{langs} idioma{langsSuffix} · {keys} clave{keysSuffix}",
     "format": "Formato",
-    "formatJson": "JSON",
-    "formatJsonHint": "{\"en\":{…}}",
+    "formatJson": "JSON (anidado)",
+    "formatJsonHint": "{\"es\":{action:{…}}}",
+    "formatJsonNs": "JSON (por namespace)",
+    "formatJsonNsHint": "locales/common/es-ES.json",
     "formatCsv": "CSV / Excel",
     "formatCsvHint": "key,en-UK,fr-FR,…",
     "formatTsv": "Tabla (TSV)",
@@ -243,6 +250,7 @@ export const esES: UiMessages = {
     "historyError": "Error de historial: {message}",
     "nothingToCommit": "Nada que confirmar",
     "commitPushed": "Commit enviado a {branch} — {count} claves modificadas",
+    "prCreated": "PR #{number} creada",
     "keyRestored": "Clave \"{key}\" restaurada",
     "keyAdded": "Clave \"{key}\" añadida",
     "configKeyAdded": "Clave config \"{key}\" añadida",
@@ -322,5 +330,37 @@ export const esES: UiMessages = {
     "colPath": "ruta",
     "colMessage": "mensaje",
     "colCode": "código"
+  },
+  "setup": {
+    "title": "Conectar a GitHub",
+    "subtitle": "Selecciona un repositorio y detecta tus archivos de traducción automáticamente.",
+    "stepToken": "Conexión",
+    "stepRepo": "Repositorio",
+    "stepFolder": "Carpetas",
+    "stepLangs": "Idiomas",
+    "signInGithub": "Iniciar sesión con GitHub",
+    "usePatInstead": "Usar un token personal en su lugar",
+    "orPat": "o usar un token",
+    "tokenLabel": "Token de acceso personal de GitHub",
+    "tokenHint": "Crea un token en github.com/settings/tokens con el alcance repo. Se queda solo en tu navegador.",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "loggedAs": "Conectado como {user}",
+    "searchRepo": "Buscar repositorios…",
+    "noRepos": "No se encontraron repositorios",
+    "langsDetected": "{count} idioma(s) detectado(s)",
+    "emptyFolder": "Carpeta vacía",
+    "foldersSelected": "{count} carpeta(s) seleccionada(s)",
+    "langsSummary": "{count} idiomas encontrados en {folder}",
+    "langsSummaryMulti": "{count} idiomas encontrados en {folders} carpetas",
+    "baseLangLabel": "Idioma base",
+    "selectLangs": "Idiomas activos",
+    "useFolder": "Usar selección ({count} idiomas)",
+    "finish": "Finalizar configuración",
+    "skip": "Modo demo",
+    "back": "Volver",
+    "loading": "Cargando…",
+    "disconnect": "Desconectar",
+    "connectedTo": "Conectado a {repo}"
   }
 }

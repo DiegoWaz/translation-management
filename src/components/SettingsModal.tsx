@@ -1,7 +1,7 @@
 import type { GitHubConfig } from '../types'
 import { cn } from '../helpers/cn'
-import { btnSecClass } from '../helpers/styles'
-import { isGithubConfigured } from '../helpers/config'
+import { btnSecClass, btnPrimaryClass } from '../helpers/styles'
+import { isGithubConfigured, loadUiConfig } from '../helpers/config'
 import { ui } from '../i18n/ui'
 import { Overlay } from './Overlay'
 import { Field } from './Field'
@@ -15,13 +15,18 @@ const maskToken = (token: string) => {
 export const SettingsModal = ({
   config,
   onClose,
+  onSetup,
+  onDisconnect,
   isMobile,
 }: {
   config: GitHubConfig
   onClose: () => void
+  onSetup: () => void
+  onDisconnect: () => void
   isMobile: boolean
 }) => {
   const configured = isGithubConfigured(config)
+  const fromUi = !!loadUiConfig()
   const pathTemplate = import.meta.env.VITE_GH_PATH_TEMPLATE || ui.settings.placeholders.pathTemplate
 
   const rows: Array<{ label: string; value: string }> = [
@@ -31,8 +36,6 @@ export const SettingsModal = ({
     { label: ui.settings.fields.branch, value: config.branch || ui.settings.missingValue },
     { label: ui.settings.fields.baseLang, value: config.baseLang || ui.settings.missingValue },
     { label: ui.settings.pathTemplateLabel, value: pathTemplate },
-    { label: ui.settings.configPathTemplateLabel, value: config.configPathTemplate },
-    { label: ui.settings.configSchemaPathLabel, value: config.configSchemaPath },
   ]
 
   return (
@@ -84,8 +87,18 @@ export const SettingsModal = ({
           </div>
         </div>
 
-        <div className={cn('flex gap-2.5 justify-end border-t border-border', isMobile ? 'px-5 py-3' : 'px-7 py-4')}>
-          <button onClick={onClose} className={btnSecClass}>{ui.settings.done}</button>
+        <div className={cn('flex gap-2.5 justify-between border-t border-border', isMobile ? 'px-5 py-3' : 'px-7 py-4')}>
+          <div className="flex gap-2">
+            {fromUi && (
+              <button type="button" onClick={() => { onClose(); onDisconnect() }} className={cn(btnSecClass, 'text-fg-error border-border-error')}>
+                {ui.setup.disconnect}
+              </button>
+            )}
+            <button type="button" onClick={() => { onClose(); onSetup() }} className={btnPrimaryClass}>
+              {fromUi || configured ? ui.setup.connectedTo.replace('{repo}', `${config.owner}/${config.repo}`) + ' — ' : ''}{ui.setup.connect}
+            </button>
+          </div>
+          <button type="button" onClick={onClose} className={btnSecClass}>{ui.settings.done}</button>
         </div>
       </div>
     </Overlay>

@@ -56,6 +56,8 @@ export type UiMessages = {
     title: string; messageLabel: string; messagePlaceholder: string
     pushTo: string; defaultMessage: string; configDefaultMessage: string; configSchemaMessage: string
     newFile: string; schemaFile: string
+    modePr: string; modeDirect: string; type: string; branchNameLabel: string
+    prTitleLabel: string; prTitlePlaceholder: string; createPr: string
   }
   settings: {
     title: string; envConfigured: string; envMissing: string; envOnlyHint: string
@@ -63,7 +65,7 @@ export type UiMessages = {
     tokenPermRepo: string; tokenPermWrite: string
     fields: { token: string; owner: string; repo: string; branch: string; baseLang: string }
     placeholders: { pathTemplate: string }
-    pathTemplateLabel: string; configPathTemplateLabel: string; configSchemaPathLabel: string
+    pathTemplateLabel: string
     activeLanguages: string; done: string
   }
   import: {
@@ -91,6 +93,7 @@ export type UiMessages = {
   export: {
     title: string; titleConfigs: string; summary: string; format: string
     formatJson: string; formatJsonHint: string
+    formatJsonNs: string; formatJsonNsHint: string
     formatCsv: string; formatCsvHint: string
     formatTsv: string; formatTsvHint: string
     tableView: string; rawView: string
@@ -99,7 +102,7 @@ export type UiMessages = {
   }
   toast: {
     loadedFromGithub: string; draftRestored: string; error: string; historyError: string
-    nothingToCommit: string; commitPushed: string
+    nothingToCommit: string; commitPushed: string; prCreated: string
     keyRestored: string; keyAdded: string; configKeyAdded: string
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
@@ -131,6 +134,21 @@ export type UiMessages = {
     jsonValid: string; jsonEmpty: string; jsonError: string
     waiting: string; validMessage: string
     colPath: string; colMessage: string; colCode: string
+  }
+  setup: {
+    title: string; subtitle: string
+    stepToken: string; stepRepo: string; stepFolder: string; stepLangs: string
+    signInGithub: string; usePatInstead: string; orPat: string
+    tokenLabel: string; tokenHint: string
+    connect: string; connecting: string
+    loggedAs: string; searchRepo: string; noRepos: string
+    langsDetected: string; emptyFolder: string
+    foldersSelected: string
+    langsSummary: string; langsSummaryMulti: string
+    baseLangLabel: string; selectLangs: string
+    useFolder: string; finish: string
+    skip: string; back: string; loading: string
+    disconnect: string; connectedTo: string
   }
 }
 

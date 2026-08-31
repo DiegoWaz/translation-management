@@ -1,4 +1,5 @@
 export const extractVars = (text: string): string[] => {
+  if (typeof text !== 'string') return []
   return [...new Set([...text.matchAll(/\{([^}]+)\}/g)].map(m => m[1]))]
 }
 

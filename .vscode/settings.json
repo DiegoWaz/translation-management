@@ -1,0 +1,22 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^sleep 5; pnpm -C /Users/dwaziri/Sites/translation-management run dev 2>&1 \\| head -200 &$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^lsof -i :8443 2>/dev/null \\| tail -1 \\| awk '\\{print \\$2\\}'$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "awk": true,
+        "npm run build": true,
+        "/^npx tsc --noEmit 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^npx tsc --noEmit 2>&1 \\| head -20$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

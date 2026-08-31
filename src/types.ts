@@ -5,6 +5,15 @@ export interface LangFile {
   path: string
 }
 
+/** Tracks a single source file so changes can be routed back to it. */
+export interface FileSource {
+  path: string
+  rawContent: Record<string, unknown>
+  originalFlat: Record<string, string>
+  sha: string
+  nested: boolean
+}
+
 export interface Country {
   code: string
   name: string
@@ -20,6 +29,8 @@ export interface GitHubConfig {
   files: LangFile[]
   configPathTemplate: string
   configSchemaPath: string
+  translationsFolderName?: string
+  alwaysNestJson?: boolean
 }
 
 export type WorkspaceMode = 'translations' | 'configs' | 'schema'
@@ -66,7 +77,7 @@ export interface ParsedImport {
 }
 
 export type ImportFormat = 'text' | 'table' | 'json'
-export type ExportFormat = 'json' | 'csv' | 'tsv'
+export type ExportFormat = 'json' | 'json-ns' | 'csv' | 'tsv'
 
 export interface JsonImportResult {
   type: 'multi'

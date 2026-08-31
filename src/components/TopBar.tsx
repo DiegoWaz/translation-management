@@ -19,6 +19,7 @@ export const TopBar = ({
   onCommit,
   onHistory,
   onSettings,
+  onSetup,
   onToggleTheme,
 }: {
   config: GitHubConfig
@@ -36,6 +37,7 @@ export const TopBar = ({
   onCommit: () => void
   onHistory: () => void
   onSettings: () => void
+  onSetup: () => void
   onToggleTheme: () => void
 }) => {
   const isConnected = Boolean(config.token && config.owner && config.repo)
@@ -84,6 +86,17 @@ export const TopBar = ({
         </div>
       )}
       {isMobile && isDemoMode && <span className="text-[9px] text-fg-demo bg-warning-bg px-1.5 py-px rounded-full font-bold">{ui.topBar.demo}</span>}
+
+      {isDemoMode && (
+        <button
+          type="button"
+          onClick={onSetup}
+          className="flex items-center gap-1.5 px-3 py-1 bg-brand border border-brand-hover rounded-md text-fg-on-brand text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0"
+        >
+          <GithubIcon size={12} />
+          {!isMobile && ` ${ui.setup.connect}`}
+        </button>
+      )}
 
       <div className="flex-1" />
 

@@ -6,11 +6,11 @@ import { ui, t, plural } from '../i18n/ui'
 import { Avatar } from './Avatar'
 import { highlight } from './highlight'
 
-export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, lastModified, isEven, colTemplate, showBase, showLastMod, isMobile, onChange, onDelete, searchQuery, matchedLangs, configFiles, activeLang, missingVarsList }: {
+export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, lastModified, isEven, colTemplate, showBase, showLastMod, isMobile, onChange, onDelete, onShowKeyHistory, searchQuery, matchedLangs, configFiles, activeLang, missingVarsList }: {
   rowKey: string; baseValue: string; targetValue: string; originalValue: string
   lastModified?: { author: string; date: Date; sha: string }; isEven: boolean
   colTemplate: string; showBase: boolean; showLastMod: boolean; isMobile: boolean
-  onChange: (v: string) => void; onDelete: () => void
+  onChange: (v: string) => void; onDelete: () => void; onShowKeyHistory?: (key: string) => void
   searchQuery?: string; matchedLangs?: string[]; configFiles?: LangFile[]; activeLang?: string
   missingVarsList?: string[]
 }) => {
@@ -104,7 +104,16 @@ export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, 
         </div>
       )}
 
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-1">
+        {hovered && onShowKeyHistory && (
+          <button 
+            onClick={() => onShowKeyHistory(rowKey)} 
+            className="bg-transparent border-none text-fg-muted hover:text-fg-brand cursor-pointer text-sm p-1"
+            title="View key history"
+          >
+            🕐
+          </button>
+        )}
         {hovered && <button onClick={onDelete} className="bg-transparent border-none text-fg-muted cursor-pointer text-sm p-1">{ui.common.close}</button>}
       </div>
     </div>

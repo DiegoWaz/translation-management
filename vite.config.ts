@@ -1,9 +1,55 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
 import siteConfiguration from './.figma/make/site.json'
+
+/** Vite plugin: POST /api/github/token → exchange OAuth code for access_token. */
+function githubOAuthProxy(): Plugin {
+  let clientSecret = ''
+  let clientId = ''
+  return {
+    name: 'github-oauth-proxy',
+    configResolved(config) {
+      const env = loadEnv(config.mode, config.root, '')
+      clientSecret = env.GH_CLIENT_SECRET || ''
+      clientId = env.VITE_GH_CLIENT_ID || ''
+    },
+    configureServer(server) {
+      server.middlewares.use('/api/github/token', (req, res) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+        req.on('end', () => {
+          if (!clientSecret || !clientId) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'GH_CLIENT_SECRET or VITE_GH_CLIENT_ID not set in .env' }))
+            return
+          }
+          const { code } = JSON.parse(body) as { code: string }
+          fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+          })
+            .then(r => r.json())
+            .then((data: Record<string, unknown>) => {
+              res.setHeader('Content-Type', 'application/json')
+              if (data.error) { res.statusCode = 401 }
+              res.end(JSON.stringify(data))
+            })
+            .catch((err: Error) => {
+              res.statusCode = 500
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: err.message }))
+            })
+        })
+      })
+    },
+  }
+}
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -19,6 +65,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      githubOAuthProxy(),
       figmaSiteConfiguration(siteConfiguration),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),

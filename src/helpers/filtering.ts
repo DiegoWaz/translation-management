@@ -75,7 +75,7 @@ export const filterKeys = (opts: {
         if (!keyMatches && !anyLangMatches) return false
       }
     }
-    if (filter === 'missing') return !translations[activeLang]?.[key]
+    if (filter === 'missing') return !original[activeLang]?.[key]
     if (filter === 'modified') return (translations[activeLang]?.[key] ?? '') !== (original[activeLang]?.[key] ?? '')
     if (filter === 'var-issues') return Boolean(varIssuesMap[key])
     return true

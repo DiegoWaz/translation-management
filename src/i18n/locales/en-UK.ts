@@ -128,7 +128,7 @@ export const enUK: UiMessages = {
     "restored": "✓ restored"
   },
   "commit": {
-    "title": "Commit",
+    "title": "Publish changes",
     "messageLabel": "Commit message",
     "messagePlaceholder": "feat(i18n): update translations",
     "pushTo": "Push to {branch}",
@@ -136,7 +136,14 @@ export const enUK: UiMessages = {
     "configDefaultMessage": "feat(config): update {langs}",
     "configSchemaMessage": "feat(config): update schema",
     "newFile": "New file",
-    "schemaFile": "Schema"
+    "schemaFile": "Schema",
+    "modePr": "Pull Request",
+    "modeDirect": "Push direct",
+    "type": "Type",
+    "branchNameLabel": "Branch name",
+    "prTitleLabel": "PR title",
+    "prTitlePlaceholder": "feat(i18n): update translations",
+    "createPr": "Create Pull Request"
   },
   "settings": {
     "title": "Settings",
@@ -158,8 +165,6 @@ export const enUK: UiMessages = {
       "pathTemplate": "locales/{lang}.json"
     },
     "pathTemplateLabel": "Translations path (template)",
-    "configPathTemplateLabel": "Configs path (template)",
-    "configSchemaPathLabel": "Config schema path",
     "activeLanguages": "Active languages",
     "done": "Close"
   },
@@ -218,8 +223,10 @@ export const enUK: UiMessages = {
     "titleConfigs": "Export configs",
     "summary": "{langs} language{langsSuffix} · {keys} key{keysSuffix}",
     "format": "Format",
-    "formatJson": "JSON",
-    "formatJsonHint": "{\"en\":{…}}",
+    "formatJson": "JSON (nested)",
+    "formatJsonHint": "{\"en\":{action:{…}}}",
+    "formatJsonNs": "JSON (namespace split)",
+    "formatJsonNsHint": "locales/common/en.json",
     "formatCsv": "CSV / Excel",
     "formatCsvHint": "key,en-UK,fr-FR,…",
     "formatTsv": "Table (TSV)",
@@ -243,6 +250,7 @@ export const enUK: UiMessages = {
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",
     "commitPushed": "Commit pushed to {branch} — {count} keys changed",
+    "prCreated": "PR #{number} created",
     "keyRestored": "Key \"{key}\" restored",
     "keyAdded": "Key \"{key}\" added",
     "configKeyAdded": "Config key \"{key}\" added",
@@ -322,5 +330,37 @@ export const enUK: UiMessages = {
     "colPath": "path",
     "colMessage": "message",
     "colCode": "code"
+  },
+  "setup": {
+    "title": "Connect to GitHub",
+    "subtitle": "Select a repository and detect your translation files automatically.",
+    "stepToken": "Sign in",
+    "stepRepo": "Repository",
+    "stepFolder": "Folders",
+    "stepLangs": "Languages",
+    "signInGithub": "Sign in with GitHub",
+    "usePatInstead": "Use a personal access token instead",
+    "orPat": "or use a token",
+    "tokenLabel": "GitHub Personal Access Token",
+    "tokenHint": "Create a token at github.com/settings/tokens with repo scope. It stays in your browser only.",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "loggedAs": "Logged in as {user}",
+    "searchRepo": "Search repositories…",
+    "noRepos": "No repositories found",
+    "langsDetected": "{count} locale(s) detected",
+    "emptyFolder": "Empty folder",
+    "foldersSelected": "{count} folder(s) selected",
+    "langsSummary": "{count} locales found in {folder}",
+    "langsSummaryMulti": "{count} locales found across {folders} folders",
+    "baseLangLabel": "Base language",
+    "selectLangs": "Active languages",
+    "useFolder": "Use selection ({count} locales)",
+    "finish": "Finish setup",
+    "skip": "Demo mode",
+    "back": "Back",
+    "loading": "Loading…",
+    "disconnect": "Disconnect",
+    "connectedTo": "Connected to {repo}"
   }
 }
