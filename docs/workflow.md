@@ -18,7 +18,9 @@ Les données de travail (traductions, configs, schéma, SHAs, workspace, locale 
 
 Changer `VITE_GH_LANGS` / dépôt dans `.env` → autre clé de stockage (brouillon précédent non réutilisé).
 
-## Commit unique
+## Commit unique — toujours via Pull Request
+
+LocaleHub ne pousse jamais directement sur la branche de base : chaque commit crée une nouvelle branche puis ouvre une Pull Request à valider sur GitHub. Détails et garanties : [security.md](security.md).
 
 Contrairement à un PUT Contents par fichier (1 commit / fichier), l’app utilise l’**API Git Data** (`commitJsonFiles` dans `src/helpers/github.ts`) :
 

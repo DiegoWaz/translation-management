@@ -29,6 +29,7 @@ Sans token / dépôt, l’app démarre en **mode démo** avec des données ficti
 | [docs/translations.md](docs/translations.md) | Workspace Traductions |
 | [docs/configs.md](docs/configs.md) | Workspace Configs (Excel / JSON) |
 | [docs/workflow.md](docs/workflow.md) | Brouillon local, commit unique, historique |
+| [docs/security.md](docs/security.md) | Confiance & sécurité : rien conservé, tout passe par une PR |
 | [docs/architecture.md](docs/architecture.md) | Structure du code, flux de données |
 | [docs/context/product.md](docs/context/product.md) | Brief produit compact |
 
