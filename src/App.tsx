@@ -9,6 +9,7 @@ import { AddKeyBar } from './components/AddKeyBar'
 import { AddConfigKeyBar } from './components/AddConfigKeyBar'
 import { TranslationTable } from './components/TranslationTable'
 import { ConfigTable } from './components/ConfigTable'
+import { Pagination } from './components/Pagination'
 import { HistoryPanel } from './components/HistoryPanel'
 import { HistoryDrawer } from './components/HistoryDrawer'
 import { BulkImportModal } from './components/BulkImportModal'
@@ -154,7 +155,7 @@ const App = () => {
                 showBase={app.showBase}
                 config={app.config}
                 activeLang={app.activeLang}
-                filteredKeys={app.filteredConfigKeys}
+                filteredKeys={app.pagedConfigKeys}
                 schema={app.configSchema}
                 configs={app.configs}
                 original={app.configsOriginal}
@@ -173,7 +174,7 @@ const App = () => {
                 config={app.config}
                 activeLang={app.activeLang}
                 activeLangFile={app.activeLangFile}
-                filteredKeys={app.filteredKeys}
+                filteredKeys={app.pagedKeys}
                 filter={app.filter}
                 search={app.search}
                 translations={app.translations}
@@ -188,6 +189,18 @@ const App = () => {
                 onShowKeyHistory={(key) => { app.setKeyHistoryFilter(key); app.setShowHistory(true) }}
               />
             )}
+
+            <Pagination
+              page={app.page}
+              pageCount={app.pageCount}
+              pageSize={app.pageSize}
+              pageSizeOptions={app.pageSizeOptions}
+              totalCount={isConfigs ? app.filteredConfigKeys.length : app.filteredKeys.length}
+              isMobile={app.isMobile}
+              onPageChange={app.setPage}
+              onPageSizeChange={app.setPageSize}
+            />
+
           </main>
 
           {app.showHistory && !app.isMobile && !isSchema && (

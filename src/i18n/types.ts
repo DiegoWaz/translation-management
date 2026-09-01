@@ -30,6 +30,11 @@ export type UiMessages = {
     export: string; exportTitle: string; import: string; importTitle: string
     addKey: string; addKeyTitle: string; addConfigKey: string; addConfigKeyTitle: string
   }
+  pagination: {
+    perPage: string; page: string; of: string
+    previous: string; next: string
+    showingRange: string
+  }
   table: {
     key: string; allLanguages: string; lastModified: string; empty: string
     clickToTranslate: string; clickToTranslateEllipsis: string

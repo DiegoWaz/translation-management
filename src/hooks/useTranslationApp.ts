@@ -76,6 +76,10 @@ const loadConfigOrDefault = () => {
   return c.files.length > 0 ? c : DEFAULT_DEMO_CONFIG
 }
 
+const PAGE_SIZE_KEY = 'localehub:pageSize:v1'
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const
+const DEFAULT_PAGE_SIZE = 50
+
 export const useTranslationApp = () => {
   const [config, setConfig] = useState(loadConfigOrDefault)
   const [initialDraft] = useState(() => loadDraft(loadConfigOrDefault()))
@@ -124,6 +128,11 @@ export const useTranslationApp = () => {
   })
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterMode>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(() => {
+    const stored = Number(localStorage.getItem(PAGE_SIZE_KEY))
+    return (PAGE_SIZE_OPTIONS as readonly number[]).includes(stored) ? stored : DEFAULT_PAGE_SIZE
+  })
   const [showSettings, setShowSettings] = useState(false)
   const [showCommit, setShowCommit] = useState(false)
   const [commitMsg, setCommitMsg] = useState('')
@@ -748,6 +757,25 @@ export const useTranslationApp = () => {
     activeLang,
   })
 
+  const activeFilteredCount = workspace === 'configs' ? filteredConfigKeys.length : filteredKeys.length
+  const pageCount = Math.max(1, Math.ceil(activeFilteredCount / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  const pageStart = (currentPage - 1) * pageSize
+  const pagedKeys = filteredKeys.slice(pageStart, pageStart + pageSize)
+  const pagedConfigKeys = filteredConfigKeys.slice(pageStart, pageStart + pageSize)
+
+  // Reset to page 1 whenever the filtered result set changes shape (new
+  // search, filter, group, workspace…) so the user never lands on an
+  // out-of-range empty page.
+  useEffect(() => {
+    setPage(1)
+  }, [search, searchMode, filter, activeGroup, workspace, pageSize])
+
+  const setPageSize = (size: number) => {
+    setPageSizeState(size)
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(size)) } catch { /* ignore */ }
+  }
+
   const translationLangStats = buildLangStats(localizedConfig.files, baseKeys, translations, original)
   const configLangStats = buildConfigLangStats(
     localizedConfig.files,
@@ -918,6 +946,7 @@ export const useTranslationApp = () => {
     toasts, showToast,
     isMobile, isTablet,
     baseKeys, filteredKeys, configKeys, filteredConfigKeys, langStats,
+    pagedKeys, pagedConfigKeys, page: currentPage, setPage, pageSize, setPageSize, pageCount, pageSizeOptions: PAGE_SIZE_OPTIONS,
     modifiedKeys, modifiedConfigKeys, modifiedCount,
     varIssuesCount: Object.keys(varIssuesMap).length,
     varIssuesMap, searchMatchMap,

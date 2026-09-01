@@ -82,6 +82,14 @@ export const frFR: UiMessages = {
     "addConfigKey": "+ Config",
     "addConfigKeyTitle": "Ajouter une clé config"
   },
+  "pagination": {
+    "perPage": "Par page",
+    "page": "Page",
+    "of": "sur",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "showingRange": "{from}–{to} sur {total}"
+  },
   "table": {
     "key": "Clé",
     "allLanguages": "Toutes les langues",

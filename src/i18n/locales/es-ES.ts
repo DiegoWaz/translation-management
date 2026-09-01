@@ -82,6 +82,14 @@ export const esES: UiMessages = {
     "addConfigKey": "+ Config",
     "addConfigKeyTitle": "Añadir una clave config"
   },
+  "pagination": {
+    "perPage": "Por página",
+    "page": "Página",
+    "of": "de",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "showingRange": "{from}–{to} de {total}"
+  },
   "table": {
     "key": "Clave",
     "allLanguages": "Todos los idiomas",
