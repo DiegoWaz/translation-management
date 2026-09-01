@@ -55,18 +55,22 @@ export const TopBar = ({
 
       <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden shrink-0">
         {([
-          ['translations', ui.topBar.workspaceTranslations, 'i18n'],
-          ['configs', ui.topBar.workspaceConfigs, 'cfg'],
-          ['schema', ui.topBar.workspaceSchema, 'dto'],
-        ] as const).map(([mode, label, short], index) => (
+          ['translations', ui.topBar.workspaceTranslations, 'i18n', false],
+          ['configs', ui.topBar.workspaceConfigs, 'cfg', true],
+          ['schema', ui.topBar.workspaceSchema, 'dto', true],
+        ] as const).map(([mode, label, short, disabled], index) => (
           <button
             key={mode}
             type="button"
+            disabled={disabled}
+            title={disabled ? ui.topBar.workspaceDisabled : undefined}
             onClick={() => onWorkspaceChange(mode)}
             className={cn(
-              'px-2.5 py-1 border-none text-[11px] cursor-pointer font-inherit whitespace-nowrap',
+              'px-2.5 py-1 border-none text-[11px] font-inherit whitespace-nowrap',
               index < 2 && 'border-r border-border-strong',
-              workspace === mode ? 'bg-brand-soft-bg text-fg-brand-strong font-semibold' : 'bg-transparent text-fg-muted font-normal',
+              disabled
+                ? 'bg-transparent text-fg-faint cursor-not-allowed opacity-50'
+                : workspace === mode ? 'bg-brand-soft-bg text-fg-brand-strong font-semibold cursor-pointer' : 'bg-transparent text-fg-muted font-normal cursor-pointer',
             )}
           >
             {compact ? short : label}

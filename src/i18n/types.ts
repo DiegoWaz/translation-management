@@ -10,7 +10,7 @@ export type UiMessages = {
     disconnected: string; demo: string; loadGithub: string; loadGithubTitle: string
     history: string; historyTitle: string; commit: string; commitTitle: string; settings: string
     uiLang: string
-    workspaceTranslations: string; workspaceConfigs: string; workspaceSchema: string
+    workspaceTranslations: string; workspaceConfigs: string; workspaceSchema: string; workspaceDisabled: string
   }
   filters: {
     all: string; allKeys: string; missing: string; missingShort: string

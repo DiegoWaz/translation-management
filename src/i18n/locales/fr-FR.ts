@@ -38,7 +38,8 @@ export const frFR: UiMessages = {
     "uiLang": "Langue de l'interface",
     "workspaceTranslations": "Traductions",
     "workspaceConfigs": "Configs",
-    "workspaceSchema": "DTO"
+    "workspaceSchema": "DTO",
+    "workspaceDisabled": "Bientôt disponible — traductions d'abord"
   },
   "filters": {
     "all": "Toutes",

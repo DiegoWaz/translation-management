@@ -83,13 +83,7 @@ export const useTranslationApp = () => {
   })
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
   const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>({})
-  const [workspace, setWorkspace] = useState<WorkspaceMode>(
-    () => {
-      const w = initialDraft?.workspace
-      if (w === 'configs' || w === 'schema' || w === 'translations') return w
-      return 'translations'
-    },
-  )
+  const [workspace] = useState<WorkspaceMode>('translations')
   const [translations, setTranslations] = useState(() => {
     if (initialDraft) return initialDraft.translations
     const c = loadConfigOrDefault()
@@ -681,8 +675,8 @@ export const useTranslationApp = () => {
     )
   }
 
-  const setWorkspaceMode = (mode: WorkspaceMode) => {
-    setWorkspace(mode)
+  const setWorkspaceMode = (_mode: WorkspaceMode) => {
+    // Configs and Schema workspaces are temporarily disabled; workspace stays on 'translations'.
     setSearch('')
     setFilter('all')
     setActiveGroup(null)
