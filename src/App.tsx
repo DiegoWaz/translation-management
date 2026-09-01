@@ -53,6 +53,7 @@ const App = () => {
         loading={app.loading}
         showHistory={app.showHistory}
         isMobile={app.isMobile}
+        isTablet={app.isTablet}
         isDark={app.isDark}
         uiLocale={app.uiLocale}
         workspace={app.workspace}

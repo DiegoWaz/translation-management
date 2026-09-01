@@ -98,7 +98,6 @@ export const SettingsModal = ({
               {fromUi || configured ? ui.setup.connectedTo.replace('{repo}', `${config.owner}/${config.repo}`) + ' — ' : ''}{ui.setup.connect}
             </button>
           </div>
-          <button type="button" onClick={onClose} className={btnSecClass}>{ui.settings.done}</button>
         </div>
       </div>
     </Overlay>

@@ -10,6 +10,7 @@ export const TopBar = ({
   loading,
   showHistory,
   isMobile,
+  isTablet,
   isDark,
   uiLocale,
   workspace,
@@ -28,6 +29,7 @@ export const TopBar = ({
   loading: boolean
   showHistory: boolean
   isMobile: boolean
+  isTablet?: boolean
   isDark: boolean
   uiLocale: UiLocale
   workspace: WorkspaceMode
@@ -41,12 +43,14 @@ export const TopBar = ({
   onToggleTheme: () => void
 }) => {
   const isConnected = Boolean(config.token && config.owner && config.repo)
+  // Compact mode hides secondary labels/badges on medium screens (tablet) to prevent overflow
+  const compact = isMobile || Boolean(isTablet)
 
   return (
-    <header className={cn('h-[52px] flex items-center px-3.5 bg-surface border-b border-border-muted shrink-0', isMobile ? 'gap-2' : 'gap-3.5')}>
-      <div className="flex items-center gap-1.5">
+    <header className={cn('h-[52px] flex items-center px-3.5 bg-surface border-b border-border-muted shrink-0 overflow-x-auto overflow-y-hidden', isMobile ? 'gap-2' : 'gap-3.5')}>
+      <div className="flex items-center gap-1.5 shrink-0">
         <div className="size-[26px] bg-linear-to-br from-brand to-brand-soft rounded-md flex items-center justify-center text-[10px] font-bold text-fg-on-brand shrink-0">{ui.app.logo}</div>
-        {!isMobile && <span className="text-[13px] font-semibold text-fg tracking-tight whitespace-nowrap">{ui.app.name}</span>}
+        {!isMobile && !isTablet && <span className="text-[13px] font-semibold text-fg tracking-tight whitespace-nowrap">{ui.app.name}</span>}
       </div>
 
       <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden shrink-0">
@@ -65,12 +69,12 @@ export const TopBar = ({
               workspace === mode ? 'bg-brand-soft-bg text-fg-brand-strong font-semibold' : 'bg-transparent text-fg-muted font-normal',
             )}
           >
-            {isMobile ? short : label}
+            {compact ? short : label}
           </button>
         ))}
       </div>
 
-      {!isMobile && (
+      {!compact && (
         <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-elevated border border-border rounded-full shrink-0">
           <GithubIcon size={12} />
           <span className={cn('text-[11px] font-mono whitespace-nowrap', isConnected ? 'text-fg-tertiary' : 'text-fg-muted')}>
@@ -85,7 +89,7 @@ export const TopBar = ({
           {isDemoMode && <span className="text-[9px] text-fg-demo bg-warning-bg px-1.5 py-px rounded-full font-bold tracking-wider">{ui.topBar.demo}</span>}
         </div>
       )}
-      {isMobile && isDemoMode && <span className="text-[9px] text-fg-demo bg-warning-bg px-1.5 py-px rounded-full font-bold">{ui.topBar.demo}</span>}
+      {compact && isDemoMode && <span className="text-[9px] text-fg-demo bg-warning-bg px-1.5 py-px rounded-full font-bold shrink-0">{ui.topBar.demo}</span>}
 
       {isDemoMode && (
         <button
@@ -94,11 +98,11 @@ export const TopBar = ({
           className="flex items-center gap-1.5 px-3 py-1 bg-brand border border-brand-hover rounded-md text-fg-on-brand text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0"
         >
           <GithubIcon size={12} />
-          {!isMobile && ` ${ui.setup.connect}`}
+          {!compact && ` ${ui.setup.connect}`}
         </button>
       )}
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-2" />
 
       <label className="relative shrink-0" title={ui.topBar.uiLang}>
         <span className="sr-only">{ui.topBar.uiLang}</span>
@@ -109,7 +113,7 @@ export const TopBar = ({
         >
           {UI_LOCALES.map(l => (
             <option key={l.code} value={l.code}>
-              {l.flag} {isMobile ? l.code.split('-')[0].toUpperCase() : l.label}
+              {l.flag} {compact ? l.code.split('-')[0].toUpperCase() : l.label}
             </option>
           ))}
         </select>
@@ -124,12 +128,12 @@ export const TopBar = ({
         {isDark ? ui.theme.lightIcon : ui.theme.darkIcon}
       </button>
 
-      {!isMobile && (
+      {!compact && (
         <button
           onClick={onLoad}
           disabled={loading}
           title={ui.topBar.loadGithubTitle}
-          className={cn('flex items-center gap-1.5 px-3 py-1 bg-elevated border border-border-strong rounded-md text-fg-tertiary text-xs cursor-pointer font-inherit whitespace-nowrap', loading && 'opacity-50')}
+          className={cn('flex items-center gap-1.5 px-3 py-1 bg-elevated border border-border-strong rounded-md text-fg-tertiary text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0', loading && 'opacity-50')}
         >
           <span>{ui.topBar.loadGithub}</span>
         </button>
@@ -143,7 +147,7 @@ export const TopBar = ({
           showHistory ? 'bg-accent-bg border-border-brand-soft text-brand-soft' : 'bg-elevated border-border-strong text-fg-tertiary',
         )}
       >
-        <HistoryIcon size={13} />{!isMobile && ` ${ui.topBar.history}`}
+        <HistoryIcon size={13} />{!compact && ` ${ui.topBar.history}`}
       </button>
 
       <button
@@ -157,7 +161,7 @@ export const TopBar = ({
         )}
       >
         <GithubIcon size={13} />
-        {!isMobile && ` ${ui.topBar.commit}`}
+        {!compact && ` ${ui.topBar.commit}`}
         {modifiedCount > 0 && <span className="bg-white/20 rounded-full px-1.5 py-px text-[11px] font-bold">{modifiedCount}</span>}
       </button>
 
