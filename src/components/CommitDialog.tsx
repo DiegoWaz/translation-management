@@ -95,6 +95,14 @@ export const CommitDialog = ({
           <GithubIcon size={13} />
           <span className="font-semibold">{ui.commit.modePr}</span>
           <span className="text-fg-muted">— {ui.commit.prOnlyHint}</span>
+          <a
+            href="https://github.com/DiegoWaz/translation-management/blob/main/docs/security.md"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto underline decoration-dotted text-fg-brand hover:text-fg"
+          >
+            {ui.commit.securityLink}
+          </a>
         </div>
 
         <div className="bg-elevated border border-border rounded-lg p-3 max-h-56 overflow-y-auto">

@@ -64,7 +64,7 @@ export type UiMessages = {
     title: string; messageLabel: string; messagePlaceholder: string
     defaultMessage: string; configDefaultMessage: string; configSchemaMessage: string
     newFile: string; schemaFile: string
-    modePr: string; prOnlyHint: string; type: string; branchNameLabel: string
+    modePr: string; prOnlyHint: string; securityLink: string; type: string; branchNameLabel: string
     prTitleLabel: string; prTitlePlaceholder: string; createPr: string
   }
   settings: {

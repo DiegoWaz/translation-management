@@ -154,6 +154,7 @@ export const esES: UiMessages = {
     "schemaFile": "Esquema",
     "modePr": "Pull Request",
     "prOnlyHint": "sin push directo — todo pasa por una PR que apruebas",
+    "securityLink": "Cómo LocaleHub protege tu repositorio →",
     "type": "Tipo",
     "branchNameLabel": "Nombre de la rama",
     "prTitleLabel": "Título de la PR",

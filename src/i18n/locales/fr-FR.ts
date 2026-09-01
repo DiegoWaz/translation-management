@@ -154,6 +154,7 @@ export const frFR: UiMessages = {
     "schemaFile": "Schéma",
     "modePr": "Pull Request",
     "prOnlyHint": "aucun push direct — tout passe par une PR à valider",
+    "securityLink": "Comment LocaleHub protège votre dépôt →",
     "type": "Type",
     "branchNameLabel": "Nom de la branche",
     "prTitleLabel": "Titre de la PR",

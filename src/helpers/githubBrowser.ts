@@ -63,15 +63,17 @@ export const listTree = async (
 
 const LOCALE_PATTERN = /^[a-z]{2}(?:-[A-Z]{2})?\.json$/
 
-/** Detect locale JSON files inside a given folder from the tree listing. */
+/** Detect locale JSON files inside a given folder from the tree listing.
+ * Searches recursively (any depth) so structures like `translations/locale/{lang}.json`
+ * are found, not just files directly at the folder root. */
 export const detectLocaleFiles = (
   tree: GhTreeEntry[],
   folder: string,
 ): string[] => {
   const prefix = folder ? (folder.endsWith('/') ? folder : `${folder}/`) : ''
   return tree
-    .filter(e => e.type === 'blob' && e.path.startsWith(prefix) && !e.path.slice(prefix.length).includes('/'))
-    .map(e => e.path.slice(prefix.length))
+    .filter(e => e.type === 'blob' && e.path.startsWith(prefix))
+    .map(e => e.path.split('/').pop()!)
     .filter(name => LOCALE_PATTERN.test(name))
     .map(name => name.replace('.json', ''))
     .sort()
@@ -114,22 +116,27 @@ export const detectAllLocaleFiles = (tree: GhTreeEntry[], folderName: string): s
   return Array.from(allFiles).sort()
 }
 
-/** Get all file paths for each locale from ALL folders with a given name. */
+/** Get all file paths for each locale from ALL folders with a given name.
+ * Recurses into subfolders so structures like `translations/locale/{lang}.json` are found. */
 export const getTranslationFilePaths = (
   tree: GhTreeEntry[],
   folderName: string,
 ): Record<string, string[]> => {
   const folders = detectAllFoldersWithName(tree, folderName)
   const result: Record<string, string[]> = {}
-  
+
   folders.forEach(folder => {
-    detectLocaleFiles(tree, folder).forEach(lang => {
-      const fileName = `${lang}.json`
-      const filePath = folder ? `${folder}/${fileName}` : fileName
-      if (!result[lang]) result[lang] = []
-      result[lang].push(filePath)
-    })
+    const prefix = folder ? `${folder}/` : ''
+    tree
+      .filter(e => e.type === 'blob' && e.path.startsWith(prefix))
+      .forEach(e => {
+        const fileName = e.path.split('/').pop()!
+        if (!LOCALE_PATTERN.test(fileName)) return
+        const lang = fileName.replace('.json', '')
+        if (!result[lang]) result[lang] = []
+        result[lang].push(e.path)
+      })
   })
-  
+
   return result
 }

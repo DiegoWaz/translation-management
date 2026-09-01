@@ -154,6 +154,7 @@ export const enUK: UiMessages = {
     "schemaFile": "Schema",
     "modePr": "Pull Request",
     "prOnlyHint": "no direct push — everything goes through a PR you approve",
+    "securityLink": "How LocaleHub protects your repo →",
     "type": "Type",
     "branchNameLabel": "Branch name",
     "prTitleLabel": "PR title",
