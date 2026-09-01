@@ -726,7 +726,13 @@ export const useTranslationApp = () => {
     configsOriginal,
     configPathForLang,
   )
-  const langStats = workspace === 'configs' ? configLangStats : translationLangStats
+  const langStatsRaw = workspace === 'configs' ? configLangStats : translationLangStats
+  // Always surface the default (base) language first in the sidebar list.
+  const langStats = [...langStatsRaw].sort((a, b) => {
+    if (a.lang === config.baseLang) return -1
+    if (b.lang === config.baseLang) return 1
+    return 0
+  })
   const { showBase, showLastMod, colTemplate } = columnLayout(isMobile, isTablet)
 
   const setSearchAndClearGroup = (value: string) => {
