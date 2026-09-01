@@ -64,3 +64,33 @@ configs/en-UK.json
 ```
 
 Les fichiers absents peuvent être créés au premier commit (nouveaux blobs).
+
+## Déploiement en production (Vercel)
+
+L'échange OAuth GitHub (`code` → `access_token`) doit se faire **côté serveur**,
+car il nécessite `GH_CLIENT_SECRET`, qui ne doit jamais atteindre le navigateur.
+
+- En local (`pnpm run dev`), cet échange est géré par un middleware Vite dev-only
+  (`githubOAuthProxy` dans [`vite.config.ts`](../vite.config.ts)) — il n'existe pas
+  dans un build statique (`vite build`).
+- En production, [`api/github/token.ts`](../api/github/token.ts) est une
+  **Vercel Serverless Function** qui fournit le même endpoint
+  `POST /api/github/token`. Le frontend (`src/helpers/githubOAuth.ts`) appelle
+  toujours ce même chemin, sans distinguer dev/prod.
+
+### Déployer sur Vercel
+
+1. Importer le repo sur [vercel.com](https://vercel.com/new)
+2. Renseigner les variables d'environnement du projet Vercel (Project Settings → Environment Variables) :
+   - `VITE_GH_CLIENT_ID` — Client ID de l'OAuth App GitHub
+   - `GH_CLIENT_SECRET` — Client Secret (jamais préfixé `VITE_`, donc jamais exposé au navigateur)
+   - éventuellement `VITE_GH_LANGS`, `VITE_GH_BASE_LANG`, etc. si l'équipe préfère la config par variables plutôt que par l'assistant de configuration OAuth
+3. Dans l'OAuth App GitHub (**Settings → Developer settings → OAuth Apps**), mettre à jour :
+   - **Homepage URL** : l'URL de prod (ex. `https://mon-app.vercel.app`)
+   - **Authorization callback URL** : la même URL (ex. `https://mon-app.vercel.app`)
+4. Déployer. Aucune autre configuration serveur n'est nécessaire — `vercel.json` déclare déjà le build Vite et le dossier `api/`.
+
+> Pour un autre hébergeur que Vercel, il faut porter `api/github/token.ts` vers
+> l'équivalent (Netlify Function, route Express, etc.) — la logique métier
+> (appel à `https://github.com/login/oauth/access_token`) est directement réutilisable.
+
