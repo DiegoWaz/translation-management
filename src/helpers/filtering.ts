@@ -104,7 +104,11 @@ export const getModifiedKeys = (
   const modified: Array<{ lang: string; key: string }> = []
   for (const lang of Object.keys(translations)) {
     for (const key of Object.keys(translations[lang] ?? {})) {
-      if ((translations[lang][key] ?? '') !== (original[lang]?.[key] ?? '')) {
+      // A brand-new key (not present in the original file yet) must always be
+      // committed for every locale, even if its value is still empty —
+      // otherwise locales left untouched by the user never get the key added.
+      const isNewKey = !(key in (original[lang] ?? {}))
+      if (isNewKey || (translations[lang][key] ?? '') !== (original[lang]?.[key] ?? '')) {
         modified.push({ lang, key })
       }
     }
