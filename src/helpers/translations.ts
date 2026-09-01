@@ -5,7 +5,9 @@ type TranslationMap = Record<string, Record<string, string>>
 
 export const addKeyToAll = (prev: TranslationMap, key: string): TranslationMap => {
   return Object.keys(prev).reduce<TranslationMap>((next, lang) => {
-    next[lang] = { ...prev[lang], [key]: '' }
+    // Only fill in the key with '' where it's genuinely missing — never
+    // overwrite an existing value in a language that already has one.
+    next[lang] = key in prev[lang] ? prev[lang] : { ...prev[lang], [key]: '' }
     return next
   }, { ...prev })
 }
