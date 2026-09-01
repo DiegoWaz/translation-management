@@ -36,6 +36,9 @@ export type UiMessages = {
     missingVar: string; missingVarsTitle: string; missingVarsTitlePlural: string
     foundInLang: string; missingInLang: string
     missingShortBadge: string; modifiedShortBadge: string
+    editKeyTitle: string; deleteKeyTitle: string; renameKeyPlaceholder: string
+    renameKeyConfirmTitle: string; renameKeyCancelTitle: string
+    deleteKeyConfirm: string; deleteKeyConfirmShort: string
   }
   empty: {
     noMissing: string; noModified: string; noResult: string; noKey: string
@@ -103,7 +106,7 @@ export type UiMessages = {
   toast: {
     loadedFromGithub: string; draftRestored: string; error: string; historyError: string
     nothingToCommit: string; commitPushed: string; prCreated: string
-    keyRestored: string; keyAdded: string; configKeyAdded: string
+    keyRestored: string; keyAdded: string; configKeyAdded: string; keyRenamed: string
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
   }

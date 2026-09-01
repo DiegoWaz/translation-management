@@ -95,7 +95,14 @@ export const enUK: UiMessages = {
     "foundInLang": "{label}: found",
     "missingInLang": "{label}: missing",
     "missingShortBadge": "{count} miss.",
-    "modifiedShortBadge": "{count} mod."
+    "modifiedShortBadge": "{count} mod.",
+    "editKeyTitle": "Rename key",
+    "deleteKeyTitle": "Delete key",
+    "renameKeyPlaceholder": "New key name",
+    "renameKeyConfirmTitle": "Confirm rename",
+    "renameKeyCancelTitle": "Cancel",
+    "deleteKeyConfirm": "Delete key \"{key}\" from all languages? This cannot be undone.",
+    "deleteKeyConfirmShort": "Delete?"
   },
   "empty": {
     "noMissing": "No missing keys",
@@ -254,6 +261,7 @@ export const enUK: UiMessages = {
     "prCreated": "PR #{number} created",
     "keyRestored": "Key \"{key}\" restored",
     "keyAdded": "Key \"{key}\" added",
+    "keyRenamed": "Key \"{oldKey}\" renamed to \"{newKey}\"",
     "configKeyAdded": "Config key \"{key}\" added",
     "valuesImported": "{count} values imported",
     "valuesImportedJson": "{count} values imported (JSON)",

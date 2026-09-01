@@ -4,18 +4,31 @@ import { cn } from '../helpers/cn'
 import { ui, t } from '../i18n/ui'
 import { highlight } from './highlight'
 
-export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLang, isEven, isMobile, onUpdate, onDelete, onShowKeyHistory, searchQuery }: {
+export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLang, isEven, isMobile, onUpdate, onDelete, onRename, onShowKeyHistory, searchQuery }: {
   rowKey: string; translations: Record<string, Record<string, string>>; original: Record<string, Record<string, string>>
   configFiles: LangFile[]; baseLang: string; isEven: boolean; isMobile: boolean
-  onUpdate: (lang: string, key: string, value: string) => void; onDelete: () => void; onShowKeyHistory?: (key: string) => void; searchQuery?: string
+  onUpdate: (lang: string, key: string, value: string) => void; onDelete: () => void
+  onRename?: (oldKey: string, newKey: string) => boolean
+  onShowKeyHistory?: (key: string) => void; searchQuery?: string
 }) => {
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [editingLang, setEditingLang] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [keyDraft, setKeyDraft] = useState(rowKey)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const renameInputRef = useRef<HTMLInputElement>(null)
   const q = searchQuery ?? ''
 
   useEffect(() => { if (editingLang && inputRef.current) { inputRef.current.focus(); inputRef.current.select() } }, [editingLang])
+  useEffect(() => { if (renaming && renameInputRef.current) { renameInputRef.current.focus(); renameInputRef.current.select() } }, [renaming])
+
+  const startRename = () => { setKeyDraft(rowKey); setRenaming(true) }
+  const confirmRename = () => {
+    if (onRename?.(rowKey, keyDraft)) setRenaming(false)
+  }
+  const cancelRename = () => { setKeyDraft(rowKey); setRenaming(false) }
 
   const baseValue = translations[baseLang]?.[rowKey] ?? ''
   const hasAnyModification = configFiles.some(f => (translations[f.lang]?.[rowKey] ?? '') !== (original[f.lang]?.[rowKey] ?? ''))
@@ -28,7 +41,7 @@ export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLa
   return (
     <div
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => { setHovered(false); setConfirmingDelete(false) }}
       className={cn(
         'border-b border-border-subtle',
         open ? 'bg-card' : hovered ? 'bg-row-hover' : isEven ? 'bg-row-even' : 'bg-row-odd',
@@ -48,13 +61,25 @@ export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLa
           )}>▶</span>
           {hasAnyModification && <span className="size-[5px] rounded-full bg-brand shrink-0" />}
           {missingCount > 0 && !hasAnyModification && <span className="size-[5px] rounded-full bg-fg-warning shrink-0" />}
-          <span className={cn(
-            'font-mono flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap',
-            isMobile ? 'text-[11px]' : 'text-xs',
-            open ? 'text-fg-brand' : 'text-fg-key',
-          )}>
-            {highlight(rowKey, q)}
-          </span>
+          {renaming ? (
+            <input
+              ref={renameInputRef}
+              value={keyDraft}
+              onClick={e => e.stopPropagation()}
+              onChange={e => setKeyDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') cancelRename() }}
+              onBlur={confirmRename}
+              className={cn('font-mono bg-input border border-border-brand rounded px-1 py-0.5 outline-none min-w-0 flex-1', isMobile ? 'text-[11px]' : 'text-xs')}
+            />
+          ) : (
+            <span className={cn(
+              'font-mono flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap',
+              isMobile ? 'text-[11px]' : 'text-xs',
+              open ? 'text-fg-brand' : 'text-fg-key',
+            )}>
+              {highlight(rowKey, q)}
+            </span>
+          )}
           {!isMobile && !open && baseValue && (
             <span className="text-[11px] text-fg-muted italic overflow-hidden text-ellipsis whitespace-nowrap max-w-60 shrink">
               {baseValue.length > 60 ? baseValue.slice(0, 60) + '…' : baseValue}
@@ -93,8 +118,42 @@ export const KeyModeRow = ({ rowKey, translations, original, configFiles, baseLa
           )}
         </button>
 
-        {hovered && (
-          <button onClick={onDelete} className="bg-transparent border-none text-fg-muted cursor-pointer text-sm px-2.5 shrink-0 leading-none">{ui.common.close}</button>
+        {hovered && onRename && !confirmingDelete && (
+          <button
+            onClick={startRename}
+            className="bg-transparent border-none text-fg-muted hover:text-fg-brand cursor-pointer text-sm px-2 shrink-0 leading-none"
+            title={ui.table.editKeyTitle}
+          >
+            ✎
+          </button>
+        )}
+        {hovered && !confirmingDelete && (
+          <button
+            onClick={() => setConfirmingDelete(true)}
+            className="bg-transparent border-none text-fg-muted hover:text-fg-danger cursor-pointer text-sm px-2.5 shrink-0 leading-none"
+            title={ui.table.deleteKeyTitle}
+          >
+            {ui.common.close}
+          </button>
+        )}
+        {confirmingDelete && (
+          <div className="flex items-center gap-1 px-2 shrink-0">
+            <span className="text-[10px] text-fg-danger whitespace-nowrap" title={t(ui.table.deleteKeyConfirm, { key: rowKey })}>{ui.table.deleteKeyConfirmShort}</span>
+            <button
+              onClick={onDelete}
+              className="bg-transparent border-none text-fg-danger cursor-pointer text-xs font-bold p-1"
+              title={ui.table.renameKeyConfirmTitle}
+            >
+              ✓
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="bg-transparent border-none text-fg-muted cursor-pointer text-xs p-1"
+              title={ui.table.renameKeyCancelTitle}
+            >
+              {ui.common.close}
+            </button>
+          </div>
         )}
       </div>
 

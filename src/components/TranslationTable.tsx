@@ -26,6 +26,7 @@ export const TranslationTable = ({
   varIssuesMap,
   onUpdate,
   onDelete,
+  onRename,
   onShowKeyHistory,
 }: {
   searchMode: SearchMode
@@ -47,6 +48,7 @@ export const TranslationTable = ({
   varIssuesMap: Record<string, string[]>
   onUpdate: (lang: string, key: string, value: string) => void
   onDelete: (key: string) => void
+  onRename?: (oldKey: string, newKey: string) => boolean
   onShowKeyHistory?: (key: string) => void
 }) => {
   const baseFile = config.files.find(f => f.lang === config.baseLang)
@@ -90,6 +92,7 @@ export const TranslationTable = ({
                 isMobile={isMobile}
                 onUpdate={onUpdate}
                 onDelete={() => onDelete(key)}
+                onRename={onRename}
                 onShowKeyHistory={onShowKeyHistory}
                 searchQuery={search}
               />
@@ -108,6 +111,7 @@ export const TranslationTable = ({
                 isMobile={isMobile}
                 onChange={val => onUpdate(activeLang, key, val)}
                 onDelete={() => onDelete(key)}
+                onRename={onRename}
                 onShowKeyHistory={onShowKeyHistory}
                 searchQuery={search}
                 matchedLangs={searchMatchMap[key] ?? []}

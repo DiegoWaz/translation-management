@@ -287,6 +287,28 @@ export const removeConfigKey = (
   return { schema: nextSchema, configs: nextConfigs }
 }
 
+/** Rename a config key across the schema and every locale, preserving its type and values. */
+export const renameConfigKey = (
+  schema: ConfigSchema,
+  configs: Record<string, ConfigMap>,
+  oldKey: string,
+  newKey: string,
+): { schema: ConfigSchema; configs: Record<string, ConfigMap> } => {
+  const nextSchema = Object.entries(schema).reduce<ConfigSchema>((acc, [k, v]) => {
+    acc[k === oldKey ? newKey : k] = v
+    return acc
+  }, {})
+  const nextConfigs = Object.keys(configs).reduce<Record<string, ConfigMap>>((acc, lang) => {
+    const entries = Object.entries(configs[lang] ?? {})
+    acc[lang] = entries.reduce<ConfigMap>((map, [k, v]) => {
+      map[k === oldKey ? newKey : k] = v
+      return map
+    }, {})
+    return acc
+  }, {})
+  return { schema: nextSchema, configs: nextConfigs }
+}
+
 export const filterConfigKeys = (
   keys: string[],
   opts: {

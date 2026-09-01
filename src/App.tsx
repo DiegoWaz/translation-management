@@ -184,6 +184,7 @@ const App = () => {
                 varIssuesMap={app.varIssuesMap}
                 onUpdate={app.updateValue}
                 onDelete={app.deleteKey}
+                onRename={app.renameKey}
                 onShowKeyHistory={(key) => { app.setKeyHistoryFilter(key); app.setShowHistory(true) }}
               />
             )}

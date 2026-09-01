@@ -95,7 +95,14 @@ export const frFR: UiMessages = {
     "foundInLang": "{label}: trouvé",
     "missingInLang": "{label}: manquant",
     "missingShortBadge": "{count} manq.",
-    "modifiedShortBadge": "{count} modif."
+    "modifiedShortBadge": "{count} modif.",
+    "editKeyTitle": "Renommer la clé",
+    "deleteKeyTitle": "Supprimer la clé",
+    "renameKeyPlaceholder": "Nouveau nom de clé",
+    "renameKeyConfirmTitle": "Confirmer le renommage",
+    "renameKeyCancelTitle": "Annuler",
+    "deleteKeyConfirm": "Supprimer la clé \"{key}\" de toutes les langues ? Cette action est irréversible.",
+    "deleteKeyConfirmShort": "Supprimer ?"
   },
   "empty": {
     "noMissing": "Aucune clé manquante",
@@ -254,6 +261,7 @@ export const frFR: UiMessages = {
     "prCreated": "PR #{number} créée",
     "keyRestored": "Clé \"{key}\" restaurée",
     "keyAdded": "Clé \"{key}\" ajoutée",
+    "keyRenamed": "Clé \"{oldKey}\" renommée en \"{newKey}\"",
     "configKeyAdded": "Clé config \"{key}\" ajoutée",
     "valuesImported": "{count} valeurs importées",
     "valuesImportedJson": "{count} valeurs importées (JSON)",

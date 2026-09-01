@@ -19,6 +19,18 @@ export const removeKeyFromAll = (prev: TranslationMap, key: string): Translation
   }, { ...prev })
 }
 
+/** Rename a key across every locale, preserving its position and value. */
+export const renameKeyInAll = (prev: TranslationMap, oldKey: string, newKey: string): TranslationMap => {
+  return Object.keys(prev).reduce<TranslationMap>((next, lang) => {
+    const entries = Object.entries(prev[lang] ?? {})
+    next[lang] = entries.reduce<Record<string, string>>((acc, [k, v]) => {
+      acc[k === oldKey ? newKey : k] = v
+      return acc
+    }, {})
+    return next
+  }, { ...prev })
+}
+
 export const applyBulkAssignments = (
   prev: TranslationMap,
   assignments: Array<{ paragraphIndex: number; key: string }>,

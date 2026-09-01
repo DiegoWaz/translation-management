@@ -24,7 +24,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady } from '../helpers/config'
 import { buildKeyLastModified } from '../helpers/history'
 import { commitJsonFiles, commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
@@ -43,6 +43,7 @@ import {
   cloneTranslations,
   mergeTranslationMaps,
   removeKeyFromAll,
+  renameKeyInAll,
 } from '../helpers/translations'
 import {
   addConfigKey,
@@ -56,6 +57,7 @@ import {
   normalizeConfigMap,
   normalizeSchema,
   removeConfigKey,
+  renameConfigKey,
   schemasEqual,
 } from '../helpers/configValues'
 import { defaultPath, deriveLangMeta } from '../helpers/lang'
@@ -162,6 +164,15 @@ export const useTranslationApp = () => {
     )
     return modifiedTx.length > 0 || modifiedCfg.length > 0 || schemaChanged
   })
+
+  // Encrypted token storage decrypts asynchronously; once ready, refresh
+  // config so the real token (not the empty placeholder) is in state.
+  useEffect(() => {
+    waitForTokenReady().then(() => {
+      const c = loadConfigOrDefault()
+      if (c.token) setConfig(prev => (prev.token ? prev : c))
+    })
+  }, [])
 
   // Handle OAuth redirect callback
   useEffect(() => {
@@ -307,31 +318,21 @@ export const useTranslationApp = () => {
       const tree = await listTree(config.token, config.owner, config.repo, config.branch)
       const folderName = config.translationsFolderName || 'translations'
       const filePaths = getTranslationFilePaths(tree, folderName)
-       
-      console.log('[handleLoad] Folder name:', folderName)
-      console.log('[handleLoad] Discovered translation files:', filePaths)
 
       // Load all discovered files (not just those in config.files)
       for (const [lang, paths] of Object.entries(filePaths)) {
        if (paths.length === 0) continue
-        
-       console.log(`[handleLoad] Loading ${lang}:`, paths)
-        
+
        // Load ALL files for this language (don't filter, merge all)
        const sources: FileSource[] = []
        const merged: Record<string, string> = {}
          
        for (const path of paths) {
          const { content, sha, nested, rawContent } = await loadFile(config, path)
-         console.log(`[handleLoad] Loaded ${path}: ${Object.keys(content).length} keys`)
          sources.push({ path, rawContent, originalFlat: { ...content }, sha, nested })
          Object.assign(merged, content)
        }
-        
-       console.log(`[handleLoad] Merged ${lang}: ${Object.keys(merged).length} total keys`)
-       const namespaces = new Set(Object.keys(merged).map(k => k.split('.')[0]))
-       console.log(`[handleLoad] Namespaces in ${lang}:`, Array.from(namespaces))
-         
+
        newFileSources[lang] = sources
        newTrans[lang] = merged
        newShas[lang] = sources[0]?.sha ?? ''
@@ -417,8 +418,6 @@ export const useTranslationApp = () => {
     
     // Load history for all discovered languages
     const langsToLoad = Object.keys(fileSources)
-    console.log('[useEffect] Demo mode off, loading history for:', langsToLoad)
-    
     langsToLoad.forEach(lang => {
       handleLoadHistory(lang)
     })
@@ -627,6 +626,37 @@ export const useTranslationApp = () => {
     }
     setTranslations(prev => removeKeyFromAll(prev, key))
     setOriginal(prev => removeKeyFromAll(prev, key))
+  }
+
+  /** Rename a key across all locales. Returns false (and shows a toast) if the new name is invalid or already used. */
+  const renameKey = (oldKey: string, rawNewKey: string): boolean => {
+    const newKey = rawNewKey.trim()
+    if (!newKey || newKey === oldKey) return false
+
+    if (workspace === 'configs') {
+      if (!isCamelCaseConfigKey(newKey)) {
+        showToast(ui.configs.errorCamelCase, 'error')
+        return false
+      }
+      if (configSchema[newKey]) {
+        showToast(ui.configs.errorDuplicate, 'error')
+        return false
+      }
+      const result = renameConfigKey(configSchema, configs, oldKey, newKey)
+      setConfigSchema(result.schema)
+      setConfigs(result.configs)
+      showToast(t(ui.toast.keyRenamed, { oldKey, newKey }), 'info')
+      return true
+    }
+
+    if (baseKeys.includes(newKey)) {
+      showToast(ui.configs.errorDuplicate, 'error')
+      return false
+    }
+    setTranslations(prev => renameKeyInAll(prev, oldKey, newKey))
+    setOriginal(prev => renameKeyInAll(prev, oldKey, newKey))
+    showToast(t(ui.toast.keyRenamed, { oldKey, newKey }), 'info')
+    return true
   }
 
   /** Remove a config value from one locale only (schema kept). */
@@ -905,7 +935,7 @@ export const useTranslationApp = () => {
       setShowHistory(v => !v)
       if (!isDemoMode && !fileHistory[activeLang]?.length) handleLoadHistory(activeLang)
     },
-    updateValue, updateConfigValue, restoreKey, deleteKey, clearConfigOnLang,
+    updateValue, updateConfigValue, restoreKey, deleteKey, renameKey, clearConfigOnLang,
     handleBulkApply, handleJsonApply, handleConfigImport,
   }
 }

@@ -42,8 +42,7 @@ export const exchangeCodeForToken = async (code: string): Promise<string> => {
     body: JSON.stringify({ code }),
   })
   const data = await res.json() as Record<string, unknown>
-  console.log('Token exchange response:', { status: res.status, data })
-  
+
   if (!res.ok) {
     throw new Error((data.error as string) ?? 'Token exchange failed')
   }
