@@ -26,7 +26,7 @@ import {
 } from '../helpers/defaults'
 import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady } from '../helpers/config'
 import { buildKeyLastModified } from '../helpers/history'
-import { commitJsonFiles, commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
+import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
 import {
   buildKeyGroups,
@@ -458,7 +458,11 @@ export const useTranslationApp = () => {
     setShowCommit(true)
   }
 
-  const doCommit = async (mode: 'pr' | 'direct' = 'direct', prTitle?: string, branchName?: string) => {
+  // PR-only: LocaleHub never pushes directly to the base branch. Every
+  // change always lands on a dedicated branch behind a Pull Request that the
+  // user reviews and merges themselves on GitHub — this app can't overwrite
+  // or delete anything in the repo on its own.
+  const doCommit = async (mode: 'pr' = 'pr', prTitle?: string, branchName?: string) => {
     setLoading(true)
     setShowCommit(false)
     try {
@@ -527,33 +531,10 @@ export const useTranslationApp = () => {
           return
         }
 
-        if (mode === 'pr') {
-          const { prNumber, prUrl } = await commitJsonFilesAsPR(config, files, message, prTitle || message, branchName)
-          setOriginal(cloneTranslations(translations))
-          showToast(t(ui.toast.prCreated, { number: prNumber }), 'success')
-          window.open(prUrl, '_blank')
-          showToast('PR #' + prNumber + ' ouverte dans un nouvel onglet', 'success')
-        } else {
-          const pathShas = await commitJsonFiles(config, files, message)
-          const newShas = { ...shas }
-          for (const lang of langs) {
-            const sources = fileSources[lang] || []
-            for (const source of sources) {
-              if (pathShas[source.path]) newShas[lang] = pathShas[source.path]
-            }
-          }
-          setShas(newShas)
-          setOriginal(cloneTranslations(translations))
-          setStaleLangs([])
-          showToast(
-            t(ui.toast.commitPushed, {
-              branch: config.branch,
-              count: Math.max(modifiedKeys.length, files.length),
-            }),
-            'success',
-          )
-          for (const lang of langs) handleLoadHistory(lang)
-        }
+        const { prNumber, prUrl } = await commitJsonFilesAsPR(config, files, message, prTitle || message, branchName)
+        setOriginal(cloneTranslations(translations))
+        showToast(t(ui.toast.prCreated, { number: prNumber }), 'success')
+        window.open(prUrl, '_blank')
       }
     } catch (e) {
       showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')

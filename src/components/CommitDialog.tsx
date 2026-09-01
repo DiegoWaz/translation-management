@@ -8,7 +8,7 @@ import { Overlay } from './Overlay'
 import { Field } from './Field'
 import { GithubIcon } from './Icons'
 
-export type CommitMode = 'pr' | 'direct'
+export type CommitMode = 'pr'
 
 export const CommitDialog = ({
   commitMsg,
@@ -35,7 +35,11 @@ export const CommitDialog = ({
   onClose: () => void
   isMobile: boolean
 }) => {
-  const [mode, setMode] = useState<CommitMode>('pr')
+  // Only Pull Requests are supported: LocaleHub never pushes directly to the
+  // base branch, so it can never overwrite or delete anything on its own —
+  // every change lands as a reviewable PR the user merges (or discards)
+  // themselves on GitHub.
+  const mode: CommitMode = 'pr'
   
   // Auto-detect commit type
   const commitType = useMemo(() => detectCommitType(modifiedKeys, original), [modifiedKeys, original])
@@ -85,24 +89,12 @@ export const CommitDialog = ({
           </span>
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setMode('pr')}
-            className={cn(
-              'flex-1 px-3 py-1.5 text-xs cursor-pointer font-inherit border-none border-r border-border-strong',
-              mode === 'pr' ? 'bg-brand-soft-bg text-fg-brand font-semibold' : 'bg-transparent text-fg-muted',
-            )}
-          >{ui.commit.modePr}</button>
-          <button
-            type="button"
-            onClick={() => setMode('direct')}
-            className={cn(
-              'flex-1 px-3 py-1.5 text-xs cursor-pointer font-inherit border-none',
-              mode === 'direct' ? 'bg-brand-soft-bg text-fg-brand font-semibold' : 'bg-transparent text-fg-muted',
-            )}
-          >{ui.commit.modeDirect}</button>
+        {/* PR-only: LocaleHub never pushes directly to the base branch, so it
+            can't overwrite or delete repo content on its own. */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-soft-bg border border-border rounded-md text-xs text-fg-brand">
+          <GithubIcon size={13} />
+          <span className="font-semibold">{ui.commit.modePr}</span>
+          <span className="text-fg-muted">— {ui.commit.prOnlyHint}</span>
         </div>
 
         <div className="bg-elevated border border-border rounded-lg p-3 max-h-56 overflow-y-auto">
@@ -136,16 +128,12 @@ export const CommitDialog = ({
           })}
         </div>
 
-        {mode === 'pr' && (
-          <>
-            <Field label={ui.commit.branchNameLabel}>
-              <input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="fix/1234567890" className={inputClass} />
-            </Field>
-            <Field label={ui.commit.prTitleLabel}>
-              <input value={prTitle} onChange={e => setPrTitle(e.target.value)} placeholder={ui.commit.prTitlePlaceholder} className={inputClass} />
-            </Field>
-          </>
-        )}
+        <Field label={ui.commit.branchNameLabel}>
+          <input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="fix/1234567890" className={inputClass} />
+        </Field>
+        <Field label={ui.commit.prTitleLabel}>
+          <input value={prTitle} onChange={e => setPrTitle(e.target.value)} placeholder={ui.commit.prTitlePlaceholder} className={inputClass} />
+        </Field>
 
         <Field label={ui.commit.messageLabel}>
           <input value={commitMsg} onChange={e => onMsgChange(e.target.value)} placeholder={ui.commit.messagePlaceholder} className={inputClass} />
@@ -153,25 +141,14 @@ export const CommitDialog = ({
 
         <div className="flex gap-2.5 justify-end">
           <button type="button" onClick={onClose} className={btnSecClass}>{ui.common.cancel}</button>
-          {mode === 'pr' ? (
-            <button
-              type="button"
-              onClick={() => onConfirm('pr', prTitle, branchName)}
-              disabled={!commitMsg.trim() || !prTitle.trim() || !branchName.trim()}
-              className={cn(btnPrimaryClass, 'bg-success-bg border-border-success text-fg-success')}
-            >
-              <GithubIcon size={13} /> {ui.commit.createPr}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onConfirm('direct')}
-              disabled={!commitMsg.trim()}
-              className={btnPrimaryClass}
-            >
-              <GithubIcon size={13} /> {t(ui.commit.pushTo, { branch: config.branch })}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onConfirm('pr', prTitle, branchName)}
+            disabled={!commitMsg.trim() || !prTitle.trim() || !branchName.trim()}
+            className={cn(btnPrimaryClass, 'bg-success-bg border-border-success text-fg-success')}
+          >
+            <GithubIcon size={13} /> {ui.commit.createPr}
+          </button>
         </div>
       </div>
     </Overlay>

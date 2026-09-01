@@ -62,9 +62,9 @@ export type UiMessages = {
   }
   commit: {
     title: string; messageLabel: string; messagePlaceholder: string
-    pushTo: string; defaultMessage: string; configDefaultMessage: string; configSchemaMessage: string
+    defaultMessage: string; configDefaultMessage: string; configSchemaMessage: string
     newFile: string; schemaFile: string
-    modePr: string; modeDirect: string; type: string; branchNameLabel: string
+    modePr: string; prOnlyHint: string; type: string; branchNameLabel: string
     prTitleLabel: string; prTitlePlaceholder: string; createPr: string
   }
   settings: {
@@ -110,7 +110,7 @@ export type UiMessages = {
   }
   toast: {
     loadedFromGithub: string; draftRestored: string; error: string; historyError: string
-    nothingToCommit: string; commitPushed: string; prCreated: string
+    nothingToCommit: string; prCreated: string
     keyRestored: string; keyAdded: string; configKeyAdded: string; keyRenamed: string
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
