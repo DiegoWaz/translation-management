@@ -158,6 +158,12 @@ export const esES: UiMessages = {
     "securityLink": "Cómo LocaleHub protege tu repositorio →",
     "type": "Tipo",
     "branchNameLabel": "Nombre de la rama",
+    "branchModeLabel": "Destino",
+    "branchModeNew": "Nueva rama",
+    "branchModeExisting": "Rama existente",
+    "branchModeExistingHint": "Añade este commit a una PR ya abierta (o una rama existente), en lugar de crear una nueva.",
+    "branchesLoading": "Cargando ramas…",
+    "noOtherBranches": "No se encontró ninguna otra rama.",
     "prTitleLabel": "Título de la PR",
     "prTitlePlaceholder": "feat(i18n): update translations",
     "createPr": "Crear Pull Request"

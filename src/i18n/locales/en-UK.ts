@@ -158,6 +158,12 @@ export const enUK: UiMessages = {
     "securityLink": "How LocaleHub protects your repo →",
     "type": "Type",
     "branchNameLabel": "Branch name",
+    "branchModeLabel": "Destination",
+    "branchModeNew": "New branch",
+    "branchModeExisting": "Existing branch",
+    "branchModeExistingHint": "Adds this commit to an already-open PR (or existing branch), instead of creating a new one.",
+    "branchesLoading": "Loading branches…",
+    "noOtherBranches": "No other branch found.",
     "prTitleLabel": "PR title",
     "prTitlePlaceholder": "feat(i18n): update translations",
     "createPr": "Create Pull Request"

@@ -249,7 +249,14 @@ export const prepareCommitContent = (
   return currentFlat
 }
 
-/** Create a new branch from the tip of the base branch, commit files, and open a PR. */
+/**
+ * Create a branch (or reuse an existing one), commit files, and ensure a PR exists.
+ * - If `customBranchName` refers to a branch that already exists, files are committed
+ *   directly onto it (no new branch created) — this lets you push follow-up commits
+ *   onto a PR you already opened, or fix a mistake in your last commit there.
+ * - If an open PR already targets that branch, its URL/number is returned instead of
+ *   opening a duplicate PR.
+ */
 export const commitJsonFilesAsPR = async (
   config: GitHubConfig,
   files: JsonFileChange[],
@@ -262,18 +269,29 @@ export const commitJsonFilesAsPR = async (
   const { owner, repo, branch: baseBranch, token } = config
   const branchName = customBranchName || `localehub/${Date.now()}`
 
-  // Get the SHA of the base branch tip
-  const baseRef = await ghFetch(token, `/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`)
-  const baseSha = baseRef.object.sha as string
+  const existingBranch = await ghFetch(token, `/repos/${owner}/${repo}/git/ref/heads/${branchName}`).catch(() => null)
 
-  // Create the new branch
-  await ghFetch(token, `/repos/${owner}/${repo}/git/refs`, {
-    method: 'POST',
-    body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
-  })
+  if (!existingBranch) {
+    // Get the SHA of the base branch tip and create the new branch from it
+    const baseRef = await ghFetch(token, `/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`)
+    const baseSha = baseRef.object.sha as string
+    await ghFetch(token, `/repos/${owner}/${repo}/git/refs`, {
+      method: 'POST',
+      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
+    })
+  }
 
-  // Commit files to the new branch
+  // Commit files onto the branch (new or existing)
   await commitJsonFiles({ ...config, branch: branchName }, files, commitMessage)
+
+  if (existingBranch) {
+    // Reuse an already-open PR for this branch if one exists
+    const openPrs = await ghFetch(token, `/repos/${owner}/${repo}/pulls?head=${owner}:${branchName}&state=open`)
+    const existingPr = Array.isArray(openPrs) ? openPrs[0] : undefined
+    if (existingPr) {
+      return { prUrl: existingPr.html_url as string, prNumber: existingPr.number as number }
+    }
+  }
 
   // Create the PR
   const pr = await ghFetch(token, `/repos/${owner}/${repo}/pulls`, {
