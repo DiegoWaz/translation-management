@@ -30,6 +30,7 @@ export const frFR: UiMessages = {
     "demo": "DÉMO",
     "loadGithub": "↓ GitHub",
     "loadGithubTitle": "Charger depuis GitHub",
+    "loading": "Chargement…",
     "history": "Historique",
     "historyTitle": "Historique",
     "commit": "Créer une PR",

@@ -30,6 +30,7 @@ export const enUK: UiMessages = {
     "demo": "DEMO",
     "loadGithub": "↓ GitHub",
     "loadGithubTitle": "Load from GitHub",
+    "loading": "Loading…",
     "history": "History",
     "historyTitle": "History",
     "commit": "Commit",

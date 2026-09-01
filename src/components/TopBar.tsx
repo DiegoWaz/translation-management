@@ -1,7 +1,7 @@
 import type { GitHubConfig, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
 import { ui, UI_LOCALES, type UiLocale } from '../i18n/ui'
-import { GithubIcon, HistoryIcon } from './Icons'
+import { GithubIcon, HistoryIcon, SpinnerIcon } from './Icons'
 
 export const TopBar = ({
   config,
@@ -139,7 +139,8 @@ export const TopBar = ({
           title={ui.topBar.loadGithubTitle}
           className={cn('flex items-center gap-1.5 px-3 py-1 bg-elevated border border-border-strong rounded-md text-fg-tertiary text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0', loading && 'opacity-50')}
         >
-          <span>{ui.topBar.loadGithub}</span>
+          {loading ? <SpinnerIcon size={12} /> : null}
+          <span>{loading ? ui.topBar.loading : ui.topBar.loadGithub}</span>
         </button>
       )}
 

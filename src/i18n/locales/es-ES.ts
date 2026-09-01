@@ -30,6 +30,7 @@ export const esES: UiMessages = {
     "demo": "DEMO",
     "loadGithub": "↓ GitHub",
     "loadGithubTitle": "Cargar desde GitHub",
+    "loading": "Cargando…",
     "history": "Historial",
     "historyTitle": "Historial",
     "commit": "Confirmar",

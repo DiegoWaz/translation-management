@@ -22,6 +22,7 @@ import { defaultPath } from './helpers/lang'
 import { configMapsToStringMaps } from './helpers/exportGenerators'
 import { SchemaValidateWorkspace } from './components/SchemaValidateWorkspace'
 import { ToastStack } from './components/ToastStack'
+import { LoadingOverlay } from './components/LoadingOverlay'
 import { ui } from './i18n/ui'
 
 const App = () => {
@@ -98,7 +99,8 @@ const App = () => {
             />
           )}
 
-          <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <main className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+            {app.loading && !app.isDemoMode && <LoadingOverlay />}
             <EditorToolbar
               workspace={app.workspace}
               search={app.search}

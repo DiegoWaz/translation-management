@@ -7,7 +7,7 @@ export type UiMessages = {
   }
   theme: { toLight: string; toDark: string; lightIcon: string; darkIcon: string }
   topBar: {
-    disconnected: string; demo: string; loadGithub: string; loadGithubTitle: string
+    disconnected: string; demo: string; loadGithub: string; loadGithubTitle: string; loading: string
     history: string; historyTitle: string; commit: string; commitTitle: string; settings: string
     uiLang: string
     workspaceTranslations: string; workspaceConfigs: string; workspaceSchema: string; workspaceDisabled: string
