@@ -350,16 +350,15 @@ export const commitJsonFilesAsPR = async (
 }
 
 export const fetchFileCommits = async (config: GitHubConfig, path: string): Promise<CommitRecord[]> => {
-  const commits = await ghFetch<
-    Array<{
-      sha: string
-      commit: { message: string; author?: { name?: string; date?: string } }
-      author?: { login?: string }
-    }>
-  >(
+  type GhCommit = {
+    sha: string
+    commit: { message: string; author?: { name?: string; date?: string } }
+    author?: { login?: string }
+  }
+  const commits = await ghFetch(
     config.token,
     `/repos/${config.owner}/${config.repo}/commits?path=${encodeURIComponent(path)}&sha=${encodeURIComponent(config.branch)}&per_page=20`,
-  )
+  ) as GhCommit[]
 
   const records: CommitRecord[] = []
   for (let i = 0; i < commits.length; i++) {

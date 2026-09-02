@@ -27,7 +27,7 @@ import {
 } from '../helpers/defaults'
 import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken } from '../helpers/config'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
-import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile } from '../helpers/github'
+import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
 import {
