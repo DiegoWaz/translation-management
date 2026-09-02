@@ -2,6 +2,7 @@ import type { GitHubConfig, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
 import { ui, UI_LOCALES, t, type UiLocale } from '../i18n/ui'
 import { GithubIcon, HistoryIcon, SpinnerIcon } from './Icons'
+import { Logo } from './Logo'
 
 export const TopBar = ({
   config,
@@ -51,10 +52,7 @@ export const TopBar = ({
 
   return (
     <header className={cn('h-[52px] flex items-center px-3.5 bg-surface border-b border-border-muted shrink-0 overflow-x-auto overflow-y-hidden', isMobile ? 'gap-2' : 'gap-3.5')}>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <div className="size-[26px] bg-linear-to-br from-brand to-brand-soft rounded-md flex items-center justify-center text-[10px] font-bold text-fg-on-brand shrink-0">{ui.app.logo}</div>
-        {!isMobile && !isTablet && <span className="text-[13px] font-semibold text-fg tracking-tight whitespace-nowrap">{ui.app.name}</span>}
-      </div>
+      <Logo showWordmark={!isMobile && !isTablet} />
 
       <div className="flex bg-elevated border border-border-strong rounded-md overflow-hidden shrink-0">
         {([

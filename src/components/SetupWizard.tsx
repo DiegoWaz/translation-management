@@ -11,6 +11,7 @@ import {
 } from '../helpers/githubBrowser'
 import { buildAuthorizeUrl } from '../helpers/githubOAuth'
 import { GithubIcon } from './Icons'
+import { Logo } from './Logo'
 import { ui, t } from '../i18n/ui'
 
 type Step = 'auth' | 'repo' | 'langs'
@@ -193,8 +194,8 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="m-0 text-base font-semibold text-fg">{ui.setup.title}</h2>
-          <p className="m-0 mt-1 text-xs text-fg-muted">{ui.setup.subtitle}</p>
+          <Logo size="md" showWordmark className="mb-3" />
+          <p className="m-0 text-xs text-fg-muted">{ui.setup.subtitle}</p>
           <div className="flex gap-1.5 mt-3">
             {stepLabels.map((label, i) => (
               <div key={label} className="flex-1 flex flex-col gap-1">
