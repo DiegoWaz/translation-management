@@ -88,7 +88,7 @@ car il nécessite `GH_CLIENT_SECRET`, qui ne doit jamais atteindre le navigateur
 3. Dans l'OAuth App GitHub (**Settings → Developer settings → OAuth Apps**), mettre à jour :
    - **Homepage URL** : l'URL de prod (ex. `https://mon-app.vercel.app`)
    - **Authorization callback URL** : **exactement** la même URL que celle de l'app (ex. `https://mon-app.vercel.app/` — avec ou sans slash final, mais identique à ce que le navigateur envoie)
-4. Déployer. Aucune autre configuration serveur n'est nécessaire — `vercel.json` déclare déjà le build Vite et le dossier `api/`.
+4. Déployer. Le dossier `api/` expose `POST /api/github/token` (handler `@vercel/node`, pas le format Web `Request`/`Response` seul). `vercel.json` route le SPA vers `index.html` tout en laissant `/api/*` aux fonctions serverless.
 
 Après autorisation GitHub, l'app échange le `code` contre un token via `/api/github/token` (le `redirect_uri` est transmis automatiquement). En cas d'échec, un toast d'erreur s'affiche ; en cas de succès, l'assistant de configuration s'ouvre pour choisir le dépôt.
 

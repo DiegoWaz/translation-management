@@ -80,6 +80,7 @@ import {
   exchangeCodeForToken,
   extractOAuthCode,
   verifyState,
+  hasOAuthCallback,
 } from '../helpers/githubOAuth'
 
 // Load config with fallback to demo config if empty
@@ -96,6 +97,7 @@ export const useTranslationApp = () => {
   const [config, setConfig] = useState(loadConfigOrDefault)
   const [initialDraft] = useState(() => loadDraft(loadConfigOrDefault()))
   const [showSetup, setShowSetup] = useState(() => {
+    if (hasOAuthCallback()) return true
     const cfg = loadConfigOrDefault()
     return !isGithubConfigured(cfg) && !loadUiConfig()
   })
@@ -176,6 +178,7 @@ export const useTranslationApp = () => {
   const [sessionLostReason, setSessionLostReason] = useState<string | null>(null)
   const [githubReady, setGithubReady] = useState(false)
   const pendingSessionLostRef = useRef<string | null>(null)
+  const oauthHandledRef = useRef(false)
   const staleDismissedRef = useRef<Set<string>>(new Set())
   const staleLangs = useMemo(() => staleConflicts.map(c => c.lang), [staleConflicts])
   const [varValidation, setVarValidation] = useState(true)
@@ -243,8 +246,10 @@ export const useTranslationApp = () => {
 
   // Handle OAuth redirect callback (after GitHub authorizes the app).
   useEffect(() => {
+    if (oauthHandledRef.current) return
     const oauthResult = extractOAuthCode()
     if (!oauthResult) return
+    oauthHandledRef.current = true
 
     if (!verifyState(oauthResult.state)) {
       cleanOAuthParams()
@@ -263,6 +268,7 @@ export const useTranslationApp = () => {
         showToast(ui.toast.oauthConnected, 'success')
       })
       .catch((e: Error) => {
+        oauthHandledRef.current = false
         setOauthToken(undefined)
         showToast(t(ui.toast.oauthFailed, { message: e.message }), 'error')
       })
