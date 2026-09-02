@@ -88,63 +88,73 @@ export const TranslationTable = ({
     />
   )
 
-  return (
-    <>
-      {searchMode === 'key' ? (
-        <div
-          className={cn('grid border-b border-border bg-row-even', pad)}
-          style={{ gridTemplateColumns: keyModeColTemplate }}
-        >
-          <ColHeader
-            label={ui.table.key}
-            resizable={canResize}
-            onResize={delta => onResizeColumn?.('key', delta)}
-            onResetWidth={() => onResetColumn?.('key')}
-          />
-          {!isMobile && <ColHeader label={ui.table.allLanguages} accent />}
-          <div />
-        </div>
-      ) : (
-        <div className={cn('grid border-b border-border bg-row-even min-w-0', pad)} style={{ gridTemplateColumns: colTemplate }}>
-          <ColHeader
-            label={ui.table.key}
-            resizable={canResize}
-            onResize={delta => onResizeColumn?.('key', delta)}
-            onResetWidth={() => onResetColumn?.('key')}
-          />
-          {showBase && (
-            <ColHeader
-              label={`${baseFile?.flag ?? ''} ${baseFile?.label ?? ui.common.base}`}
-              resizable={canResize}
-              onResize={delta => onResizeColumn?.('base', delta)}
-              onResetWidth={() => onResetColumn?.('base')}
-            />
-          )}
-          <ColHeader
-            label={`${activeLangFile?.flag ?? ''} ${activeLangFile?.label ?? activeLang}`}
-            accent
-            resizable={canResize}
-            onResize={delta => onResizeColumn?.('target', delta)}
-            onResetWidth={() => onResetColumn?.('target')}
-          />
-          {showLastMod && (
-            <ColHeader
-              label={ui.table.lastModified}
-              resizable={canResize}
-              onResize={delta => onResizeColumn?.('lastMod', delta)}
-              onResetWidth={() => onResetColumn?.('lastMod')}
-            />
-          )}
-          <div />
-        </div>
+  const localeHeader = (
+    <div className={cn('grid border-b border-border bg-row-even min-w-0', pad)} style={{ gridTemplateColumns: colTemplate }}>
+      <ColHeader
+        label={ui.table.key}
+        resizable={canResize}
+        onResize={delta => onResizeColumn?.('key', delta)}
+        onResetWidth={() => onResetColumn?.('key')}
+      />
+      {showBase && (
+        <ColHeader
+          label={`${baseFile?.flag ?? ''} ${baseFile?.label ?? ui.common.base}`}
+          resizable={canResize}
+          onResize={delta => onResizeColumn?.('base', delta)}
+          onResetWidth={() => onResetColumn?.('base')}
+        />
       )}
+      <ColHeader
+        label={`${activeLangFile?.flag ?? ''} ${activeLangFile?.label ?? activeLang}`}
+        accent
+        resizable={canResize}
+        onResize={delta => onResizeColumn?.('target', delta)}
+        onResetWidth={() => onResetColumn?.('target')}
+      />
+      {showLastMod && (
+        <ColHeader
+          label={ui.table.lastModified}
+          resizable={canResize}
+          onResize={delta => onResizeColumn?.('lastMod', delta)}
+          onResetWidth={() => onResetColumn?.('lastMod')}
+        />
+      )}
+      <div />
+    </div>
+  )
 
-      {filteredKeys.length === 0 ? (
-        <div className="flex-1 overflow-y-auto">
+  const keyHeader = (
+    <div
+      className={cn('grid border-b border-border bg-row-even', pad)}
+      style={{ gridTemplateColumns: keyModeColTemplate }}
+    >
+      <ColHeader
+        label={ui.table.key}
+        resizable={canResize}
+        onResize={delta => onResizeColumn?.('key', delta)}
+        onResetWidth={() => onResetColumn?.('key')}
+      />
+      {!isMobile && <ColHeader label={ui.table.allLanguages} accent />}
+      <div />
+    </div>
+  )
+
+  if (filteredKeys.length === 0) {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {searchMode === 'key' ? keyHeader : localeHeader}
+        <div className="flex-1 overflow-y-auto min-h-0">
           <EmptyState filter={filter} search={search} />
         </div>
-      ) : searchMode === 'key' ? (
-        <div className="flex-1 overflow-y-auto">
+      </div>
+    )
+  }
+
+  if (searchMode === 'key') {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {keyHeader}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {filteredKeys.map((key, i) => (
             <KeyModeRow
               key={key}
@@ -163,20 +173,27 @@ export const TranslationTable = ({
             />
           ))}
         </div>
-      ) : useVirtual ? (
-        <div className="flex-1 overflow-x-auto min-h-0 flex flex-col">
-          <VirtualList
-            itemCount={filteredKeys.length}
-            itemHeight={TRANSLATION_ROW_HEIGHT}
-            getItemKey={index => filteredKeys[index]}
-            renderItem={index => renderLocaleRow(filteredKeys[index], index)}
-          />
-        </div>
+      </div>
+    )
+  }
+
+  // One scrollport only: VirtualList (or the non-virtual body) owns vertical scroll.
+  // Avoid overflow-x-auto alone on a parent — CSS would force overflow-y:auto and nest scrolls.
+  return (
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      {localeHeader}
+      {useVirtual ? (
+        <VirtualList
+          itemCount={filteredKeys.length}
+          itemHeight={TRANSLATION_ROW_HEIGHT}
+          getItemKey={index => filteredKeys[index]}
+          renderItem={index => renderLocaleRow(filteredKeys[index], index)}
+        />
       ) : (
-        <div className="flex-1 overflow-y-auto overflow-x-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {filteredKeys.map((key, i) => renderLocaleRow(key, i))}
         </div>
       )}
-    </>
+    </div>
   )
 }
