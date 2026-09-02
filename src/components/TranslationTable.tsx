@@ -1,4 +1,4 @@
-import type { FilterMode, GitHubConfig, KeyLastModifiedMap, LangFile, SearchMode } from '../types'
+import type { FilterMode, GitHubConfig, KeyLastModifiedMap, LangFile, SearchMode, TranslationColumnWidths } from '../types'
 import { cn } from '../helpers/cn'
 import { ui } from '../i18n/ui'
 import { ColHeader } from './ColHeader'
@@ -11,6 +11,7 @@ export const TranslationTable = ({
   searchMode,
   isMobile,
   colTemplate,
+  keyModeColTemplate,
   showBase,
   showLastMod,
   config,
@@ -25,6 +26,8 @@ export const TranslationTable = ({
   searchMatchMap,
   varValidation,
   varIssuesMap,
+  onResizeColumn,
+  onResetColumn,
   onUpdate,
   onDelete,
   onRename,
@@ -33,6 +36,7 @@ export const TranslationTable = ({
   searchMode: SearchMode
   isMobile: boolean
   colTemplate: string
+  keyModeColTemplate: string
   showBase: boolean
   showLastMod: boolean
   config: GitHubConfig
@@ -47,6 +51,8 @@ export const TranslationTable = ({
   searchMatchMap: Record<string, string[]>
   varValidation: boolean
   varIssuesMap: Record<string, string[]>
+  onResizeColumn?: (col: keyof TranslationColumnWidths, deltaX: number) => void
+  onResetColumn?: (col: keyof TranslationColumnWidths) => void
   onUpdate: (lang: string, key: string, value: string) => void
   onDelete: (key: string) => void
   onRename?: (oldKey: string, newKey: string) => boolean
@@ -55,6 +61,7 @@ export const TranslationTable = ({
   const baseFile = config.files.find(f => f.lang === config.baseLang)
   const pad = isMobile ? 'px-3' : 'px-5'
   const useVirtual = searchMode !== 'key' && filteredKeys.length > 40
+  const canResize = Boolean(onResizeColumn) && !isMobile
 
   const renderLocaleRow = (key: string, i: number) => (
     <TranslationRow
@@ -86,18 +93,48 @@ export const TranslationTable = ({
       {searchMode === 'key' ? (
         <div
           className={cn('grid border-b border-border bg-row-even', pad)}
-          style={{ gridTemplateColumns: isMobile ? '1fr 24px' : '200px 1fr 24px' }}
+          style={{ gridTemplateColumns: keyModeColTemplate }}
         >
-          <ColHeader label={ui.table.key} />
+          <ColHeader
+            label={ui.table.key}
+            resizable={canResize}
+            onResize={delta => onResizeColumn?.('key', delta)}
+            onResetWidth={() => onResetColumn?.('key')}
+          />
           {!isMobile && <ColHeader label={ui.table.allLanguages} accent />}
           <div />
         </div>
       ) : (
-        <div className={cn('grid border-b border-border bg-row-even', pad)} style={{ gridTemplateColumns: colTemplate }}>
-          <ColHeader label={ui.table.key} />
-          {showBase && <ColHeader label={`${baseFile?.flag ?? ''} ${baseFile?.label ?? ui.common.base}`} />}
-          <ColHeader label={`${activeLangFile?.flag ?? ''} ${activeLangFile?.label ?? activeLang}`} accent />
-          {showLastMod && <ColHeader label={ui.table.lastModified} />}
+        <div className={cn('grid border-b border-border bg-row-even min-w-0', pad)} style={{ gridTemplateColumns: colTemplate }}>
+          <ColHeader
+            label={ui.table.key}
+            resizable={canResize}
+            onResize={delta => onResizeColumn?.('key', delta)}
+            onResetWidth={() => onResetColumn?.('key')}
+          />
+          {showBase && (
+            <ColHeader
+              label={`${baseFile?.flag ?? ''} ${baseFile?.label ?? ui.common.base}`}
+              resizable={canResize}
+              onResize={delta => onResizeColumn?.('base', delta)}
+              onResetWidth={() => onResetColumn?.('base')}
+            />
+          )}
+          <ColHeader
+            label={`${activeLangFile?.flag ?? ''} ${activeLangFile?.label ?? activeLang}`}
+            accent
+            resizable={canResize}
+            onResize={delta => onResizeColumn?.('target', delta)}
+            onResetWidth={() => onResetColumn?.('target')}
+          />
+          {showLastMod && (
+            <ColHeader
+              label={ui.table.lastModified}
+              resizable={canResize}
+              onResize={delta => onResizeColumn?.('lastMod', delta)}
+              onResetWidth={() => onResetColumn?.('lastMod')}
+            />
+          )}
           <div />
         </div>
       )}
@@ -127,14 +164,16 @@ export const TranslationTable = ({
           ))}
         </div>
       ) : useVirtual ? (
-        <VirtualList
-          itemCount={filteredKeys.length}
-          itemHeight={TRANSLATION_ROW_HEIGHT}
-          getItemKey={index => filteredKeys[index]}
-          renderItem={index => renderLocaleRow(filteredKeys[index], index)}
-        />
+        <div className="flex-1 overflow-x-auto min-h-0 flex flex-col">
+          <VirtualList
+            itemCount={filteredKeys.length}
+            itemHeight={TRANSLATION_ROW_HEIGHT}
+            getItemKey={index => filteredKeys[index]}
+            renderItem={index => renderLocaleRow(filteredKeys[index], index)}
+          />
+        </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-auto">
           {filteredKeys.map((key, i) => renderLocaleRow(key, i))}
         </div>
       )}

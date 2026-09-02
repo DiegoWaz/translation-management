@@ -11,6 +11,7 @@ import type {
   ParsedImport,
   SearchMode,
   StaleLangConflict,
+  TranslationColumnWidths,
   WorkspaceMode,
 } from '../types'
 import { useWidth } from './useWidth'
@@ -26,6 +27,12 @@ import {
   makeDemoHistory,
 } from '../helpers/defaults'
 import { isGithubConfigured, loadConfig, saveUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
+import {
+  clampWidth,
+  DEFAULT_TRANSLATION_COLUMN_WIDTHS,
+  loadColumnWidths,
+  saveColumnWidths,
+} from '../helpers/columnWidths'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
@@ -39,6 +46,7 @@ import {
   columnLayout,
   filterKeys,
   getModifiedKeys,
+  groupKeyPrefix,
 } from '../helpers/filtering'
 import {
   addKeyToAll,
@@ -196,6 +204,7 @@ export const useTranslationApp = () => {
   const [varValidation, setVarValidation] = useState(true)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [searchMode, setSearchMode] = useState<SearchMode>('locale')
+  const [columnWidths, setColumnWidths] = useState<TranslationColumnWidths>(loadColumnWidths)
   const [isDark, setIsDark] = useState(loadStoredIsDark)
   const [uiLocale, setUiLocaleState] = useState<UiLocale>(detectUiLocale)
   const [draftRestored] = useState(() => {
@@ -857,6 +866,22 @@ export const useTranslationApp = () => {
     showToast(t(ui.toast.keyAdded, { key: k }), 'info')
   }
 
+  const resizeColumn = (col: keyof TranslationColumnWidths, deltaX: number) => {
+    setColumnWidths(prev => {
+      const next = { ...prev, [col]: clampWidth(col, prev[col] + deltaX) }
+      saveColumnWidths(next)
+      return next
+    })
+  }
+
+  const resetColumn = (col: keyof TranslationColumnWidths) => {
+    setColumnWidths(prev => {
+      const next = { ...prev, [col]: DEFAULT_TRANSLATION_COLUMN_WIDTHS[col] }
+      saveColumnWidths(next)
+      return next
+    })
+  }
+
   const deleteKey = (key: string) => {
     if (workspace === 'configs') {
       const result = removeConfigKey(configSchema, configs, key)
@@ -989,6 +1014,16 @@ export const useTranslationApp = () => {
     () => collectTranslationKeys(translations, original, allLangs, config.baseLang),
     [translations, original, allLangs, config.baseLang],
   )
+
+  const startAddKey = () => {
+    if (workspace === 'translations') {
+      setNewKey(groupKeyPrefix(activeGroup, baseKeys))
+    } else {
+      setNewKey('')
+    }
+    setAddingKey(true)
+  }
+
   const configKeys = Object.keys(configSchema).sort()
   const activeLangFile = localizedConfig.files.find(f => f.lang === activeLang)
 
@@ -1049,7 +1084,7 @@ export const useTranslationApp = () => {
     if (b.lang === config.baseLang) return 1
     return 0
   })
-  const { showBase, showLastMod, colTemplate } = columnLayout(isMobile, isTablet)
+  const { showBase, showLastMod, colTemplate, keyModeColTemplate } = columnLayout(isMobile, isTablet, columnWidths)
 
   const setSearchAndClearGroup = (value: string) => {
     setSearch(value)
@@ -1243,7 +1278,7 @@ export const useTranslationApp = () => {
     showSettings, setShowSettings, showLoad, setShowLoad, showCommit, setShowCommit,
     showSetup, setShowSetup, oauthToken,
     commitMsg, setCommitMsg, loading, oauthConnecting, isDemoMode,
-    addingKey, setAddingKey, newKey, setNewKey, newConfigType, setNewConfigType, addKey,
+    addingKey, setAddingKey, newKey, setNewKey, newConfigType, setNewConfigType, addKey, startAddKey,
     showHistory, setShowHistory, fileHistory,
     historyLoading: historyStatus[activeLang] === 'loading',
     historyError: historyStatus[activeLang] === 'error',
@@ -1271,7 +1306,7 @@ export const useTranslationApp = () => {
     langsNeedingFile: workspace === 'configs' ? configLangsNeedingFile : langsNeedingFile,
     schemaDirty: schemaDirty || schemaNeedingFile,
     activeLangKeyMap: keyLastModified[activeLang] ?? {},
-    showBase, showLastMod, colTemplate,
+    showBase, showLastMod, colTemplate, keyModeColTemplate, resizeColumn, resetColumn,
     handleLoad, openLoadDialog, handleLoadConfirm, hasUnsavedChanges,
     fileSources,
     keyOwners,

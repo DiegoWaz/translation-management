@@ -40,6 +40,9 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 - **Clé** · **Base** (desktop) · **Cible** éditable · dernière modif. (large) · supprimer
 - Édition inline : Entrée ou blur pour valider
 - **Mode clé** (toggle recherche) : une ligne = toutes les locales en accordéon
+- **Colonnes** : glisser le bord droit d’un en-tête pour agrandir / rétrécir ; double-clic pour réinitialiser (largeurs mémorisées)
+- **Recherche** : filtre sur le nom de clé **et** les valeurs de toutes les locales
+- **+ Clé** dans un groupe (ex. `common`) : préremplit `common.`
 
 ### Filtres
 

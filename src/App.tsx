@@ -119,7 +119,7 @@ const App = () => {
               onToggleVarValidation={app.toggleVarValidation}
               onExport={() => app.setShowExport(true)}
               onImport={() => app.setShowBulkImport(true)}
-              onAddKey={() => app.setAddingKey(true)}
+              onAddKey={app.startAddKey}
             />
 
             {!isConfigs && (
@@ -186,6 +186,7 @@ const App = () => {
                 searchMode={app.searchMode}
                 isMobile={app.isMobile}
                 colTemplate={app.colTemplate}
+                keyModeColTemplate={app.keyModeColTemplate}
                 showBase={app.showBase}
                 showLastMod={app.showLastMod}
                 config={app.config}
@@ -200,6 +201,8 @@ const App = () => {
                 searchMatchMap={app.searchMatchMap}
                 varValidation={app.varValidation}
                 varIssuesMap={app.varIssuesMap}
+                onResizeColumn={app.resizeColumn}
+                onResetColumn={app.resetColumn}
                 onUpdate={app.updateValue}
                 onDelete={app.deleteKey}
                 onRename={app.renameKey}

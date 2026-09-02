@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { ui } from '../i18n/ui'
 
 export const AddKeyBar = ({
@@ -11,10 +12,20 @@ export const AddKeyBar = ({
   onConfirm: () => void
   onCancel: () => void
 }) => {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.focus()
+    const pos = el.value.length
+    el.setSelectionRange(pos, pos)
+  }, [])
+
   return (
     <div className="px-4 py-2.5 border-b border-border bg-card flex gap-2">
       <input
-        autoFocus
+        ref={inputRef}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => {

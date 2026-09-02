@@ -77,6 +77,13 @@ export type ConfigMap = Record<string, ConfigValue>
 
 export type FilterMode = 'all' | 'missing' | 'modified' | 'var-issues'
 export type SearchMode = 'locale' | 'key'
+
+export interface TranslationColumnWidths {
+  key: number
+  base: number
+  target: number
+  lastMod: number
+}
 export type ToastType = 'success' | 'error' | 'info'
 
 export interface Toast {

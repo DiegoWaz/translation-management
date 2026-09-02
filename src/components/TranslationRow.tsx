@@ -50,8 +50,8 @@ export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, 
     >
       <div className={cn('flex items-center gap-1.5 min-w-0', isMobile ? 'px-2.5 py-2' : 'px-3 py-2')}>
         {isModified && (
-          <span 
-            className="text-fg-brand font-bold shrink-0 text-sm" 
+          <span
+            className="text-fg-brand font-bold shrink-0 text-sm"
             title="Translation modified but not yet committed"
             aria-label="Modified"
           >
@@ -59,8 +59,8 @@ export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, 
           </span>
         )}
         {isMissing && !isModified && (
-          <span 
-            className="text-fg-warning font-bold shrink-0 text-sm" 
+          <span
+            className="text-fg-warning font-bold shrink-0 text-sm"
             title="Translation is empty"
             aria-label="Missing translation"
           >
@@ -145,8 +145,8 @@ export const TranslationRow = ({ rowKey, baseValue, targetValue, originalValue, 
 
       <div className="flex items-center justify-center gap-1">
         {hovered && onShowKeyHistory && !confirmingDelete && (
-          <button 
-            onClick={() => onShowKeyHistory(rowKey)} 
+          <button
+            onClick={() => onShowKeyHistory(rowKey)}
             className="bg-transparent border-none text-fg-muted hover:text-fg-brand cursor-pointer text-sm p-1"
             title="View key history"
           >

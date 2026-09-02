@@ -1,5 +1,5 @@
-import type { SearchMode, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
+import type { SearchMode, WorkspaceMode } from '../types'
 import { ui, t, plural } from '../i18n/ui'
 import { SearchIcon } from './Icons'
 
@@ -46,11 +46,9 @@ export const EditorToolbar = ({
           value={search}
           onChange={e => onSearchChange(e.target.value)}
           placeholder={
-            searchMode === 'key'
-              ? ui.toolbar.searchByKey
-              : isConfigs
-                ? ui.toolbar.searchConfigs
-                : ui.toolbar.searchAllLocales
+            isConfigs
+              ? ui.toolbar.searchConfigs
+              : ui.toolbar.searchAllLocales
           }
           className="flex-1 bg-transparent border-none outline-none text-fg text-[13px] font-inherit min-w-0"
         />
