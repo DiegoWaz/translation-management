@@ -1,11 +1,16 @@
 import { ui } from '../i18n/ui'
 import { SpinnerIcon } from './Icons'
 
-/** Full-panel overlay shown while translations/configs are being fetched from GitHub. */
+/** Blocks the whole app while GitHub operations are in progress. */
 export const LoadingOverlay = () => {
   return (
-    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-page/80 backdrop-blur-[1px]">
-      <SpinnerIcon size={28} />
+    <div
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-3 bg-page/90 backdrop-blur-sm"
+      role="alert"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <SpinnerIcon size={32} />
       <span className="text-sm text-fg-tertiary">{ui.topBar.loading}</span>
     </div>
   )

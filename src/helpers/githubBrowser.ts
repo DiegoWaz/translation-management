@@ -1,4 +1,9 @@
+import { assertGitHubResponseOk } from './githubAuth'
+
 const GH = 'https://api.github.com'
+
+const gitTreeRefPath = (owner: string, repo: string, branchOrSha: string): string =>
+  `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branchOrSha)}`
 
 const ghFetch = async <T>(token: string, path: string): Promise<T> => {
   const res = await fetch(`${GH}${path}`, {
@@ -7,10 +12,7 @@ const ghFetch = async <T>(token: string, path: string): Promise<T> => {
       Accept: 'application/vnd.github.v3+json',
     },
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? res.statusText)
-  }
+  await assertGitHubResponseOk(res)
   return res.json() as Promise<T>
 }
 
@@ -56,7 +58,7 @@ export const listTree = async (
 ): Promise<GhTreeEntry[]> => {
   const data = await ghFetch<{ tree: GhTreeEntry[] }>(
     token,
-    `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+    `${gitTreeRefPath(owner, repo, branch)}?recursive=1`,
   )
   return data.tree
 }

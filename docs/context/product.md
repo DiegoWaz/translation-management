@@ -1,27 +1,29 @@
 # LocaleHub — contexte produit
 
-Fichier court pour briefings / agents. Détail dans `docs/`.
+Fichier court pour briefings / agents. Détail : [features.md](../features.md).
 
 ## Quoi
 
-**LocaleHub** : outil interne d’édition de fichiers JSON (traductions + configs) versionnés sur GitHub, sans backend.
+**LocaleHub** : éditeur i18n **pour les développeurs** — fichiers JSON (traductions + configs) versionnés sur GitHub, sans backend applicatif.
 
 ## Qui
 
-Équipes produit / i18n qui maintiennent des locales listées dans `VITE_GH_LANGS`.
+**Développeurs** qui maintiennent les locales dans le repo (`VITE_GH_LANGS` ou détection auto). Pas de PO, QA ou traducteurs métier dans le produit.
 
 ## Promesses
 
 1. Éditer hors IDE, depuis le navigateur
 2. Ne pas perdre le travail non commité au refresh (brouillon navigateur)
-3. Un commit Git propre listant les locales touchées
-4. Configs typées (schéma) avec valeurs optionnelles par langue
+3. Un commit Git propre listant les locales touchées, **toujours via PR**
+4. Reconnexion **obligatoire** si la session GitHub expire (brouillon conservé)
 
 ## Hors scope
 
-- Auth utilisateur multi-comptes (un PAT d’équipe dans `.env`)
-- CI / reviews automatiques
-- Formats non JSON (sauf export TSV côté traductions)
+- Workflow PO / QA / traduction métier (rôles, assignation, relecture)
+- Machine translation, glossaire, mémoire de traduction
+- Auth multi-comptes / RBAC dans l’app
+- Formats non JSON (sauf export TSV/CSV)
+- Push direct sur la branche de base
 
 ## Vocabulaire
 
@@ -31,4 +33,5 @@ Fichier court pour briefings / agents. Détail dans `docs/`.
 | Base lang | Locale de référence (`VITE_GH_BASE_LANG`) |
 | Brouillon | État localStorage non aligné sur un commit |
 | Workspace | `translations` ou `configs` |
-| Schéma | Types des clés config (`configs/schema.json`) |
+| sourceBranch | Branche lue / chargée |
+| branch | Branche cible des Pull Requests |

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type {
   CommitRecord,
   ConfigMap,
@@ -10,6 +10,7 @@ import type {
   KeyLastModifiedMap,
   ParsedImport,
   SearchMode,
+  StaleLangConflict,
   WorkspaceMode,
 } from '../types'
 import { useWidth } from './useWidth'
@@ -24,15 +25,17 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady } from '../helpers/config'
-import { buildKeyLastModified } from '../helpers/history'
-import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
+import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken } from '../helpers/config'
+import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
+import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile } from '../helpers/github'
+import { isGitHubSessionError } from '../helpers/githubAuth'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
 import {
   buildKeyGroups,
   buildLangStats,
   buildSearchMatchMap,
   buildVarIssuesMap,
+  collectTranslationKeys,
   columnLayout,
   filterKeys,
   getModifiedKeys,
@@ -61,6 +64,15 @@ import {
   schemasEqual,
 } from '../helpers/configValues'
 import { defaultPath, deriveLangMeta } from '../helpers/lang'
+import { splitFlatByFileSources } from '../helpers/commitHelpers'
+import {
+  applyStaleResolutions,
+  buildKeyOwnersFromSources,
+  detectDuplicateKeys,
+  refreshFileSourceAfterCommit,
+  resolveKeySourceIndex,
+  type KeyOwnerMap,
+} from '../helpers/fileSources'
 import { loadDraft, saveDraft } from '../helpers/draftStorage'
 import { detectUiLocale, setUiLocale, t, ui, type UiLocale } from '../i18n/ui'
 import {
@@ -88,7 +100,12 @@ export const useTranslationApp = () => {
     return !isGithubConfigured(cfg) && !loadUiConfig()
   })
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
-  const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>({})
+  const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>(
+    () => initialDraft?.fileSources ?? {},
+  )
+  const [keyOwners, setKeyOwners] = useState<KeyOwnerMap>(
+    () => initialDraft?.keyOwners ?? buildKeyOwnersFromSources(initialDraft?.fileSources ?? {}),
+  )
   const [workspace] = useState<WorkspaceMode>('translations')
   const [translations, setTranslations] = useState(() => {
     if (initialDraft) return initialDraft.translations
@@ -134,6 +151,7 @@ export const useTranslationApp = () => {
     return (PAGE_SIZE_OPTIONS as readonly number[]).includes(stored) ? stored : DEFAULT_PAGE_SIZE
   })
   const [showSettings, setShowSettings] = useState(false)
+  const [showLoad, setShowLoad] = useState(false)
   const [showCommit, setShowCommit] = useState(false)
   const [commitMsg, setCommitMsg] = useState('')
   const [loading, setLoading] = useState(false)
@@ -143,12 +161,22 @@ export const useTranslationApp = () => {
   const [newConfigType, setNewConfigType] = useState<ConfigValueType>('text')
   const [showHistory, setShowHistory] = useState(false)
   const [fileHistory, setFileHistory] = useState<Record<string, CommitRecord[]>>({})
-  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyStatus, setHistoryStatus] = useState<Record<string, 'idle' | 'loading' | 'loaded' | 'error'>>({})
+  const historyRequestRef = useRef<Record<string, number>>({})
+  const historyStatusRef = useRef(historyStatus)
+  historyStatusRef.current = historyStatus
   const [keyHistoryFilter, setKeyHistoryFilter] = useState<string | null>(null)
   const [keyLastModified, setKeyLastModified] = useState<Record<string, KeyLastModifiedMap>>({})
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [showExport, setShowExport] = useState(false)
-  const [staleLangs, setStaleLangs] = useState<string[]>([])
+  const [staleConflicts, setStaleConflicts] = useState<StaleLangConflict[]>([])
+  const [showStaleConflict, setShowStaleConflict] = useState(false)
+  const [duplicateKeysDismissed, setDuplicateKeysDismissed] = useState(false)
+  const [sessionLostReason, setSessionLostReason] = useState<string | null>(null)
+  const [githubReady, setGithubReady] = useState(false)
+  const pendingSessionLostRef = useRef<string | null>(null)
+  const staleDismissedRef = useRef<Set<string>>(new Set())
+  const staleLangs = useMemo(() => staleConflicts.map(c => c.lang), [staleConflicts])
   const [varValidation, setVarValidation] = useState(true)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [searchMode, setSearchMode] = useState<SearchMode>('locale')
@@ -174,12 +202,12 @@ export const useTranslationApp = () => {
     return modifiedTx.length > 0 || modifiedCfg.length > 0 || schemaChanged
   })
 
-  // Encrypted token storage decrypts asynchronously; once ready, refresh
-  // config so the real token (not the empty placeholder) is in state.
+  // Encrypted token storage decrypts asynchronously; once ready, refresh config.
   useEffect(() => {
-    waitForTokenReady().then(() => {
+    void waitForTokenReady().then(() => {
       const c = loadConfigOrDefault()
       if (c.token) setConfig(prev => (prev.token ? prev : c))
+      setGithubReady(true)
     })
   }, [])
 
@@ -229,6 +257,36 @@ export const useTranslationApp = () => {
   const { toasts, showToast } = useToast()
   const isConnected = isGithubConfigured(config)
 
+  const promptSessionLost = useCallback((reason: string, userInitiated = false) => {
+    if (!userInitiated) return
+    const message = reason || ui.sessionLost.expired
+    if (loading) {
+      pendingSessionLostRef.current = message
+      return
+    }
+    invalidateStoredToken()
+    setConfig(prev => ({ ...prev, token: '' }))
+    setSessionLostReason(message)
+    setShowLoad(false)
+    setShowCommit(false)
+    setShowSettings(false)
+    setLoading(false)
+  }, [loading])
+
+  useEffect(() => {
+    if (loading || !pendingSessionLostRef.current) return
+    const message = pendingSessionLostRef.current
+    pendingSessionLostRef.current = null
+    invalidateStoredToken()
+    setConfig(prev => ({ ...prev, token: '' }))
+    setSessionLostReason(message)
+    setShowLoad(false)
+    setShowCommit(false)
+    setShowSettings(false)
+  }, [loading])
+
+  const githubApiReady = isConnected && githubReady && !isDemoMode
+
   useEffect(() => {
     if (!draftRestored) return
     showToast(ui.toast.draftRestored, 'info')
@@ -251,6 +309,8 @@ export const useTranslationApp = () => {
       shas,
       configShas,
       schemaSha,
+      fileSources,
+      keyOwners,
     })
   }, [
     config,
@@ -266,9 +326,12 @@ export const useTranslationApp = () => {
     shas,
     configShas,
     schemaSha,
+    fileSources,
+    keyOwners,
   ])
 
   useEffect(() => {
+    if (!isDemoMode) return
     const demoCommits = makeDemoHistory()
     const h = config.files.reduce<Record<string, CommitRecord[]>>((acc, f) => {
       acc[f.lang] = f.lang === config.baseLang ? demoCommits : []
@@ -280,13 +343,32 @@ export const useTranslationApp = () => {
     }, {})
     setFileHistory(h)
     setKeyLastModified(k)
+    setHistoryStatus({})
+  }, [isDemoMode, config.files, config.baseLang])
+
+  const onStale = useCallback((conflicts: StaleLangConflict[]) => {
+    setStaleConflicts(prev => {
+      const byLang = new Map(prev.map(c => [c.lang, c]))
+      for (const c of conflicts) byLang.set(c.lang, c)
+      return [...byLang.values()]
+    })
   }, [])
 
-  const onStale = useCallback((langs: string[]) => {
-    setStaleLangs(prev => [...new Set([...prev, ...langs])])
-  }, [])
+  useStalePoll({
+    config,
+    translations,
+    githubApiReady,
+    loading,
+    fileSources,
+    keyOwners,
+    dismissedLangsRef: staleDismissedRef,
+    onStale,
+  })
 
-  useStalePoll({ config, shas, isConnected, isDemoMode, fileSources, onStale })
+  const duplicateKeyWarnings = useMemo(
+    () => detectDuplicateKeys(fileSources),
+    [fileSources],
+  )
 
   const modifiedKeys = useMemo(
     () => getModifiedKeys(translations, original, config.baseLang),
@@ -315,8 +397,12 @@ export const useTranslationApp = () => {
 
   const schemaNeedingFile = !isDemoMode && !schemaSha
 
-  const handleLoad = async () => {
+  const handleLoad = async (branch?: string) => {
+    if (sessionLostReason) { setShowSetup(true); return }
     if (!isConnected) { setShowSettings(true); return }
+    if (!githubReady) return
+    const sourceBranch = branch ?? config.sourceBranch
+    const loadConfigRef = loadRefConfig({ ...config, sourceBranch })
     setLoading(true)
     try {
       const newTrans: Record<string, Record<string, string>> = {}
@@ -324,7 +410,7 @@ export const useTranslationApp = () => {
       const newFileSources: Record<string, FileSource[]> = {}
 
       // Discover all translation files in the repo
-      const tree = await listTree(config.token, config.owner, config.repo, config.branch)
+      const tree = await listTree(loadConfigRef.token, loadConfigRef.owner, loadConfigRef.repo, loadConfigRef.branch)
       const folderName = config.translationsFolderName || 'translations'
       const filePaths = getTranslationFilePaths(tree, folderName)
 
@@ -337,7 +423,7 @@ export const useTranslationApp = () => {
        const merged: Record<string, string> = {}
          
        for (const path of paths) {
-         const { content, sha, nested, rawContent } = await loadFile(config, path)
+         const { content, sha, nested, rawContent } = await loadFile(loadConfigRef, path)
          sources.push({ path, rawContent, originalFlat: { ...content }, sha, nested })
          Object.assign(merged, content)
        }
@@ -347,6 +433,8 @@ export const useTranslationApp = () => {
        newShas[lang] = sources[0]?.sha ?? ''
       }
       setFileSources(newFileSources)
+      setKeyOwners(buildKeyOwnersFromSources(newFileSources))
+      resetHistoryCache()
 
       // Update config.files to match discovered languages & paths
       const discoveredFiles = Object.entries(newFileSources).map(([lang, sources]) => ({
@@ -355,16 +443,18 @@ export const useTranslationApp = () => {
         flag: '🌐',
         path: sources[0]?.path ?? `translations/${lang}.json`,
       }))
-      const updatedConfig = { ...config, files: discoveredFiles }
+      const updatedConfig = { ...config, sourceBranch, files: discoveredFiles }
       setConfig(updatedConfig)
+      persistSourceBranch(updatedConfig, sourceBranch)
+      const draftConfig = loadRefConfig(updatedConfig)
 
-      const schemaResult = await loadJsonFile<unknown>(config, config.configSchemaPath, {})
+      const schemaResult = await loadJsonFile<unknown>(draftConfig, updatedConfig.configSchemaPath, {})
       const schema = normalizeSchema(schemaResult.content)
       const newConfigs: Record<string, ConfigMap> = {}
       const newConfigShas: Record<string, string> = {}
       for (const f of updatedConfig.files) {
-        const cfgPath = defaultPath(f.lang, config.configPathTemplate)
-        const { content, sha } = await loadJsonFile<unknown>(config, cfgPath, {})
+        const cfgPath = defaultPath(f.lang, updatedConfig.configPathTemplate)
+        const { content, sha } = await loadJsonFile<unknown>(draftConfig, cfgPath, {})
         newConfigs[f.lang] = normalizeConfigMap(content, schema)
         newConfigShas[f.lang] = sha
       }
@@ -379,58 +469,101 @@ export const useTranslationApp = () => {
       setConfigsOriginal(cloneConfigs(newConfigs))
       setConfigShas(newConfigShas)
       setIsDemoMode(false)
-      setStaleLangs([])
-      showToast(ui.toast.loadedFromGithub, 'success')
+      setStaleConflicts([])
+      staleDismissedRef.current.clear()
+      setSessionLostReason(null)
+      setShowLoad(false)
+      showToast(
+        sourceBranch === config.branch
+          ? ui.toast.loadedFromGithub
+          : t(ui.toast.loadedFromBranch, { branch: sourceBranch }),
+        'success',
+      )
     } catch (e) {
+      if (isGitHubSessionError(e)) {
+        promptSessionLost(e.message, true)
+        return
+      }
       showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // Load history for a specific language from all its translation files
-  const handleLoadHistory = async (lang: string) => {
-    if (isDemoMode) return
-    
-    // Get ALL discovered file sources for this language
+  const openLoadDialog = () => {
+    if (sessionLostReason) { setShowSetup(true); return }
+    if (!isConnected) { setShowSettings(true); return }
+    setShowLoad(true)
+  }
+
+  const handleLoadConfirm = (branch: string) => {
+    void handleLoad(branch)
+  }
+
+  const hasUnsavedChanges = modifiedKeys.length > 0
+    || modifiedConfigKeys.length > 0
+    || schemaDirty
+    || langsNeedingFile.length > 0
+    || configLangsNeedingFile.length > 0
+
+  const resetHistoryCache = useCallback(() => {
+    historyRequestRef.current = {}
+    setFileHistory({})
+    setHistoryStatus({})
+    setKeyLastModified({})
+  }, [])
+
+  const handleLoadHistory = useCallback(async (lang: string, options?: { force?: boolean }) => {
+    if (isDemoMode || !isConnected) return
+
     const sources = fileSources[lang]
     if (!sources || sources.length === 0) {
       console.warn(`[handleLoadHistory] No file sources found for language ${lang}`)
       return
     }
-    
-    setHistoryLoading(true)
+
+    if (!options?.force && historyStatusRef.current[lang] === 'loaded') return
+
+    const requestId = (historyRequestRef.current[lang] ?? 0) + 1
+    historyRequestRef.current[lang] = requestId
+    setHistoryStatus(prev => ({ ...prev, [lang]: 'loading' }))
+
     try {
-      // Fetch commits for ALL files in this language
-      const allCommits: CommitRecord[] = []
-      
+      const loadConfig = loadRefConfig(config)
+      const batches: CommitRecord[][] = []
       for (const source of sources) {
-        const commits = await fetchFileCommits(config, source.path)
-        allCommits.push(...commits)
+        batches.push(await fetchFileCommits(loadConfig, source.path))
       }
-      
-      // Sort by date (most recent first)
-      allCommits.sort((a, b) => b.date.getTime() - a.date.getTime())
-      
+
+      if (historyRequestRef.current[lang] !== requestId) return
+
+      const allCommits = mergeCommitRecords(batches)
       setFileHistory(prev => ({ ...prev, [lang]: allCommits }))
       setKeyLastModified(prev => ({ ...prev, [lang]: buildKeyLastModified(allCommits) }))
+      setHistoryStatus(prev => ({ ...prev, [lang]: 'loaded' }))
     } catch (e) {
-      showToast(t(ui.toast.historyError, { message: (e as Error).message }), 'error')
-    } finally {
-      setHistoryLoading(false)
+      if (historyRequestRef.current[lang] !== requestId) return
+      setHistoryStatus(prev => ({ ...prev, [lang]: 'error' }))
+      if (!isGitHubSessionError(e)) {
+        showToast(t(ui.toast.historyError, { message: (e as Error).message }), 'error')
+      }
     }
-  }
+  }, [isDemoMode, isConnected, fileSources, config, showToast])
 
-  // Auto-load history for all languages once we exit demo mode
+  // Prefetch history once file sources are known (connected mode).
+  const fileSourceLangKey = Object.keys(fileSources).sort().join(',')
   useEffect(() => {
-    if (isDemoMode || loading) return
-    
-    // Load history for all discovered languages
-    const langsToLoad = Object.keys(fileSources)
-    langsToLoad.forEach(lang => {
-      handleLoadHistory(lang)
-    })
-  }, [isDemoMode, loading])
+    if (isDemoMode || loading || !githubApiReady || !fileSourceLangKey) return
+    const timer = setTimeout(() => {
+      for (const lang of fileSourceLangKey.split(',')) {
+        const status = historyStatusRef.current[lang]
+        if (status !== 'loaded' && status !== 'loading') {
+          void handleLoadHistory(lang)
+        }
+      }
+    }, 5_000)
+    return () => clearTimeout(timer)
+  }, [isDemoMode, loading, githubApiReady, fileSourceLangKey, handleLoadHistory])
 
   // Filter commits by a specific key
   const filteredHistoryByKey = (lang: string, key: string): CommitRecord[] => {
@@ -449,6 +582,7 @@ export const useTranslationApp = () => {
   )
 
   const handleCommit = async () => {
+    if (sessionLostReason) { setShowSetup(true); return }
     if (!isConnected) { setShowSettings(true); return }
     if (translationCommitLangs.length === 0) {
       showToast(ui.toast.nothingToCommit, 'info')
@@ -486,36 +620,18 @@ export const useTranslationApp = () => {
           }
           
           const current = currentFlats[lang] ?? {}
-          
-          // Build a map of namespace → source index for all known namespaces
-          const nsToSource = new Map<string, number>()
-          let commonSourceIdx = 0
-          sources.forEach((source, idx) => {
-            for (const key of Object.keys(source.originalFlat)) {
-              const ns = key.split('.')[0]
-              nsToSource.set(ns, idx)
-              if (ns.toLowerCase() === 'common') commonSourceIdx = idx
-            }
-          })
-          
-          // Assign each current key to its source file
-          const perSource: Record<string, string>[] = sources.map(() => ({}))
-          for (const [key, value] of Object.entries(current)) {
-            const ns = key.split('.')[0]
-            const idx = nsToSource.get(ns) ?? commonSourceIdx
-            perSource[idx][key] = value
-          }
-          
+          const perSource = splitFlatByFileSources(sources, current, keyOwners[lang])
+
           return sources.flatMap((source, idx) => {
             const relevantFlat = perSource[idx]
-            
+
             const hasChanges =
               Object.keys(relevantFlat).some(k => relevantFlat[k] !== source.originalFlat[k])
               || Object.keys(source.originalFlat).some(k => !(k in relevantFlat))
               || Object.keys(relevantFlat).some(k => !(k in source.originalFlat))
-            
+
             if (!hasChanges) return []
-            
+
             const content = prepareCommitContent(
               relevantFlat,
               source.nested,
@@ -531,12 +647,70 @@ export const useTranslationApp = () => {
           return
         }
 
-        const { prNumber, prUrl } = await commitJsonFilesAsPR(config, files, message, prTitle || message, branchName)
+        const { prNumber, prUrl, branchName: headBranch } = await commitJsonFilesAsPR(
+          config,
+          files,
+          message,
+          prTitle || message,
+          branchName,
+        )
         setOriginal(cloneTranslations(translations))
-        showToast(t(ui.toast.prCreated, { number: prNumber }), 'success')
+        setFileSources(prev => {
+          const next: Record<string, FileSource[]> = {}
+          for (const [lang, sources] of Object.entries(prev)) {
+            const perSource = splitFlatByFileSources(sources, translations[lang] ?? {}, keyOwners[lang])
+            next[lang] = sources.map((source, idx) =>
+              refreshFileSourceAfterCommit(
+                source,
+                perSource[idx],
+                config.alwaysNestJson ?? false,
+              ),
+            )
+          }
+          return next
+        })
+
+        const loadConfigRef = loadRefConfig({ ...config, sourceBranch: headBranch })
+        const committedPaths = files.map(f => f.path)
+        void Promise.all(committedPaths.map(async path => {
+          const { sha } = await loadFile(loadConfigRef, path)
+          return { path, sha }
+        })).then(updates => {
+          setFileSources(prev => {
+            const next = { ...prev }
+            for (const [lang, sources] of Object.entries(next)) {
+              next[lang] = sources.map(source => {
+                const hit = updates.find(u => u.path === source.path)
+                return hit ? { ...source, sha: hit.sha } : source
+              })
+            }
+            return next
+          })
+        }).catch(() => { /* shas refresh is best-effort */ })
+        const updatedConfig = { ...config, sourceBranch: headBranch }
+        setConfig(updatedConfig)
+        persistSourceBranch(updatedConfig, headBranch)
+        for (const lang of langs) {
+          setHistoryStatus(prev => {
+            const next = { ...prev }
+            delete next[lang]
+            return next
+          })
+          setFileHistory(prev => {
+            const next = { ...prev }
+            delete next[lang]
+            return next
+          })
+          void handleLoadHistory(lang, { force: true })
+        }
+        showToast(t(ui.toast.prCreatedOnBranch, { number: prNumber, branch: headBranch }), 'success')
         window.open(prUrl, '_blank')
       }
     } catch (e) {
+      if (isGitHubSessionError(e)) {
+        promptSessionLost(e.message, true)
+        return
+      }
       showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')
     } finally {
       setLoading(false)
@@ -601,7 +775,16 @@ export const useTranslationApp = () => {
       return
     }
     setTranslations(prev => addKeyToAll(prev, k))
-    setOriginal(prev => addKeyToAll(prev, k))
+    setKeyOwners(prev => {
+      const next: KeyOwnerMap = { ...prev }
+      for (const f of config.files) {
+        const sources = fileSources[f.lang] ?? []
+        if (sources.length === 0) continue
+        const idx = resolveKeySourceIndex(sources, k, prev[f.lang])
+        next[f.lang] = { ...(next[f.lang] ?? {}), [k]: idx }
+      }
+      return next
+    })
     setNewKey('')
     setAddingKey(false)
     showToast(t(ui.toast.keyAdded, { key: k }), 'info')
@@ -615,7 +798,15 @@ export const useTranslationApp = () => {
       return
     }
     setTranslations(prev => removeKeyFromAll(prev, key))
-    setOriginal(prev => removeKeyFromAll(prev, key))
+    setKeyOwners(prev => {
+      const next: KeyOwnerMap = {}
+      for (const [lang, owners] of Object.entries(prev)) {
+        const langOwners = { ...owners }
+        delete langOwners[key]
+        next[lang] = langOwners
+      }
+      return next
+    })
   }
 
   /** Rename a key across all locales. Returns false (and shows a toast) if the new name is invalid or already used. */
@@ -644,7 +835,23 @@ export const useTranslationApp = () => {
       return false
     }
     setTranslations(prev => renameKeyInAll(prev, oldKey, newKey))
-    setOriginal(prev => renameKeyInAll(prev, oldKey, newKey))
+    setKeyOwners(prev => {
+      const next: KeyOwnerMap = {}
+      for (const [lang, owners] of Object.entries(prev)) {
+        const langOwners = { ...owners }
+        if (oldKey in langOwners) {
+          langOwners[newKey] = langOwners[oldKey]
+          delete langOwners[oldKey]
+        } else {
+          const sources = fileSources[lang] ?? []
+          if (sources.length > 0) {
+            langOwners[newKey] = resolveKeySourceIndex(sources, newKey, langOwners)
+          }
+        }
+        next[lang] = langOwners
+      }
+      return next
+    })
     showToast(t(ui.toast.keyRenamed, { oldKey, newKey }), 'info')
     return true
   }
@@ -710,10 +917,13 @@ export const useTranslationApp = () => {
   const isMobile = w < 640
   const isTablet = w >= 640 && w < 1024
 
-  const baseKeys = Object.keys(translations[config.baseLang] ?? {})
+  const allLangs = config.files.map(f => f.lang)
+  const baseKeys = useMemo(
+    () => collectTranslationKeys(translations, original, allLangs, config.baseLang),
+    [translations, original, allLangs, config.baseLang],
+  )
   const configKeys = Object.keys(configSchema).sort()
   const activeLangFile = localizedConfig.files.find(f => f.lang === activeLang)
-  const allLangs = config.files.map(f => f.lang)
 
   const searchMatchMap = useMemo(
     () => buildSearchMatchMap(search, baseKeys, allLangs, translations),
@@ -813,6 +1023,7 @@ export const useTranslationApp = () => {
       owner: cfg.owner,
       repo: cfg.repo,
       branch: cfg.branch,
+      sourceBranch: cfg.branch,
       baseLang: cfg.baseLang,
       langs: cfg.langs,
       translationsFolderName: cfg.translationsFolderName,
@@ -825,6 +1036,7 @@ export const useTranslationApp = () => {
       owner: cfg.owner,
       repo: cfg.repo,
       branch: cfg.branch,
+      sourceBranch: cfg.branch,
       baseLang: cfg.baseLang,
       files,
       configPathTemplate,
@@ -845,28 +1057,23 @@ export const useTranslationApp = () => {
       // Load ALL discovered files (not just cfg.langs)
       for (const [lang, paths] of Object.entries(filePaths)) {
         if (paths.length === 0) continue
-        
-        // Prefer the deepest (most specific) path when multiple exist
-        let selectedPaths = paths
-        if (paths.length > 1) {
-          const sorted = [...paths].sort((a: string, b: string) => b.split('/').length - a.split('/').length)
-          selectedPaths = [sorted[0]]
-        }
-        
+
         const sources: FileSource[] = []
         const merged: Record<string, string> = {}
-        
-        for (const path of selectedPaths) {
+
+        for (const path of paths) {
           const { content, sha, nested, rawContent } = await loadFile(newConfig, path)
           sources.push({ path, rawContent, originalFlat: { ...content }, sha, nested })
           Object.assign(merged, content)
         }
-        
+
         newFileSources[lang] = sources
         newTrans[lang] = merged
         newShas[lang] = sources[0]?.sha ?? ''
       }
       setFileSources(newFileSources)
+      setKeyOwners(buildKeyOwnersFromSources(newFileSources))
+      resetHistoryCache()
 
       // Configs are optional — don't fail if they don't exist
       const schemaPath = newConfig.configSchemaPath
@@ -892,9 +1099,15 @@ export const useTranslationApp = () => {
       setConfigsOriginal(cloneConfigs(newConfigs))
       setConfigShas(newConfigShas)
       setIsDemoMode(false)
-      setStaleLangs([])
+      setStaleConflicts([])
+      staleDismissedRef.current.clear()
+      setSessionLostReason(null)
       showToast(ui.toast.loadedFromGithub, 'success')
     } catch (e) {
+      if (isGitHubSessionError(e)) {
+        promptSessionLost(e.message, true)
+        return
+      }
       showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')
     } finally {
       setLoading(false)
@@ -906,6 +1119,45 @@ export const useTranslationApp = () => {
     setConfig(loadConfigOrDefault())
     setIsDemoMode(true)
     setShowSetup(true)
+    setSessionLostReason(null)
+  }
+
+  const handleReconnect = () => {
+    setShowSetup(true)
+  }
+
+  const handleResolveStaleConflict = (lang: string, resolutions: Record<string, 'local' | 'remote'>) => {
+    const conflict = staleConflicts.find(c => c.lang === lang)
+    if (!conflict) return
+
+    const sources = fileSources[lang] ?? []
+    const { translations: nextFlat, sources: nextSources } = applyStaleResolutions(
+      conflict,
+      sources,
+      translations[lang] ?? {},
+      keyOwners[lang],
+      resolutions,
+      config.alwaysNestJson ?? false,
+    )
+
+    setTranslations(prev => ({ ...prev, [lang]: nextFlat }))
+    setOriginal(prev => ({ ...prev, [lang]: { ...nextFlat } }))
+    setFileSources(prev => ({ ...prev, [lang]: nextSources }))
+    setStaleConflicts(prev => prev.filter(c => c.lang !== lang))
+    if (staleConflicts.length <= 1) setShowStaleConflict(false)
+    showToast(ui.toast.staleResolved, 'success')
+  }
+
+  const handleKeepAllStaleLocal = () => {
+    for (const c of staleConflicts) staleDismissedRef.current.add(c.lang)
+    setStaleConflicts([])
+    setShowStaleConflict(false)
+    showToast(ui.toast.staleKeptLocal, 'info')
+  }
+
+  const handleReloadStale = () => {
+    setShowStaleConflict(false)
+    void handleLoad()
   }
 
   return {
@@ -917,13 +1169,27 @@ export const useTranslationApp = () => {
     search, setSearch: setSearchAndClearGroup, filter, setFilter,
     searchMode, setSearchMode, varValidation, toggleVarValidation,
     activeGroup, setActiveGroup, groups,
-    showSettings, setShowSettings, showCommit, setShowCommit,
+    showSettings, setShowSettings, showLoad, setShowLoad, showCommit, setShowCommit,
     showSetup, setShowSetup, oauthToken,
     commitMsg, setCommitMsg, loading, isDemoMode,
     addingKey, setAddingKey, newKey, setNewKey, newConfigType, setNewConfigType, addKey,
-    showHistory, setShowHistory, fileHistory, historyLoading, keyHistoryFilter, setKeyHistoryFilter, filteredHistoryByKey,
+    showHistory, setShowHistory, fileHistory,
+    historyLoading: historyStatus[activeLang] === 'loading',
+    historyError: historyStatus[activeLang] === 'error',
+    keyHistoryFilter, setKeyHistoryFilter, filteredHistoryByKey,
     showBulkImport, setShowBulkImport, showExport, setShowExport,
-    staleLangs, setStaleLangs,
+    staleLangs,
+    staleConflicts,
+    showStaleConflict,
+    setShowStaleConflict,
+    duplicateKeyWarnings,
+    duplicateKeysDismissed,
+    setDuplicateKeysDismissed,
+    handleResolveStaleConflict,
+    handleKeepAllStaleLocal,
+    handleReloadStale,
+    sessionLostReason,
+    handleReconnect,
     toasts, showToast,
     isMobile, isTablet,
     baseKeys, filteredKeys, configKeys, filteredConfigKeys, langStats,
@@ -935,16 +1201,23 @@ export const useTranslationApp = () => {
     schemaDirty: schemaDirty || schemaNeedingFile,
     activeLangKeyMap: keyLastModified[activeLang] ?? {},
     showBase, showLastMod, colTemplate,
-    handleLoad, handleCommit, doCommit, handleLoadHistory,
+    handleLoad, openLoadDialog, handleLoadConfirm, hasUnsavedChanges,
+    fileSources,
+    keyOwners,
+    handleCommit, doCommit, handleLoadHistory,
     handleSetupComplete, handleDisconnect,
     handleSelectLang: (l: string) => {
       setActiveLang(l)
-      if (showHistory && !isDemoMode) handleLoadHistory(l)
+      if (showHistory && !isDemoMode) void handleLoadHistory(l, { force: true })
     },
     handleToggleHistory: () => {
-      setShowHistory(v => !v)
-      if (!isDemoMode && !fileHistory[activeLang]?.length) handleLoadHistory(activeLang)
+      setShowHistory(v => {
+        const next = !v
+        if (next && !isDemoMode) void handleLoadHistory(activeLang, { force: true })
+        return next
+      })
     },
+    reloadHistory: () => { void handleLoadHistory(activeLang, { force: true }) },
     updateValue, updateConfigValue, restoreKey, deleteKey, renameKey, clearConfigOnLang,
     handleBulkApply, handleJsonApply, handleConfigImport,
   }

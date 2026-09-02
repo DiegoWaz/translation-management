@@ -44,6 +44,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const [repoSearch, setRepoSearch] = useState('')
   const [selectedRepo, setSelectedRepo] = useState<GhRepo | null>(null)
   const [branch, setBranch] = useState('main')
+  const [branchNames, setBranchNames] = useState<string[]>([])
   const [detectedLangs, setDetectedLangs] = useState<string[]>([])
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set())
   const [baseLang, setBaseLang] = useState('')
@@ -104,30 +105,47 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     }
   }
 
+  const loadLangsForBranch = async (repo: GhRepo, branchName: string) => {
+    const tree = await listTree(token, repo.owner.login, repo.name, branchName)
+    const langs = detectAllLocaleFiles(tree, translationsFolderName)
+    if (langs.length === 0) {
+      setError(`No translation files found in '${translationsFolderName}' folders`)
+      return false
+    }
+    setDetectedLangs(langs)
+    setSelectedLangs(new Set(langs))
+    const defaultBase = langs.includes('en-GB') ? 'en-GB' : langs.find(l => l.startsWith('en')) ?? langs[0]
+    setBaseLang(defaultBase)
+    return true
+  }
+
   const handleSelectRepo = async (repo: GhRepo) => {
     setSelectedRepo(repo)
     setLoading(true)
     setError('')
     try {
       const branchList = await listBranches(token, repo.owner.login, repo.name)
-      const branchNames = branchList.map(b => b.name)
-      const selectedBranch = branchNames.includes(repo.default_branch) ? repo.default_branch : branchNames[0] || 'main'
+      const names = branchList.map(b => b.name).sort((a, b) => a.localeCompare(b))
+      setBranchNames(names)
+      const selectedBranch = names.includes(repo.default_branch) ? repo.default_branch : names[0] || 'main'
       setBranch(selectedBranch)
-      
-      // Load tree and detect all translation folders + locales
-      const tree = await listTree(token, repo.owner.login, repo.name, selectedBranch)
-      const langs = detectAllLocaleFiles(tree, translationsFolderName)
-      
-      if (langs.length === 0) {
-        setError(`No translation files found in '${translationsFolderName}' folders`)
-        return
-      }
-      
-      setDetectedLangs(langs)
-      setSelectedLangs(new Set(langs))
-      const defaultBase = langs.includes('en-GB') ? 'en-GB' : langs.find(l => l.startsWith('en')) ?? langs[0]
-      setBaseLang(defaultBase)
-      setStep('langs')
+
+      const ok = await loadLangsForBranch(repo, selectedBranch)
+      if (ok) setStep('langs')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBranchChange = async (branchName: string) => {
+    if (!selectedRepo) return
+    setBranch(branchName)
+    setLoading(true)
+    setError('')
+    try {
+      await loadLangsForBranch(selectedRepo, branchName)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -283,6 +301,19 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
             <div className="flex flex-col gap-4">
               <div className="text-xs text-fg-muted">
                 {t(ui.setup.langsDetected, { count: detectedLangs.length })} — {detectedLangs.join(', ')}
+              </div>
+
+              <div>
+                <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-2">{ui.setup.branchLabel}</div>
+                <select
+                  value={branch}
+                  onChange={e => void handleBranchChange(e.target.value)}
+                  className={cn(inputClass, 'w-full font-mono text-xs')}
+                >
+                  {branchNames.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

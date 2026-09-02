@@ -40,7 +40,9 @@ export const frFR: UiMessages = {
     "workspaceTranslations": "Traductions",
     "workspaceConfigs": "Configs",
     "workspaceSchema": "DTO",
-    "workspaceDisabled": "Bientôt disponible — traductions d'abord"
+    "workspaceDisabled": "Bientôt disponible — traductions d'abord",
+    "sourceBranchTitle": "Branche chargée — cliquer pour changer",
+    "prBaseSuffix": "PR → {branch}"
   },
   "filters": {
     "all": "Toutes",
@@ -129,13 +131,44 @@ export const frFR: UiMessages = {
     "changedSingular": "a été modifié",
     "changedPlural": "ont été modifiés",
     "bySomeoneElse": "par quelqu'un d'autre depuis votre chargement.",
-    "reload": "Recharger"
+    "reload": "Recharger",
+    "review": "Voir les différences"
+  },
+  "sessionLost": {
+    "icon": "🔒",
+    "title": "Session GitHub expirée",
+    "message": "La connexion à GitHub est perdue (token expiré ou révoqué). Reconnectez-vous pour charger, committer ou synchroniser avec le dépôt distant.",
+    "draftHint": "Votre brouillon non commité dans ce navigateur est conservé tant que vous ne rechargez pas depuis GitHub.",
+    "reconnect": "Se reconnecter à GitHub",
+    "expired": "Le token GitHub n'est plus valide"
+  },
+  "staleConflict": {
+    "title": "Modifications distantes détectées",
+    "subtitle": "Choisissez quelle version garder pour chaque clé, ou rechargez tout depuis GitHub.",
+    "keyCount": "{count} clés en conflit",
+    "yours": "Votre version",
+    "theirs": "Distant",
+    "choice": "Garder",
+    "keepLocal": "La mienne",
+    "takeRemote": "Distante",
+    "keepAllLocal": "Tout garder (moi)",
+    "takeAllRemote": "Tout prendre (distant)",
+    "dismissKeepMine": "Garder mes modifs",
+    "apply": "Appliquer"
+  },
+  "duplicates": {
+    "icon": "⛔",
+    "summary": "{count} clé(s) dupliquée(s) entre plusieurs fichiers — la vue fusionnée n'en affiche qu'une.",
+    "more": "+{count} de plus…"
   },
   "history": {
     "title": "Historique",
     "demoBanner": "Données de démonstration — connectez GitHub pour l'historique réel",
     "loading": "Chargement...",
     "empty": "Aucun commit trouvé",
+    "reload": "Actualiser",
+    "error": "Impossible de charger l'historique depuis GitHub",
+    "noKeyChanges": "Aucune modification pour cette clé",
     "keysCount": "{count} clé",
     "keysCountPlural": "{count} clés",
     "typeAdded": "+ AJOUT",
@@ -166,7 +199,20 @@ export const frFR: UiMessages = {
     "noOtherBranches": "Aucune autre branche trouvée.",
     "prTitleLabel": "Titre de la PR",
     "prTitlePlaceholder": "feat(i18n): update translations",
-    "createPr": "Créer une Pull Request"
+    "createPr": "Créer une Pull Request",
+    "updatePr": "Mettre à jour la Pull Request"
+  },
+  "load": {
+    "title": "Charger depuis GitHub",
+    "subtitle": "Choisissez la branche à lire. Les Pull Requests continueront de cibler la branche de base.",
+    "branchLabel": "Branche source",
+    "baseBranchSuffix": "base PR",
+    "prTargetHint": "Les commits ouvriront une PR vers {branch}.",
+    "draftWarning": "Des modifications non commitées seront perdues au chargement.",
+    "confirm": "Charger",
+    "loading": "Chargement…",
+    "branchesLoading": "Chargement des branches…",
+    "noBranches": "Aucune branche trouvée."
   },
   "settings": {
     "title": "Configuration",
@@ -181,7 +227,8 @@ export const frFR: UiMessages = {
       "token": "GitHub Token",
       "owner": "Owner",
       "repo": "Repository",
-      "branch": "Branche",
+      "branch": "Branche de base (PR)",
+      "sourceBranch": "Branche chargée",
       "baseLang": "Langue de base"
     },
     "placeholders": {
@@ -245,7 +292,10 @@ export const frFR: UiMessages = {
     "title": "Exporter les traductions",
     "titleConfigs": "Exporter les configs",
     "summary": "{langs} langue{langsSuffix} · {keys} clé{keysSuffix}",
+    "summaryWithFiles": "{langs} langue{langsSuffix} · {files} fichier{filesSuffix} · {keys} clé{keysSuffix}",
     "format": "Format",
+    "formatJsonFiles": "Fichiers d'origine (ZIP)",
+    "formatJsonFilesHint": "chemins repo · tous les dossiers translations/",
     "formatJson": "JSON (imbriqué)",
     "formatJsonHint": "{\"en\":{action:{…}}}",
     "formatJsonNs": "JSON (par namespace)",
@@ -268,11 +318,13 @@ export const frFR: UiMessages = {
   },
   "toast": {
     "loadedFromGithub": "Fichiers chargés depuis GitHub",
+    "loadedFromBranch": "Fichiers chargés depuis la branche {branch}",
     "draftRestored": "Brouillon non commité restauré depuis ce navigateur",
     "error": "Erreur: {message}",
     "historyError": "Erreur historique: {message}",
     "nothingToCommit": "Aucune modification à committer",
     "prCreated": "PR #{number} créée",
+    "prCreatedOnBranch": "PR #{number} créée — branche active : {branch}",
     "keyRestored": "Clé \"{key}\" restaurée",
     "keyAdded": "Clé \"{key}\" ajoutée",
     "keyRenamed": "Clé \"{oldKey}\" renommée en \"{newKey}\"",
@@ -281,7 +333,9 @@ export const frFR: UiMessages = {
     "valuesImportedJson": "{count} valeurs importées (JSON)",
     "configsImported": "{values} valeur(s) config importée(s) sur {langs} locale(s)",
     "copiedClipboard": "Copié dans le presse-papiers",
-    "fileDownloaded": "Fichier .{ext} téléchargé"
+    "fileDownloaded": "Fichier .{ext} téléchargé",
+    "staleResolved": "Conflits résolus",
+    "staleKeptLocal": "Vos modifications sont conservées — alerte distante ignorée"
   },
   "configs": {
     "empty": "Aucune clé config pour l'instant",
@@ -378,6 +432,7 @@ export const frFR: UiMessages = {
     "langsSummaryMulti": "{count} locales trouvées dans {folders} dossiers",
     "baseLangLabel": "Langue de base",
     "selectLangs": "Langues actives",
+    "branchLabel": "Branche de base",
     "useFolder": "Utiliser la sélection ({count} locales)",
     "finish": "Terminer la configuration",
     "skip": "Mode démo",

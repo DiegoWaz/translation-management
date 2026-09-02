@@ -4,6 +4,42 @@ import { buildLangFile } from './lang'
 import { encryptForStorage, decryptFromStorage, isSecureStorageSupported } from './secureStorage'
 
 const UI_CONFIG_KEY = 'localehub:config:v1'
+const SOURCE_BRANCH_KEY = 'localehub:sourceBranch:v1'
+
+const sourceBranchStorageKey = (owner: string, repo: string): string =>
+  `${SOURCE_BRANCH_KEY}:${owner}/${repo}`
+
+/** Persist load branch for env-only setups (no full UI config). */
+export const saveSourceBranch = (owner: string, repo: string, sourceBranch: string): void => {
+  if (!owner || !repo) return
+  try { localStorage.setItem(sourceBranchStorageKey(owner, repo), sourceBranch) } catch { /* ignore */ }
+}
+
+const loadSourceBranchFromStorage = (owner: string, repo: string): string | null => {
+  if (!owner || !repo) return null
+  try {
+    const raw = localStorage.getItem(sourceBranchStorageKey(owner, repo))
+    return raw?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+/** Config with `branch` set to the active load ref (for GitHub read APIs). */
+export const loadRefConfig = (config: GitHubConfig): GitHubConfig => ({
+  ...config,
+  branch: config.sourceBranch,
+})
+
+export const persistSourceBranch = (config: GitHubConfig, sourceBranch: string): void => {
+  saveSourceBranch(config.owner, config.repo, sourceBranch)
+  const ui = loadUiConfig()
+  if (ui) saveUiConfig({ ...ui, sourceBranch })
+}
+
+/** When loading from a non-base branch, commits should default to that branch. */
+export const preferExistingCommitBranch = (config: GitHubConfig): boolean =>
+  config.sourceBranch !== config.branch
 
 // The GitHub token is the only genuinely sensitive value we persist. It is
 // encrypted at rest (see secureStorage.ts) so it never sits as plain text in
@@ -34,6 +70,7 @@ export interface StoredConfig {
   owner: string
   repo: string
   branch: string
+  sourceBranch?: string
   baseLang: string
   langs: string[]
   translationsFolderName?: string
@@ -100,6 +137,16 @@ export const clearUiConfig = (): void => {
   try { localStorage.removeItem(UI_CONFIG_KEY) } catch { /* ignore */ }
 }
 
+/** Clear an invalid token but keep repo / langs so reconnect is faster. */
+export const invalidateStoredToken = (): void => {
+  tokenCache = null
+  const ui = loadUiConfig()
+  if (!ui) return
+  try {
+    localStorage.setItem(UI_CONFIG_KEY, JSON.stringify({ ...ui, token: '' }))
+  } catch { /* ignore */ }
+}
+
 /** Load config from localStorage first, then fall back to env vars. */
 export const loadConfig = (): GitHubConfig => {
   const ui = loadUiConfig()
@@ -121,11 +168,13 @@ export const loadConfig = (): GitHubConfig => {
       files = []
     }
     
+    const branch = ui.branch
     return {
       token: ui.token,
       owner: ui.owner,
       repo: ui.repo,
-      branch: ui.branch,
+      branch,
+      sourceBranch: ui.sourceBranch || branch,
       baseLang: ui.baseLang || files[0]?.lang || '',
       files,
       configPathTemplate: ui.configPathTemplate || DEFAULT_CONFIG_PATH_TEMPLATE,
@@ -135,11 +184,15 @@ export const loadConfig = (): GitHubConfig => {
     }
   }
   const files = filesFromEnv()
+  const owner = envString('VITE_GH_OWNER') ?? ''
+  const repo = envString('VITE_GH_REPO') ?? ''
+  const branch = envString('VITE_GH_BRANCH') ?? 'main'
   return {
     token: envString('VITE_GH_TOKEN') ?? '',
-    owner: envString('VITE_GH_OWNER') ?? '',
-    repo: envString('VITE_GH_REPO') ?? '',
-    branch: envString('VITE_GH_BRANCH') ?? 'main',
+    owner,
+    repo,
+    branch,
+    sourceBranch: loadSourceBranchFromStorage(owner, repo) ?? branch,
     baseLang: envString('VITE_GH_BASE_LANG') ?? files[0]?.lang ?? '',
     files,
     configPathTemplate: envString('VITE_GH_CONFIG_PATH_TEMPLATE') ?? DEFAULT_CONFIG_PATH_TEMPLATE,

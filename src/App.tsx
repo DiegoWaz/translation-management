@@ -5,6 +5,8 @@ import { Sidebar } from './components/Sidebar'
 import { EditorToolbar } from './components/EditorToolbar'
 import { GroupStrip } from './components/GroupStrip'
 import { StaleBanner } from './components/StaleBanner'
+import { StaleConflictModal } from './components/StaleConflictModal'
+import { DuplicateKeysBanner } from './components/DuplicateKeysBanner'
 import { AddKeyBar } from './components/AddKeyBar'
 import { AddConfigKeyBar } from './components/AddConfigKeyBar'
 import { TranslationTable } from './components/TranslationTable'
@@ -17,12 +19,14 @@ import { ConfigBulkImportModal } from './components/ConfigBulkImportModal'
 import { ExportModal } from './components/ExportModal'
 import { SettingsModal } from './components/SettingsModal'
 import { CommitDialog } from './components/CommitDialog'
+import { LoadDialog } from './components/LoadDialog'
 import { SetupWizard } from './components/SetupWizard'
 import { defaultPath } from './helpers/lang'
 import { configMapsToStringMaps } from './helpers/exportGenerators'
 import { SchemaValidateWorkspace } from './components/SchemaValidateWorkspace'
 import { ToastStack } from './components/ToastStack'
 import { LoadingOverlay } from './components/LoadingOverlay'
+import { SessionLostModal } from './components/SessionLostModal'
 import { ui } from './i18n/ui'
 
 const App = () => {
@@ -61,7 +65,8 @@ const App = () => {
         workspace={app.workspace}
         onWorkspaceChange={app.setWorkspace}
         onUiLocaleChange={app.setUiLocale}
-        onLoad={app.handleLoad}
+        onLoad={app.openLoadDialog}
+        onBranchClick={app.openLoadDialog}
         onCommit={app.handleCommit}
         onHistory={app.handleToggleHistory}
         onSettings={() => app.setShowSettings(true)}
@@ -100,7 +105,6 @@ const App = () => {
           )}
 
           <main className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
-            {app.loading && !app.isDemoMode && <LoadingOverlay />}
             <EditorToolbar
               workspace={app.workspace}
               search={app.search}
@@ -125,9 +129,20 @@ const App = () => {
             <StaleBanner
               staleLangs={app.staleLangs}
               config={app.config}
-              onReload={app.handleLoad}
-              onDismiss={() => app.setStaleLangs([])}
+              onReview={() => app.setShowStaleConflict(true)}
+              onReload={() => app.handleReloadStale()}
+              onDismiss={() => {
+                app.handleKeepAllStaleLocal()
+              }}
             />
+
+            {!isConfigs && !app.duplicateKeysDismissed && (
+              <DuplicateKeysBanner
+                warnings={app.duplicateKeyWarnings}
+                config={app.config}
+                onDismiss={() => app.setDuplicateKeysDismissed(true)}
+              />
+            )}
 
             {app.addingKey && !isConfigs && (
               <AddKeyBar
@@ -211,8 +226,10 @@ const App = () => {
               langFile={app.activeLangFile}
               commits={app.fileHistory[app.activeLang] ?? []}
               loading={app.historyLoading}
+              error={app.historyError}
               isDemoMode={app.isDemoMode}
               onClose={() => { app.setShowHistory(false); app.setKeyHistoryFilter(null) }}
+              onReload={app.reloadHistory}
               onRestoreKey={app.restoreKey}
               compact={app.isTablet}
               keyFilter={app.keyHistoryFilter}
@@ -231,8 +248,10 @@ const App = () => {
           langFile={app.activeLangFile}
           commits={app.fileHistory[app.activeLang] ?? []}
           loading={app.historyLoading}
+          error={app.historyError}
           isDemoMode={app.isDemoMode}
           onClose={() => app.setShowHistory(false)}
+          onReload={app.reloadHistory}
           onRestoreKey={app.restoreKey}
         />
       )}
@@ -243,6 +262,16 @@ const App = () => {
           onClose={() => app.setShowSettings(false)}
           onSetup={() => app.setShowSetup(true)}
           onDisconnect={app.handleDisconnect}
+          isMobile={app.isMobile}
+        />
+      )}
+      {app.showLoad && (
+        <LoadDialog
+          config={app.config}
+          hasUnsavedChanges={app.hasUnsavedChanges}
+          loading={app.loading && app.showLoad}
+          onConfirm={app.handleLoadConfirm}
+          onClose={() => app.setShowLoad(false)}
           isMobile={app.isMobile}
         />
       )}
@@ -287,11 +316,32 @@ const App = () => {
           baseKeys={exportKeys}
           filteredKeys={exportFilteredKeys}
           configFiles={app.config.files}
+          fileSources={isConfigs ? undefined : app.fileSources}
+          keyOwners={isConfigs ? undefined : app.keyOwners}
           title={isConfigs ? ui.export.titleConfigs : ui.export.title}
           downloadBasename={isConfigs ? 'configs' : 'translations'}
           onClose={() => app.setShowExport(false)}
           showToast={app.showToast}
           isMobile={app.isMobile}
+        />
+      )}
+
+      {app.showStaleConflict && app.staleConflicts.length > 0 && (
+        <StaleConflictModal
+          conflicts={app.staleConflicts}
+          config={app.config}
+          onClose={() => app.setShowStaleConflict(false)}
+          onResolve={app.handleResolveStaleConflict}
+          onReloadAll={app.handleReloadStale}
+          onKeepAllLocal={app.handleKeepAllStaleLocal}
+          isMobile={app.isMobile}
+        />
+      )}
+
+      {app.sessionLostReason && !app.showSetup && !app.loading && (
+        <SessionLostModal
+          reason={app.sessionLostReason}
+          onReconnect={app.handleReconnect}
         />
       )}
 
@@ -303,6 +353,8 @@ const App = () => {
           isMobile={app.isMobile}
         />
       )}
+
+      {app.loading && <LoadingOverlay />}
 
       <ToastStack toasts={app.toasts} />
     </div>

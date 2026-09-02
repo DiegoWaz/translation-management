@@ -5,20 +5,22 @@ alwaysApply: true
 
 # LocaleHub
 
-SPA React (Vite + Tailwind v4) to edit i18n JSON and per-locale config JSON on GitHub.
+SPA React (Vite + Tailwind v4) for **developers** to edit i18n JSON on GitHub — not a TMS for PO/QA/translators. See `docs/features.md`.
 
 ## Hard facts
 
 - Product: **LocaleHub** (npm `locale-hub`). UI brand via `ui.app.name` / `ui.app.logo`.
-- Config: `.env` only (`VITE_GH_*`). See `docs/setup.md`.
+- Audience: **devs only** — no PO/QA workflow in the product.
+- Config: `.env` + optional OAuth UI config. See `docs/setup.md`.
 - Drafts: `localStorage` via `src/helpers/draftStorage.ts` — reload must keep uncommitted edits.
-- Commit: single multi-file commit via `commitJsonFiles` (`src/helpers/github.ts`), message lists **only modified locales**.
-- Workspaces: translations | configs. Config keys = camelCase; optional per locale.
+- **Session lost** (401/403): blocking `SessionLostModal`; user must reconnect via SetupWizard; draft preserved.
+- Commit: single multi-file commit via `commitJsonFiles`, always via PR.
+- Workspaces: translations (active) | configs (UI disabled). Config keys = camelCase.
 - State hub: `src/hooks/useTranslationApp.ts`. UI shell: `src/App.tsx`.
 
 ## Docs
 
-`README.md` → `docs/` (`setup`, `translations`, `configs`, `workflow`, `architecture`). Agent map: `AGENTS.md`.
+`README.md` → `docs/` (`features`, `setup`, `translations`, `workflow`, …). Agent map: `AGENTS.md`.
 
 ## When changing behavior
 

@@ -40,7 +40,9 @@ export const enUK: UiMessages = {
     "workspaceTranslations": "Translations",
     "workspaceConfigs": "Configs",
     "workspaceSchema": "DTO",
-    "workspaceDisabled": "Coming soon — translations first"
+    "workspaceDisabled": "Coming soon — translations first",
+    "sourceBranchTitle": "Loaded branch — click to change",
+    "prBaseSuffix": "PR → {branch}"
   },
   "filters": {
     "all": "All",
@@ -129,13 +131,44 @@ export const enUK: UiMessages = {
     "changedSingular": "was changed",
     "changedPlural": "were changed",
     "bySomeoneElse": "by someone else since you loaded.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "review": "Review changes"
+  },
+  "sessionLost": {
+    "icon": "🔒",
+    "title": "GitHub session expired",
+    "message": "Your connection to GitHub was lost (expired or revoked token). Reconnect to load, commit, or sync with the remote repository.",
+    "draftHint": "Your uncommitted draft in this browser is preserved until you reload from GitHub.",
+    "reconnect": "Reconnect to GitHub",
+    "expired": "GitHub token is no longer valid"
+  },
+  "staleConflict": {
+    "title": "Remote changes detected",
+    "subtitle": "Choose which version to keep for each key, or reload everything from GitHub.",
+    "keyCount": "{count} conflicting keys",
+    "yours": "Yours",
+    "theirs": "Remote",
+    "choice": "Keep",
+    "keepLocal": "Mine",
+    "takeRemote": "Remote",
+    "keepAllLocal": "All mine",
+    "takeAllRemote": "All remote",
+    "dismissKeepMine": "Keep mine (dismiss)",
+    "apply": "Apply choices"
+  },
+  "duplicates": {
+    "icon": "⛔",
+    "summary": "{count} duplicate key(s) across multiple translation files — the merged view shows one value only.",
+    "more": "+{count} more…"
   },
   "history": {
     "title": "History",
     "demoBanner": "Demo data — connect GitHub for real history",
     "loading": "Loading...",
     "empty": "No commits found",
+    "reload": "Refresh",
+    "error": "Could not load history from GitHub",
+    "noKeyChanges": "No changes for this key",
     "keysCount": "{count} key",
     "keysCountPlural": "{count} keys",
     "typeAdded": "+ ADDED",
@@ -166,7 +199,20 @@ export const enUK: UiMessages = {
     "noOtherBranches": "No other branch found.",
     "prTitleLabel": "PR title",
     "prTitlePlaceholder": "feat(i18n): update translations",
-    "createPr": "Create Pull Request"
+    "createPr": "Create Pull Request",
+    "updatePr": "Update Pull Request"
+  },
+  "load": {
+    "title": "Load from GitHub",
+    "subtitle": "Choose which branch to read. Pull Requests will still target the base branch.",
+    "branchLabel": "Source branch",
+    "baseBranchSuffix": "PR base",
+    "prTargetHint": "Commits will open a PR targeting {branch}.",
+    "draftWarning": "Uncommitted changes will be lost when loading.",
+    "confirm": "Load",
+    "loading": "Loading…",
+    "branchesLoading": "Loading branches…",
+    "noBranches": "No branches found."
   },
   "settings": {
     "title": "Settings",
@@ -181,7 +227,8 @@ export const enUK: UiMessages = {
       "token": "GitHub Token",
       "owner": "Owner",
       "repo": "Repository",
-      "branch": "Branch",
+      "branch": "Base branch (PR)",
+      "sourceBranch": "Loaded branch",
       "baseLang": "Base language"
     },
     "placeholders": {
@@ -245,7 +292,10 @@ export const enUK: UiMessages = {
     "title": "Export translations",
     "titleConfigs": "Export configs",
     "summary": "{langs} language{langsSuffix} · {keys} key{keysSuffix}",
+    "summaryWithFiles": "{langs} language{langsSuffix} · {files} file{filesSuffix} · {keys} key{keysSuffix}",
     "format": "Format",
+    "formatJsonFiles": "Original files (ZIP)",
+    "formatJsonFilesHint": "repo paths · all translations/ folders",
     "formatJson": "JSON (nested)",
     "formatJsonHint": "{\"en\":{action:{…}}}",
     "formatJsonNs": "JSON (namespace split)",
@@ -268,11 +318,13 @@ export const enUK: UiMessages = {
   },
   "toast": {
     "loadedFromGithub": "Files loaded from GitHub",
+    "loadedFromBranch": "Files loaded from branch {branch}",
     "draftRestored": "Uncommitted draft restored from this browser",
     "error": "Error: {message}",
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",
     "prCreated": "PR #{number} created",
+    "prCreatedOnBranch": "PR #{number} created — active branch: {branch}",
     "keyRestored": "Key \"{key}\" restored",
     "keyAdded": "Key \"{key}\" added",
     "keyRenamed": "Key \"{oldKey}\" renamed to \"{newKey}\"",
@@ -281,7 +333,9 @@ export const enUK: UiMessages = {
     "valuesImportedJson": "{count} values imported (JSON)",
     "configsImported": "{values} config value(s) imported across {langs} locale(s)",
     "copiedClipboard": "Copied to clipboard",
-    "fileDownloaded": "File .{ext} downloaded"
+    "fileDownloaded": "File .{ext} downloaded",
+    "staleResolved": "Conflicts resolved",
+    "staleKeptLocal": "Keeping your local changes — remote updates dismissed"
   },
   "configs": {
     "empty": "No config keys yet",
@@ -378,6 +432,7 @@ export const enUK: UiMessages = {
     "langsSummaryMulti": "{count} locales found across {folders} folders",
     "baseLangLabel": "Base language",
     "selectLangs": "Active languages",
+    "branchLabel": "Base branch",
     "useFolder": "Use selection ({count} locales)",
     "finish": "Finish setup",
     "skip": "Demo mode",

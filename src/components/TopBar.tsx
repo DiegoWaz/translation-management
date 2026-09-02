@@ -1,6 +1,6 @@
 import type { GitHubConfig, WorkspaceMode } from '../types'
 import { cn } from '../helpers/cn'
-import { ui, UI_LOCALES, type UiLocale } from '../i18n/ui'
+import { ui, UI_LOCALES, t, type UiLocale } from '../i18n/ui'
 import { GithubIcon, HistoryIcon, SpinnerIcon } from './Icons'
 
 export const TopBar = ({
@@ -17,6 +17,7 @@ export const TopBar = ({
   onWorkspaceChange,
   onUiLocaleChange,
   onLoad,
+  onBranchClick,
   onCommit,
   onHistory,
   onSettings,
@@ -36,6 +37,7 @@ export const TopBar = ({
   onWorkspaceChange: (mode: WorkspaceMode) => void
   onUiLocaleChange: (locale: UiLocale) => void
   onLoad: () => void
+  onBranchClick?: () => void
   onCommit: () => void
   onHistory: () => void
   onSettings: () => void
@@ -43,6 +45,7 @@ export const TopBar = ({
   onToggleTheme: () => void
 }) => {
   const isConnected = Boolean(config.token && config.owner && config.repo)
+  const sourceDiffersFromBase = isConnected && config.sourceBranch !== config.branch
   // Compact mode hides secondary labels/badges on medium screens (tablet) to prevent overflow
   const compact = isMobile || Boolean(isTablet)
 
@@ -87,7 +90,19 @@ export const TopBar = ({
           {isConnected && (
             <>
               <span className="text-fg-faint">@</span>
-              <span className="text-[10px] text-fg-success bg-success-bg px-1.5 py-px rounded-full font-mono">{config.branch}</span>
+              <button
+                type="button"
+                onClick={onBranchClick ?? onLoad}
+                title={ui.topBar.sourceBranchTitle}
+                className="text-[10px] text-fg-success bg-success-bg px-1.5 py-px rounded-full font-mono border-none cursor-pointer hover:opacity-80"
+              >
+                {config.sourceBranch}
+              </button>
+              {sourceDiffersFromBase && (
+                <span className="text-[9px] text-fg-muted font-mono whitespace-nowrap">
+                  {t(ui.topBar.prBaseSuffix, { branch: config.branch })}
+                </span>
+              )}
             </>
           )}
           {isDemoMode && <span className="text-[9px] text-fg-demo bg-warning-bg px-1.5 py-px rounded-full font-bold tracking-wider">{ui.topBar.demo}</span>}
@@ -99,7 +114,11 @@ export const TopBar = ({
         <button
           type="button"
           onClick={onSetup}
-          className="flex items-center gap-1.5 px-3 py-1 bg-brand border border-brand-hover rounded-md text-fg-on-brand text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0"
+          disabled={loading}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1 bg-brand border border-brand-hover rounded-md text-fg-on-brand text-xs cursor-pointer font-inherit whitespace-nowrap shrink-0',
+            loading && 'opacity-50 cursor-not-allowed',
+          )}
         >
           <GithubIcon size={12} />
           {!compact && ` ${ui.setup.connect}`}

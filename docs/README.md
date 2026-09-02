@@ -4,6 +4,7 @@ Index de la documentation produit et technique.
 
 | Document | Public | Contenu |
 |---|---|---|
+| [features.md](features.md) | Équipe / devs | Positionnement, inventaire des fonctionnalités |
 | [setup.md](setup.md) | Équipe | Installation, `.env`, token, locales |
 | [translations.md](translations.md) | Utilisateurs | Édition des fichiers i18n |
 | [configs.md](configs.md) | Utilisateurs | Schéma + configs par locale |

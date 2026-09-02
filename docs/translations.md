@@ -26,7 +26,7 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 
 | Zone | Rôle |
 |---|---|
-| **Charger** | Relit tous les JSON depuis GitHub (écrase le brouillon local par les données distantes) |
+| **Charger** | Relit tous les JSON depuis la branche source choisie (écrase le brouillon local par les données distantes) |
 | **Committer** | Ouvre le dialogue ; un seul commit pour les locales modifiées |
 | **Historique** | Commits du fichier de la locale active |
 | Sidebar / bande mobile | Locales, complétion, filtres |
@@ -48,7 +48,10 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 
 ### Import / export
 
-- **Exporter** : JSON ou TSV (locales en colonnes)
+- **Exporter** : JSON ou TSV (locales en colonnes), ou **Fichiers d'origine (ZIP)** — mêmes chemins et arborescence JSON que sur GitHub (`fileSources` / `rawContent`). Si le dépôt contient **plusieurs dossiers `translations/`** (ex. `apps/web/translations/` et `packages/ui/translations/`), tous les fichiers découverts sont chargés, commités et exportés séparément ; les clés sont réparties via `keyOwners` (fichier d’origine + routage namespace/chemin pour les nouvelles clés).
+- **Clés dupliquées** : bannière d’avertissement si la même clé existe dans plusieurs fichiers d’une même locale.
+- **Conflits distants** : détection stale (poll 30 s) → bouton **Voir les différences** → résolution clé par clé (garder la mienne / prendre la distante) ou rechargement complet.
+- **Performance** : virtualisation du tableau (mode locale, > 40 lignes visibles sur la page courante).
 - **Importer** : texte libre, tableau `locale: valeur`, ou JSON
 - **+ Clé** : ajoute la clé sur toutes les locales
 

@@ -6,9 +6,10 @@ import { ui, keysLabel } from '../i18n/ui'
 import { Avatar } from './Avatar'
 import { HistoryIcon } from './Icons'
 
-export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onClose, onRestoreKey, compact, keyFilter, onKeyFilterChange, onReturnToEdit }: {
-  lang: string; langFile?: LangFile; commits: CommitRecord[]; loading: boolean; isDemoMode: boolean
-  onClose: () => void; onRestoreKey: (lang: string, key: string, value: string) => void; compact?: boolean
+export const HistoryPanel = ({ lang, langFile, commits, loading, error, isDemoMode, onClose, onReload, onRestoreKey, compact, keyFilter, onKeyFilterChange, onReturnToEdit }: {
+  lang: string; langFile?: LangFile; commits: CommitRecord[]; loading: boolean; error?: boolean; isDemoMode: boolean
+  onClose: () => void; onReload?: () => void
+  onRestoreKey: (lang: string, key: string, value: string) => void; compact?: boolean
   keyFilter?: string | null; onKeyFilterChange?: (key: string | null) => void; onReturnToEdit?: () => void
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -53,7 +54,20 @@ export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onC
           )}
           {langFile && !keyFilter && <div className="text-[10px] text-fg-muted font-mono mt-0.5">{langFile.path}</div>}
         </div>
-        <button onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-lg">{ui.common.close}</button>
+        <div className="flex items-center gap-1 shrink-0">
+          {!isDemoMode && onReload && (
+            <button
+              type="button"
+              onClick={onReload}
+              disabled={loading}
+              title={ui.history.reload}
+              className="bg-transparent border border-border rounded-md text-fg-muted cursor-pointer text-xs px-2 py-1 font-inherit disabled:opacity-50"
+            >
+              {ui.history.reload}
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-lg">{ui.common.close}</button>
+        </div>
       </div>
       {isDemoMode && (
         <div className="px-3.5 py-2 bg-warning-bg border-b border-border-warning text-[11px] text-fg-demo">
@@ -62,10 +76,20 @@ export const HistoryPanel = ({ lang, langFile, commits, loading, isDemoMode, onC
       )}
        {loading ? (
         <div className="flex items-center justify-center h-[120px] text-fg-muted text-[13px]">{ui.history.loading}</div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-40 text-fg-muted gap-3 px-4 text-center">
+          <HistoryIcon size={24} />
+          <div className="text-[13px] text-fg-danger">{ui.history.error}</div>
+          {onReload && (
+            <button type="button" onClick={onReload} className="text-xs text-fg-brand border border-border-brand-soft rounded-md px-3 py-1.5 cursor-pointer font-inherit bg-transparent">
+              {ui.history.reload}
+            </button>
+          )}
+        </div>
       ) : filteredCommits.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-40 text-fg-muted gap-2">
           <HistoryIcon size={24} />
-          <div className="text-[13px]">{keyFilter ? 'No changes for this key' : ui.history.empty}</div>
+          <div className="text-[13px]">{keyFilter ? ui.history.noKeyChanges : ui.history.empty}</div>
         </div>
       ) : (
         <div className="flex-1">

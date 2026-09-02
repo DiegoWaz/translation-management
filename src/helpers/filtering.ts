@@ -1,6 +1,35 @@
 import type { FilterMode, KeyGroup, LangFile, SearchMode } from '../types'
 import { missingVars } from './vars'
 
+export const collectTranslationKeys = (
+  translations: Record<string, Record<string, string>>,
+  original: Record<string, Record<string, string>>,
+  langs: string[],
+  baseLang: string,
+): string[] => {
+  const keys = new Set<string>()
+  for (const lang of langs) {
+    Object.keys(translations[lang] ?? {}).forEach(k => keys.add(k))
+    Object.keys(original[lang] ?? {}).forEach(k => keys.add(k))
+  }
+  const order = [
+    ...Object.keys(original[baseLang] ?? {}),
+    ...Object.keys(translations[baseLang] ?? {}),
+  ]
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  for (const key of order) {
+    if (keys.has(key) && !seen.has(key)) {
+      seen.add(key)
+      ordered.push(key)
+    }
+  }
+  for (const key of [...keys].sort((a, b) => a.localeCompare(b))) {
+    if (!seen.has(key)) ordered.push(key)
+  }
+  return ordered
+}
+
 export const buildSearchMatchMap = (
   search: string,
   baseKeys: string[],

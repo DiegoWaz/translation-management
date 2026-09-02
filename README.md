@@ -1,6 +1,8 @@
 # LocaleHub
 
-Interface web pour gérer les **traductions i18n** et les **configs JSON** stockées dans un dépôt GitHub. Édition dans le navigateur, brouillon local, commit unique vers la branche configurée.
+**Éditeur i18n Git-native pour les développeurs** — modifiez les fichiers JSON de traduction (et configs) **depuis le navigateur**, sans TMS ni workflow PO/QA. La source de vérité reste **votre dépôt GitHub** ; LocaleHub lit, édite en local et pousse via **Pull Request**.
+
+> Par les devs, pour les devs : pas de rôles traducteur/relecteur, pas d’assignation de tâches, pas de machine translation. Voir [docs/features.md](docs/features.md) pour l’inventaire complet et le hors-scope.
 
 ```
 Navigateur  →  GitHub API (HTTPS)  →  votre dépôt
@@ -19,31 +21,29 @@ pnpm run dev
 
 Le serveur écoute sur `$PORT` (défaut **8443**). Redémarrer après toute modification du `.env`.
 
-Sans token / dépôt, l’app démarre en **mode démo** avec des données fictives.
+Sans token / dépôt → **mode démo** (données fictives, pas de push).
 
 ## Documentation
 
 | Document | Contenu |
 |---|---|
-| [docs/setup.md](docs/setup.md) | `.env`, token GitHub, locales, chemins |
+| [docs/features.md](docs/features.md) | **Fonctionnalités & positionnement** (dev-only) |
+| [docs/setup.md](docs/setup.md) | `.env`, token GitHub, OAuth, locales |
 | [docs/translations.md](docs/translations.md) | Workspace Traductions |
 | [docs/configs.md](docs/configs.md) | Workspace Configs (Excel / JSON) |
-| [docs/workflow.md](docs/workflow.md) | Brouillon local, commit unique, historique |
-| [docs/security.md](docs/security.md) | Confiance & sécurité : rien conservé, tout passe par une PR |
-| [docs/architecture.md](docs/architecture.md) | Structure du code, flux de données |
+| [docs/workflow.md](docs/workflow.md) | Brouillon, commit, historique, reconnexion |
+| [docs/security.md](docs/security.md) | Confiance : rien conservé côté serveur, tout passe par une PR |
+| [docs/architecture.md](docs/architecture.md) | Structure du code |
 | [docs/context/product.md](docs/context/product.md) | Brief produit compact |
 
 Contexte agents / IA : [AGENTS.md](AGENTS.md) · règles Cursor : [`.cursor/rules/`](.cursor/rules/).
 
-## Fonctionnalités (aperçu)
+## En bref
 
-- **Deux workspaces** : Traductions ↔ Configs + **DTO** (validation Zod)
-- **Édition** : inline, mode clé (toutes locales), import / export
-- **Configs** : schéma camelCase, valeurs optionnelles par locale, vues Excel (arbre) et JSON
-- **DTO** : coller un schéma Zod + JSON → liste des erreurs de format
-- **Brouillon** : persistance `localStorage` tant qu’il n’y a pas de commit / rechargement GitHub
-- **Commit** : **un seul** commit Git listant uniquement les locales modifiées
-- Thème clair / sombre, UI fr / en / es
+- **Traductions** : édition inline, import/export, multi-dossiers `translations/`, commit unique → PR
+- **Brouillon** : persistance navigateur ; reconnexion GitHub obligatoire si le token expire
+- **Configs / DTO** : codés, onglets désactivés pour l’instant
+- UI **fr / en / es** · thème clair / sombre
 
 ## Configuration (résumé)
 
@@ -54,19 +54,17 @@ Contexte agents / IA : [AGENTS.md](AGENTS.md) · règles Cursor : [`.cursor/rule
 | `VITE_GH_BASE_LANG` | Locale de référence |
 | `VITE_GH_LANGS` | Locales actives (`en-UK,fr-FR`) |
 | `VITE_GH_PATH_TEMPLATE` | Chemins traductions (`locales/{lang}.json`) |
-| `VITE_GH_CONFIG_PATH_TEMPLATE` | Chemins configs (`configs/{lang}.json`) |
-| `VITE_GH_CONFIG_SCHEMA_PATH` | Schéma configs |
 
 Détail : [docs/setup.md](docs/setup.md). Ne jamais committer `.env`.
 
 ## Stack
 
-React 19 · Vite 8 · TypeScript 5.7 · Tailwind CSS v4 · GitHub REST / Git Data API · CodeMirror (JSON)
+React 19 · Vite 8 · TypeScript 5.7 · Tailwind CSS v4 · GitHub REST / Git Data API
 
 ```bash
-pnpm run build    # build production
-pnpm run preview  # prévisualiser le build
-pnpm format       # oxfmt
+pnpm run build
+pnpm run preview
+pnpm format
 ```
 
 Package npm : `locale-hub`.

@@ -4,6 +4,7 @@ import { cn } from '../helpers/cn'
 import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
 import { ui, t } from '../i18n/ui'
 import { detectCommitType, generateBranchName, generatePrTitle } from '../helpers/commitHelpers'
+import { preferExistingCommitBranch } from '../helpers/config'
 import { listBranches } from '../helpers/githubBrowser'
 import { Overlay } from './Overlay'
 import { Field } from './Field'
@@ -48,13 +49,18 @@ export const CommitDialog = ({
   // Auto-generate branch name and PR title
   const defaultBranchName = useMemo(() => generateBranchName(commitType), [commitType])
   const defaultPrTitle = useMemo(() => generatePrTitle(commitType, commitMsg), [commitType, commitMsg])
-  
+  const defaultToExistingBranch = preferExistingCommitBranch(config)
+
   const [branchName, setBranchName] = useState(defaultBranchName)
   const [prTitle, setPrTitle] = useState(defaultPrTitle)
-  const [branchMode, setBranchMode] = useState<'new' | 'existing'>('new')
+  const [branchMode, setBranchMode] = useState<'new' | 'existing'>(() =>
+    defaultToExistingBranch ? 'existing' : 'new',
+  )
   const [branches, setBranches] = useState<string[]>([])
-  const [loadingBranches, setLoadingBranches] = useState(false)
-  const [selectedExistingBranch, setSelectedExistingBranch] = useState('')
+  const [loadingBranches, setLoadingBranches] = useState(defaultToExistingBranch)
+  const [selectedExistingBranch, setSelectedExistingBranch] = useState(
+    defaultToExistingBranch ? config.sourceBranch : '',
+  )
 
   useEffect(() => {
     if (branchMode !== 'existing' || branches.length > 0 || loadingBranches) return
@@ -63,13 +69,17 @@ export const CommitDialog = ({
       .then(list => {
         const names = list.map(b => b.name).filter(n => n !== config.branch)
         setBranches(names)
-        if (names.length > 0) setSelectedExistingBranch(names[0])
+        const preferred = names.includes(config.sourceBranch)
+          ? config.sourceBranch
+          : names[0]
+        if (preferred) setSelectedExistingBranch(preferred)
       })
       .catch(() => setBranches([]))
       .finally(() => setLoadingBranches(false))
-  }, [branchMode, branches.length, loadingBranches, config.token, config.owner, config.repo, config.branch])
+  }, [branchMode, branches.length, loadingBranches, config.token, config.owner, config.repo, config.branch, config.sourceBranch])
 
   const effectiveBranchName = branchMode === 'existing' ? selectedExistingBranch : branchName
+  const confirmLabel = commitType === 'fix' ? ui.commit.updatePr : ui.commit.createPr
 
   const byLang = modifiedKeys.reduce<Record<string, string[]>>((acc, { lang, key }) => {
     acc[lang] = acc[lang] ?? []
@@ -219,7 +229,7 @@ export const CommitDialog = ({
             disabled={!commitMsg.trim() || !prTitle.trim() || !effectiveBranchName.trim()}
             className={cn(btnPrimaryClass, 'bg-success-bg border-border-success text-fg-success')}
           >
-            <GithubIcon size={13} /> {ui.commit.createPr}
+            <GithubIcon size={13} /> {confirmLabel}
           </button>
         </div>
       </div>

@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
-import type { ExportFormat, LangFile, ToastType } from '../types'
+import type { ExportFormat, FileSource, LangFile, ToastType } from '../types'
 import { cn } from '../helpers/cn'
 import {
   buildSheetMatrix,
+  countOriginalExportFiles,
   generateCsvExport,
   generateJsonExport,
   generateNamespacedJsonPreview,
   generateNamespacedZip,
+  generateOriginalFilesPreview,
+  generateOriginalFilesZip,
   generateTsvExport,
 } from '../helpers/exportGenerators'
 import { btnPrimaryClass, btnSecClass } from '../helpers/styles'
@@ -18,6 +21,8 @@ export const ExportModal = ({
   baseKeys,
   filteredKeys,
   configFiles,
+  fileSources,
+  keyOwners,
   title,
   downloadBasename,
   onClose,
@@ -28,13 +33,16 @@ export const ExportModal = ({
   baseKeys: string[]
   filteredKeys: string[]
   configFiles: LangFile[]
+  fileSources?: Record<string, FileSource[]>
+  keyOwners?: Record<string, Record<string, number>>
   title?: string
   downloadBasename?: string
   onClose: () => void
   showToast: (m: string, t: ToastType) => void
   isMobile: boolean
 }) => {
-  const [format, setFormat] = useState<ExportFormat>('csv')
+  const hasOriginalFiles = Boolean(fileSources && Object.keys(fileSources).length > 0)
+  const [format, setFormat] = useState<ExportFormat>(() => (hasOriginalFiles ? 'json-files' : 'csv'))
   const [previewMode, setPreviewMode] = useState<'table' | 'raw'>('table')
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set(configFiles.map(f => f.lang)))
   const [keyScope, setKeyScope] = useState<'all' | 'filtered'>('all')
@@ -42,21 +50,36 @@ export const ExportModal = ({
 
   const langs = configFiles.map(f => f.lang).filter(l => selectedLangs.has(l))
   const keys = keyScope === 'all' ? baseKeys : filteredKeys
+  const keysAreFiltered = keyScope === 'filtered'
+
+  const originalFileCount = useMemo(() => {
+    if (!fileSources) return 0
+    return countOriginalExportFiles(fileSources, langs)
+  }, [fileSources, langs])
 
   const output = useMemo(() => {
+    if (format === 'json-files' && fileSources) {
+      return generateOriginalFilesPreview(fileSources, data, langs, keys, keysAreFiltered, keyOwners)
+    }
     if (format === 'json') return generateJsonExport(data, langs, keys)
     if (format === 'json-ns') return generateNamespacedJsonPreview(data, langs, keys)
     if (format === 'csv') return generateCsvExport(data, langs, keys)
     return generateTsvExport(data, langs, keys)
-  }, [format, data, langs, keys])
+  }, [format, fileSources, keyOwners, data, langs, keys, keysAreFiltered])
 
   const matrix = useMemo(
-    () => (format === 'json' || format === 'json-ns' ? [] : buildSheetMatrix(data, langs, keys)),
+    () => (format === 'json' || format === 'json-ns' || format === 'json-files' ? [] : buildSheetMatrix(data, langs, keys)),
     [format, data, langs, keys],
   )
 
-  const extMap = { json: 'json', 'json-ns': 'zip', csv: 'csv', tsv: 'tsv' } as const
-  const mimeMap = { json: 'application/json', 'json-ns': 'application/zip', csv: 'text/csv;charset=utf-8', tsv: 'text/tab-separated-values' } as const
+  const extMap = { json: 'json', 'json-ns': 'zip', 'json-files': 'zip', csv: 'csv', tsv: 'tsv' } as const
+  const mimeMap = {
+    json: 'application/json',
+    'json-ns': 'application/zip',
+    'json-files': 'application/zip',
+    csv: 'text/csv;charset=utf-8',
+    tsv: 'text/tab-separated-values',
+  } as const
   const ext = extMap[format]
   const mime = mimeMap[format]
 
@@ -75,6 +98,17 @@ export const ExportModal = ({
   }
 
   const handleDownload = () => {
+    if (format === 'json-files' && fileSources) {
+      generateOriginalFilesZip(fileSources, data, langs, keys, keysAreFiltered, keyOwners).then(blob => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `${downloadBasename ?? 'export'}.zip`
+        a.click()
+        URL.revokeObjectURL(a.href)
+        showToast(t(ui.toast.fileDownloaded, { ext: 'zip' }), 'success')
+      })
+      return
+    }
     if (format === 'json-ns') {
       generateNamespacedZip(data, langs, keys).then(blob => {
         const a = document.createElement('a')
@@ -96,6 +130,9 @@ export const ExportModal = ({
   }
 
   const formatOptions = [
+    ...(hasOriginalFiles
+      ? [{ key: 'json-files' as const, label: ui.export.formatJsonFiles, hint: ui.export.formatJsonFilesHint }]
+      : []),
     { key: 'csv' as const, label: ui.export.formatCsv, hint: ui.export.formatCsvHint },
     { key: 'tsv' as const, label: ui.export.formatTsv, hint: ui.export.formatTsvHint },
     { key: 'json' as const, label: ui.export.formatJson, hint: ui.export.formatJsonHint },
@@ -107,7 +144,7 @@ export const ExportModal = ({
     { key: 'filtered' as const, label: t(ui.export.keysFiltered, { count: filteredKeys.length }) },
   ]
 
-  const showTable = format !== 'json' && format !== 'json-ns' && previewMode === 'table'
+  const showTable = format !== 'json' && format !== 'json-ns' && format !== 'json-files' && previewMode === 'table'
 
   return (
     <Overlay onClick={onClose}>
@@ -122,12 +159,21 @@ export const ExportModal = ({
           <div>
             <h2 className="m-0 mb-0.5 text-[15px] font-semibold text-fg">{title ?? ui.export.title}</h2>
             <p className="m-0 text-xs text-fg-muted">
-              {t(ui.export.summary, {
-                langs: langs.length,
-                langsSuffix: localeSuffix(langs.length),
-                keys: keys.length,
-                keysSuffix: localeSuffix(keys.length),
-              })}
+              {format === 'json-files' && originalFileCount > 0
+                ? t(ui.export.summaryWithFiles, {
+                    langs: langs.length,
+                    langsSuffix: localeSuffix(langs.length),
+                    files: originalFileCount,
+                    filesSuffix: localeSuffix(originalFileCount),
+                    keys: keys.length,
+                    keysSuffix: localeSuffix(keys.length),
+                  })
+                : t(ui.export.summary, {
+                    langs: langs.length,
+                    langsSuffix: localeSuffix(langs.length),
+                    keys: keys.length,
+                    keysSuffix: localeSuffix(keys.length),
+                  })}
             </p>
           </div>
           <button onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-xl">{ui.common.close}</button>
@@ -194,7 +240,7 @@ export const ExportModal = ({
             <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0 gap-2">
               <span className="text-[11px] text-fg-muted">{ui.export.preview}</span>
               <div className="flex items-center gap-2">
-                {format !== 'json' && format !== 'json-ns' && (
+                {format !== 'json' && format !== 'json-ns' && format !== 'json-files' && (
                   <div className="flex bg-elevated border border-border rounded-md overflow-hidden">
                     {(['table', 'raw'] as const).map(mode => (
                       <button

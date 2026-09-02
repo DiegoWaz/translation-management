@@ -101,3 +101,15 @@ export const applyChangesToNested = (
 
   return result
 }
+
+/** Remove nested keys whose dot-path is not in `allowedKeys`. */
+export const pruneNestedToKeys = (
+  nested: Record<string, unknown>,
+  allowedKeys: Set<string>,
+): Record<string, unknown> => {
+  const result = deepClone(nested)
+  for (const key of Object.keys(flattenJson(result))) {
+    if (!allowedKeys.has(key)) deleteNested(result, key)
+  }
+  return result
+}

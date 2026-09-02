@@ -1,9 +1,11 @@
 import type {
   ConfigMap,
   ConfigSchema,
+  FileSource,
   GitHubConfig,
   WorkspaceMode,
 } from '../types'
+import { loadRefConfig } from './config'
 
 const STORAGE_PREFIX = 'localehub:draft:v1'
 /** Previous product key — still read once for migration. */
@@ -24,13 +26,18 @@ export type DraftSnapshot = {
   shas: Record<string, string>
   configShas: Record<string, string>
   schemaSha: string
+  /** Per-locale source files (multiple `translations/` folders → several paths per lang). */
+  fileSources?: Record<string, FileSource[]>
+  /** Explicit routing for keys across multiple source files per locale. */
+  keyOwners?: Record<string, Record<string, number>>
 }
 
 const keyWithPrefix = (prefix: string, config: GitHubConfig): string => {
   const langs = config.files.map(f => f.lang).join(',')
   const owner = config.owner || 'local'
   const repo = config.repo || 'demo'
-  return `${prefix}:${owner}/${repo}/${config.branch}:${langs}`
+  const ref = loadRefConfig(config).branch
+  return `${prefix}:${owner}/${repo}/${ref}:${langs}`
 }
 
 export const draftStorageKey = (config: GitHubConfig): string =>

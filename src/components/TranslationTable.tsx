@@ -5,6 +5,7 @@ import { ColHeader } from './ColHeader'
 import { EmptyState } from './EmptyState'
 import { KeyModeRow } from './KeyModeRow'
 import { TranslationRow } from './TranslationRow'
+import { TRANSLATION_ROW_HEIGHT, VirtualList } from './VirtualList'
 
 export const TranslationTable = ({
   searchMode,
@@ -53,6 +54,32 @@ export const TranslationTable = ({
 }) => {
   const baseFile = config.files.find(f => f.lang === config.baseLang)
   const pad = isMobile ? 'px-3' : 'px-5'
+  const useVirtual = searchMode !== 'key' && filteredKeys.length > 40
+
+  const renderLocaleRow = (key: string, i: number) => (
+    <TranslationRow
+      key={key}
+      rowKey={key}
+      baseValue={translations[config.baseLang]?.[key] ?? ''}
+      targetValue={translations[activeLang]?.[key] ?? ''}
+      originalValue={original[activeLang]?.[key] ?? ''}
+      lastModified={activeLangKeyMap[key]}
+      isEven={i % 2 === 0}
+      colTemplate={colTemplate}
+      showBase={showBase}
+      showLastMod={showLastMod}
+      isMobile={isMobile}
+      onChange={val => onUpdate(activeLang, key, val)}
+      onDelete={() => onDelete(key)}
+      onRename={onRename}
+      onShowKeyHistory={onShowKeyHistory}
+      searchQuery={search}
+      matchedLangs={searchMatchMap[key] ?? []}
+      configFiles={config.files}
+      activeLang={activeLang}
+      missingVarsList={varValidation ? (varIssuesMap[key] ?? []) : []}
+    />
+  )
 
   return (
     <>
@@ -75,54 +102,42 @@ export const TranslationTable = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto">
-        {filteredKeys.length === 0 ? (
+      {filteredKeys.length === 0 ? (
+        <div className="flex-1 overflow-y-auto">
           <EmptyState filter={filter} search={search} />
-        ) : (
-          filteredKeys.map((key, i) =>
-            searchMode === 'key' ? (
-              <KeyModeRow
-                key={key}
-                rowKey={key}
-                translations={translations}
-                original={original}
-                configFiles={config.files}
-                baseLang={config.baseLang}
-                isEven={i % 2 === 0}
-                isMobile={isMobile}
-                onUpdate={onUpdate}
-                onDelete={() => onDelete(key)}
-                onRename={onRename}
-                onShowKeyHistory={onShowKeyHistory}
-                searchQuery={search}
-              />
-            ) : (
-              <TranslationRow
-                key={key}
-                rowKey={key}
-                baseValue={translations[config.baseLang]?.[key] ?? ''}
-                targetValue={translations[activeLang]?.[key] ?? ''}
-                originalValue={original[activeLang]?.[key] ?? ''}
-                lastModified={activeLangKeyMap[key]}
-                isEven={i % 2 === 0}
-                colTemplate={colTemplate}
-                showBase={showBase}
-                showLastMod={showLastMod}
-                isMobile={isMobile}
-                onChange={val => onUpdate(activeLang, key, val)}
-                onDelete={() => onDelete(key)}
-                onRename={onRename}
-                onShowKeyHistory={onShowKeyHistory}
-                searchQuery={search}
-                matchedLangs={searchMatchMap[key] ?? []}
-                configFiles={config.files}
-                activeLang={activeLang}
-                missingVarsList={varValidation ? (varIssuesMap[key] ?? []) : []}
-              />
-            ),
-          )
-        )}
-      </div>
+        </div>
+      ) : searchMode === 'key' ? (
+        <div className="flex-1 overflow-y-auto">
+          {filteredKeys.map((key, i) => (
+            <KeyModeRow
+              key={key}
+              rowKey={key}
+              translations={translations}
+              original={original}
+              configFiles={config.files}
+              baseLang={config.baseLang}
+              isEven={i % 2 === 0}
+              isMobile={isMobile}
+              onUpdate={onUpdate}
+              onDelete={() => onDelete(key)}
+              onRename={onRename}
+              onShowKeyHistory={onShowKeyHistory}
+              searchQuery={search}
+            />
+          ))}
+        </div>
+      ) : useVirtual ? (
+        <VirtualList
+          itemCount={filteredKeys.length}
+          itemHeight={TRANSLATION_ROW_HEIGHT}
+          getItemKey={index => filteredKeys[index]}
+          renderItem={index => renderLocaleRow(filteredKeys[index], index)}
+        />
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          {filteredKeys.map((key, i) => renderLocaleRow(key, i))}
+        </div>
+      )}
     </>
   )
 }

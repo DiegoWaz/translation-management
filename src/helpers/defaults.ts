@@ -10,6 +10,7 @@ export const DEFAULT_DEMO_CONFIG: GitHubConfig = {
   owner: '',
   repo: '',
   branch: 'main',
+  sourceBranch: 'main',
   baseLang: 'en-UK',
   files: [
     { lang: 'en-UK', label: 'English (UK)', flag: '🇬🇧', path: 'locales/en-UK.json' },

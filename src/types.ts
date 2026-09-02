@@ -14,6 +14,34 @@ export interface FileSource {
   nested: boolean
 }
 
+export interface DuplicateKeyWarning {
+  lang: string
+  key: string
+  entries: Array<{ path: string; value: string }>
+}
+
+export interface StaleKeyDiff {
+  key: string
+  local: string
+  remote: string
+}
+
+export interface StaleSourceConflict {
+  path: string
+  sourceIdx: number
+  localSha: string
+  remoteSha: string
+  remoteFlat: Record<string, string>
+  remoteRaw: Record<string, unknown>
+  remoteNested: boolean
+  changedKeys: StaleKeyDiff[]
+}
+
+export interface StaleLangConflict {
+  lang: string
+  sources: StaleSourceConflict[]
+}
+
 export interface Country {
   code: string
   name: string
@@ -24,7 +52,10 @@ export interface GitHubConfig {
   token: string
   owner: string
   repo: string
+  /** Base branch — target for Pull Requests. */
   branch: string
+  /** Branch read for load / history / stale checks (persisted between sessions). */
+  sourceBranch: string
   baseLang: string
   files: LangFile[]
   configPathTemplate: string
@@ -77,7 +108,7 @@ export interface ParsedImport {
 }
 
 export type ImportFormat = 'text' | 'table' | 'json'
-export type ExportFormat = 'json' | 'json-ns' | 'csv' | 'tsv'
+export type ExportFormat = 'json' | 'json-ns' | 'json-files' | 'csv' | 'tsv'
 
 export interface JsonImportResult {
   type: 'multi'

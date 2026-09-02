@@ -11,6 +11,7 @@ export type UiMessages = {
     history: string; historyTitle: string; commit: string; commitTitle: string; settings: string
     uiLang: string
     workspaceTranslations: string; workspaceConfigs: string; workspaceSchema: string; workspaceDisabled: string
+    sourceBranchTitle: string; prBaseSuffix: string
   }
   filters: {
     all: string; allKeys: string; missing: string; missingShort: string
@@ -52,10 +53,25 @@ export type UiMessages = {
   addKey: { placeholder: string }
   stale: {
     icon: string; changedSingular: string; changedPlural: string
-    bySomeoneElse: string; reload: string
+    bySomeoneElse: string; reload: string; review: string
+  }
+  sessionLost: {
+    icon: string; title: string; message: string; draftHint: string
+    reconnect: string; expired: string
+  }
+  staleConflict: {
+    title: string; subtitle: string; keyCount: string
+    yours: string; theirs: string; choice: string
+    keepLocal: string; takeRemote: string
+    keepAllLocal: string; takeAllRemote: string
+    dismissKeepMine: string; apply: string
+  }
+  duplicates: {
+    icon: string; summary: string; more: string
   }
   history: {
     title: string; demoBanner: string; loading: string; empty: string
+    reload: string; error: string; noKeyChanges: string
     keysCount: string; keysCountPlural: string
     typeAdded: string; typeDeleted: string; typeModified: string
     restore: string; restored: string
@@ -67,13 +83,18 @@ export type UiMessages = {
     modePr: string; prOnlyHint: string; securityLink: string; type: string; branchNameLabel: string
     branchModeLabel: string; branchModeNew: string; branchModeExisting: string; branchModeExistingHint: string
     branchesLoading: string; noOtherBranches: string
-    prTitleLabel: string; prTitlePlaceholder: string; createPr: string
+    prTitleLabel: string; prTitlePlaceholder: string; createPr: string; updatePr: string
+  }
+  load: {
+    title: string; subtitle: string; branchLabel: string; baseBranchSuffix: string
+    prTargetHint: string; draftWarning: string; confirm: string; loading: string
+    branchesLoading: string; noBranches: string
   }
   settings: {
     title: string; envConfigured: string; envMissing: string; envOnlyHint: string
     envInstallCommands: string; missingValue: string
     tokenPermRepo: string; tokenPermWrite: string
-    fields: { token: string; owner: string; repo: string; branch: string; baseLang: string }
+    fields: { token: string; owner: string; repo: string; branch: string; sourceBranch: string; baseLang: string }
     placeholders: { pathTemplate: string }
     pathTemplateLabel: string
     activeLanguages: string; done: string
@@ -101,8 +122,9 @@ export type UiMessages = {
     configsApply: string; configsApplyDisabled: string
   }
   export: {
-    title: string; titleConfigs: string; summary: string; format: string
+    title: string; titleConfigs: string; summary: string; summaryWithFiles: string; format: string
     formatJson: string; formatJsonHint: string
+    formatJsonFiles: string; formatJsonFilesHint: string
     formatJsonNs: string; formatJsonNsHint: string
     formatCsv: string; formatCsvHint: string
     formatTsv: string; formatTsvHint: string
@@ -111,11 +133,12 @@ export type UiMessages = {
     preview: string; close: string; copy: string; copied: string; download: string
   }
   toast: {
-    loadedFromGithub: string; draftRestored: string; error: string; historyError: string
-    nothingToCommit: string; prCreated: string
+    loadedFromGithub: string; loadedFromBranch: string; draftRestored: string; error: string; historyError: string
+    nothingToCommit: string; prCreated: string; prCreatedOnBranch: string
     keyRestored: string; keyAdded: string; configKeyAdded: string; keyRenamed: string
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
+    staleResolved: string; staleKeptLocal: string
   }
   configs: {
     empty: string; clickToEdit: string; deleteKey: string; keyPlaceholder: string
@@ -155,7 +178,7 @@ export type UiMessages = {
     langsDetected: string; emptyFolder: string
     foldersSelected: string
     langsSummary: string; langsSummaryMulti: string
-    baseLangLabel: string; selectLangs: string
+    baseLangLabel: string; selectLangs: string; branchLabel: string
     useFolder: string; finish: string
     skip: string; back: string; loading: string
     disconnect: string; connectedTo: string

@@ -40,7 +40,9 @@ export const esES: UiMessages = {
     "workspaceTranslations": "Traducciones",
     "workspaceConfigs": "Configs",
     "workspaceSchema": "DTO",
-    "workspaceDisabled": "Próximamente — primero traducciones"
+    "workspaceDisabled": "Próximamente — primero traducciones",
+    "sourceBranchTitle": "Rama cargada — clic para cambiar",
+    "prBaseSuffix": "PR → {branch}"
   },
   "filters": {
     "all": "Todas",
@@ -129,13 +131,44 @@ export const esES: UiMessages = {
     "changedSingular": "fue modificado",
     "changedPlural": "fueron modificados",
     "bySomeoneElse": "por otra persona desde su carga.",
-    "reload": "Recargar"
+    "reload": "Recargar",
+    "review": "Ver diferencias"
+  },
+  "sessionLost": {
+    "icon": "🔒",
+    "title": "Sesión de GitHub expirada",
+    "message": "Se perdió la conexión con GitHub (token expirado o revocado). Vuelva a conectarse para cargar, confirmar o sincronizar con el repositorio remoto.",
+    "draftHint": "Su borrador sin confirmar en este navegador se conserva hasta que recargue desde GitHub.",
+    "reconnect": "Reconectar a GitHub",
+    "expired": "El token de GitHub ya no es válido"
+  },
+  "staleConflict": {
+    "title": "Cambios remotos detectados",
+    "subtitle": "Elige qué versión conservar para cada clave, o recarga todo desde GitHub.",
+    "keyCount": "{count} claves en conflicto",
+    "yours": "Tuya",
+    "theirs": "Remota",
+    "choice": "Conservar",
+    "keepLocal": "Mía",
+    "takeRemote": "Remota",
+    "keepAllLocal": "Todas mías",
+    "takeAllRemote": "Todas remotas",
+    "dismissKeepMine": "Conservar mis cambios",
+    "apply": "Aplicar"
+  },
+  "duplicates": {
+    "icon": "⛔",
+    "summary": "{count} clave(s) duplicada(s) en varios archivos — la vista fusionada muestra solo un valor.",
+    "more": "+{count} más…"
   },
   "history": {
     "title": "Historial",
     "demoBanner": "Datos de demostración — conecte GitHub para el historial real",
     "loading": "Cargando...",
     "empty": "No se encontraron commits",
+    "reload": "Actualizar",
+    "error": "No se pudo cargar el historial desde GitHub",
+    "noKeyChanges": "Sin cambios para esta clave",
     "keysCount": "{count} clave",
     "keysCountPlural": "{count} claves",
     "typeAdded": "+ AÑADIDO",
@@ -166,7 +199,20 @@ export const esES: UiMessages = {
     "noOtherBranches": "No se encontró ninguna otra rama.",
     "prTitleLabel": "Título de la PR",
     "prTitlePlaceholder": "feat(i18n): update translations",
-    "createPr": "Crear Pull Request"
+    "createPr": "Crear Pull Request",
+    "updatePr": "Actualizar Pull Request"
+  },
+  "load": {
+    "title": "Cargar desde GitHub",
+    "subtitle": "Elige la rama a leer. Las Pull Requests seguirán apuntando a la rama base.",
+    "branchLabel": "Rama fuente",
+    "baseBranchSuffix": "base PR",
+    "prTargetHint": "Los commits abrirán una PR hacia {branch}.",
+    "draftWarning": "Los cambios sin confirmar se perderán al cargar.",
+    "confirm": "Cargar",
+    "loading": "Cargando…",
+    "branchesLoading": "Cargando ramas…",
+    "noBranches": "No se encontraron ramas."
   },
   "settings": {
     "title": "Configuración",
@@ -181,7 +227,8 @@ export const esES: UiMessages = {
       "token": "GitHub Token",
       "owner": "Owner",
       "repo": "Repository",
-      "branch": "Rama",
+      "branch": "Rama base (PR)",
+      "sourceBranch": "Rama cargada",
       "baseLang": "Idioma base"
     },
     "placeholders": {
@@ -245,7 +292,10 @@ export const esES: UiMessages = {
     "title": "Exportar traducciones",
     "titleConfigs": "Exportar configs",
     "summary": "{langs} idioma{langsSuffix} · {keys} clave{keysSuffix}",
+    "summaryWithFiles": "{langs} idioma{langsSuffix} · {files} archivo{filesSuffix} · {keys} clave{keysSuffix}",
     "format": "Formato",
+    "formatJsonFiles": "Archivos originales (ZIP)",
+    "formatJsonFilesHint": "rutas del repo · todas las carpetas translations/",
     "formatJson": "JSON (anidado)",
     "formatJsonHint": "{\"es\":{action:{…}}}",
     "formatJsonNs": "JSON (por namespace)",
@@ -268,11 +318,13 @@ export const esES: UiMessages = {
   },
   "toast": {
     "loadedFromGithub": "Archivos cargados desde GitHub",
+    "loadedFromBranch": "Archivos cargados desde la rama {branch}",
     "draftRestored": "Borrador sin confirmar restaurado desde este navegador",
     "error": "Error: {message}",
     "historyError": "Error de historial: {message}",
     "nothingToCommit": "Nada que confirmar",
     "prCreated": "PR #{number} creada",
+    "prCreatedOnBranch": "PR #{number} creada — rama activa: {branch}",
     "keyRestored": "Clave \"{key}\" restaurada",
     "keyAdded": "Clave \"{key}\" añadida",
     "keyRenamed": "Clave \"{oldKey}\" renombrada a \"{newKey}\"",
@@ -281,7 +333,9 @@ export const esES: UiMessages = {
     "valuesImportedJson": "{count} valores importados (JSON)",
     "configsImported": "{values} valor(es) config importado(s) en {langs} locale(s)",
     "copiedClipboard": "Copiado al portapapeles",
-    "fileDownloaded": "Archivo .{ext} descargado"
+    "fileDownloaded": "Archivo .{ext} descargado",
+    "staleResolved": "Conflictos resueltos",
+    "staleKeptLocal": "Se conservan tus cambios — alerta remota descartada"
   },
   "configs": {
     "empty": "Aún no hay claves de config",
@@ -378,6 +432,7 @@ export const esES: UiMessages = {
     "langsSummaryMulti": "{count} idiomas encontrados en {folders} carpetas",
     "baseLangLabel": "Idioma base",
     "selectLangs": "Idiomas activos",
+    "branchLabel": "Rama base",
     "useFolder": "Usar selección ({count} idiomas)",
     "finish": "Finalizar configuración",
     "skip": "Modo demo",

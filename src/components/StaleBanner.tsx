@@ -4,11 +4,13 @@ import { ui, plural } from '../i18n/ui'
 export const StaleBanner = ({
   staleLangs,
   config,
+  onReview,
   onReload,
   onDismiss,
 }: {
   staleLangs: string[]
   config: GitHubConfig
+  onReview: () => void
   onReload: () => void
   onDismiss: () => void
 }) => {
@@ -22,6 +24,13 @@ export const StaleBanner = ({
         {' '}
         {plural(staleLangs.length, ui.stale.changedSingular, ui.stale.changedPlural)} {ui.stale.bySomeoneElse}
       </span>
+      <button
+        type="button"
+        onClick={onReview}
+        className="px-3 py-1 bg-elevated border border-fg-stale/40 rounded-md text-fg-stale text-xs cursor-pointer font-inherit whitespace-nowrap"
+      >
+        {ui.stale.review}
+      </button>
       <button onClick={onReload} className="px-3 py-1 bg-border-warning border border-fg-stale/40 rounded-md text-fg-stale text-xs cursor-pointer font-inherit whitespace-nowrap">
         {ui.stale.reload}
       </button>

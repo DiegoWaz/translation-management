@@ -1,5 +1,7 @@
 import JSZip from 'jszip'
-import type { ConfigMap, ConfigSchema, ConfigValue, LangFile } from '../types'
+import type { ConfigMap, ConfigSchema, ConfigValue, FileSource, LangFile } from '../types'
+import { splitFlatByFileSources } from './commitHelpers'
+import { applyChangesToNested, pruneNestedToKeys } from './flattenJson'
 import { serializeConfigValue } from './configValues'
 
 /** Set a value at a dot-separated path inside a nested object. */
@@ -82,6 +84,89 @@ export const generateNamespacedZip = async (
     for (const [lang, nested] of Object.entries(langMap)) {
       zip.file(`locales/${ns}/${lang}.json`, JSON.stringify(nested, null, 2) + '\n')
     }
+  }
+  return zip.generateAsync({ type: 'blob' })
+}
+
+const stringifyRepoJson = (content: unknown): string =>
+  JSON.stringify(content, null, 4) + '\n'
+
+/** One export entry per on-disk JSON file (original repo paths and nesting). */
+export const collectOriginalExportFiles = (
+  fileSources: Record<string, FileSource[]>,
+  translations: Record<string, Record<string, string>>,
+  langs: string[],
+  keys: string[],
+  keysAreFiltered: boolean,
+  keyOwners?: Record<string, Record<string, number>>,
+): Array<{ path: string; content: unknown }> => {
+  const keySet = keysAreFiltered ? new Set(keys) : null
+  const files: Array<{ path: string; content: unknown }> = []
+
+  for (const lang of langs) {
+    const sources = fileSources[lang] ?? []
+    if (sources.length === 0) continue
+
+    const langFlat = translations[lang] ?? {}
+    const perSource = splitFlatByFileSources(sources, langFlat, keyOwners?.[lang])
+
+    sources.forEach((source, idx) => {
+      const currentFlat = perSource[idx]
+      let content: unknown
+
+      if (source.nested && Object.keys(source.rawContent).length > 0) {
+        content = applyChangesToNested(source.rawContent, source.originalFlat, currentFlat)
+        if (keySet) content = pruneNestedToKeys(content as Record<string, unknown>, keySet)
+      } else if (keySet) {
+        content = Object.fromEntries(Object.entries(currentFlat).filter(([k]) => keySet.has(k)))
+      } else {
+        content = currentFlat
+      }
+
+      files.push({ path: source.path, content })
+    })
+  }
+
+  return files
+}
+
+export const countOriginalExportFiles = (
+  fileSources: Record<string, FileSource[]>,
+  langs: string[],
+): number => {
+  let count = 0
+  for (const lang of langs) {
+    count += fileSources[lang]?.length ?? 0
+  }
+  return count
+}
+
+export const generateOriginalFilesPreview = (
+  fileSources: Record<string, FileSource[]>,
+  translations: Record<string, Record<string, string>>,
+  langs: string[],
+  keys: string[],
+  keysAreFiltered: boolean,
+  keyOwners?: Record<string, Record<string, number>>,
+): string => {
+  const files = collectOriginalExportFiles(fileSources, translations, langs, keys, keysAreFiltered, keyOwners)
+  const preview: Record<string, unknown> = {}
+  for (const { path, content } of files) preview[path] = content
+  return JSON.stringify(preview, null, 2)
+}
+
+export const generateOriginalFilesZip = async (
+  fileSources: Record<string, FileSource[]>,
+  translations: Record<string, Record<string, string>>,
+  langs: string[],
+  keys: string[],
+  keysAreFiltered: boolean,
+  keyOwners?: Record<string, Record<string, number>>,
+): Promise<Blob> => {
+  const files = collectOriginalExportFiles(fileSources, translations, langs, keys, keysAreFiltered, keyOwners)
+  const zip = new JSZip()
+  for (const { path, content } of files) {
+    zip.file(path, stringifyRepoJson(content))
   }
   return zip.generateAsync({ type: 'blob' })
 }
