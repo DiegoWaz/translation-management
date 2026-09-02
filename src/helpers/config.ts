@@ -58,10 +58,6 @@ const envString = (key: keyof ImportMetaEnv): string | undefined => {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
 }
 
-/** Read at runtime from the Vite build env (set `VITE_ALWAYS_NEST_JSON=true` on Vercel). */
-export const isAlwaysNestJsonEnabled = (): boolean =>
-  envString('VITE_ALWAYS_NEST_JSON') === 'true'
-
 const filesFromEnv = (): LangFile[] => {
   const langs = envString('VITE_GH_LANGS')
   if (!langs) return []
@@ -154,7 +150,6 @@ export const invalidateStoredToken = (): void => {
 /** Load config from localStorage first, then fall back to env vars. */
 export const loadConfig = (): GitHubConfig => {
   const ui = loadUiConfig()
-  const alwaysNestJson = isAlwaysNestJsonEnabled()
   
   if (ui) {
     // If translationsFolderName is set (new system), generate files with the folder name
@@ -184,7 +179,6 @@ export const loadConfig = (): GitHubConfig => {
       configPathTemplate: ui.configPathTemplate || DEFAULT_CONFIG_PATH_TEMPLATE,
       configSchemaPath: ui.configSchemaPath || DEFAULT_CONFIG_SCHEMA_PATH,
       translationsFolderName: ui.translationsFolderName,
-      alwaysNestJson,
     }
   }
   const files = filesFromEnv()
@@ -202,7 +196,6 @@ export const loadConfig = (): GitHubConfig => {
     configPathTemplate: envString('VITE_GH_CONFIG_PATH_TEMPLATE') ?? DEFAULT_CONFIG_PATH_TEMPLATE,
     configSchemaPath: envString('VITE_GH_CONFIG_SCHEMA_PATH') ?? DEFAULT_CONFIG_SCHEMA_PATH,
     translationsFolderName: envString('VITE_TRANSLATIONS_FOLDER_NAME'),
-    alwaysNestJson,
   }
 }
 

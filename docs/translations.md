@@ -20,9 +20,7 @@ JSON à un ou plusieurs niveaux. Les objets imbriqués sont aplatis en notation 
 
 ### Format au commit
 
-- Par défaut, LocaleHub **reprend le format du fichier sur GitHub** (flat ou nested).
-- Pour **toujours** écrire du JSON imbriqué : `VITE_ALWAYS_NEST_JSON=true` (variable Vercel / `.env`, puis **redéployer** — les `VITE_*` sont injectées au build).
-- Après connexion OAuth, l’option reste lue depuis le build (pas depuis la config locale).
+Les fichiers sont **toujours écrits en JSON imbriqué** (`common.action.label.open` → `common → action → label → open`), en préservant la structure d’origine quand elle existe déjà sur GitHub.
 
 ### Variables `{name}`
 

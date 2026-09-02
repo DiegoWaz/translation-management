@@ -90,29 +90,19 @@ export const splitFlatByFileSources = (
 export const refreshFileSourceAfterCommit = (
   source: FileSource,
   sourceFlat: Record<string, string>,
-  alwaysNestJson = false,
 ): FileSource => {
-  const committed = prepareCommitContent(
+  const rawContent = prepareCommitContent(
     sourceFlat,
     source.nested,
-    alwaysNestJson,
     source.originalFlat,
     source.rawContent,
   )
 
-  let rawContent: Record<string, unknown>
-  if (typeof committed === 'object' && committed !== null && !Array.isArray(committed)) {
-    rawContent = structuredClone(committed as Record<string, unknown>)
-  } else if (source.nested) {
-    rawContent = unflattenJson(sourceFlat) as Record<string, unknown>
-  } else {
-    rawContent = { ...sourceFlat }
-  }
-
   return {
     ...source,
     originalFlat: { ...sourceFlat },
-    rawContent,
+    rawContent: structuredClone(rawContent),
+    nested: true,
   }
 }
 
@@ -214,7 +204,6 @@ export const applyStaleResolutions = (
   langFlat: Record<string, string>,
   keyOwners: Record<string, number> | undefined,
   resolutions: Record<string, 'local' | 'remote'>,
-  alwaysNestJson = false,
 ): { translations: Record<string, string>; sources: FileSource[] } => {
   const nextFlat = { ...langFlat }
   const nextSources = sources.map(s => ({ ...s }))
@@ -242,7 +231,6 @@ export const applyStaleResolutions = (
         rawContent: structuredClone(sourceConflict.remoteRaw),
       },
       sourceFlat,
-      alwaysNestJson,
     )
   }
 

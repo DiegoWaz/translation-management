@@ -19,7 +19,6 @@ export const DEFAULT_DEMO_CONFIG: GitHubConfig = {
   ] as LangFile[],
   configPathTemplate: DEFAULT_CONFIG_PATH_TEMPLATE,
   configSchemaPath: DEFAULT_CONFIG_SCHEMA_PATH,
-  alwaysNestJson: true,
 }
 
 const DEMO_KEYS = [

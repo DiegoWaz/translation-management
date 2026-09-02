@@ -25,7 +25,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, isAlwaysNestJsonEnabled } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken } from '../helpers/config'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
@@ -653,7 +653,6 @@ export const useTranslationApp = () => {
             const content = prepareCommitContent(
               relevantFlat,
               source.nested,
-              isAlwaysNestJsonEnabled(),
               source.originalFlat,
               source.rawContent,
             )
@@ -678,11 +677,7 @@ export const useTranslationApp = () => {
           for (const [lang, sources] of Object.entries(prev)) {
             const perSource = splitFlatByFileSources(sources, translations[lang] ?? {}, keyOwners[lang])
             next[lang] = sources.map((source, idx) =>
-              refreshFileSourceAfterCommit(
-                source,
-                perSource[idx],
-                isAlwaysNestJsonEnabled(),
-              ),
+              refreshFileSourceAfterCommit(source, perSource[idx]),
             )
           }
           return next
@@ -1060,7 +1055,6 @@ export const useTranslationApp = () => {
       configPathTemplate,
       configSchemaPath,
       translationsFolderName: cfg.translationsFolderName,
-      alwaysNestJson: isAlwaysNestJsonEnabled(),
     }
     
     setConfig(newConfig)
@@ -1156,7 +1150,6 @@ export const useTranslationApp = () => {
       translations[lang] ?? {},
       keyOwners[lang],
       resolutions,
-      isAlwaysNestJsonEnabled(),
     )
 
     setTranslations(prev => ({ ...prev, [lang]: nextFlat }))

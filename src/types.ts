@@ -61,7 +61,6 @@ export interface GitHubConfig {
   configPathTemplate: string
   configSchemaPath: string
   translationsFolderName?: string
-  alwaysNestJson?: boolean
 }
 
 export type WorkspaceMode = 'translations' | 'configs' | 'schema'

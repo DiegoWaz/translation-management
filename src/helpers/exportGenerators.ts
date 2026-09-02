@@ -1,7 +1,8 @@
 import JSZip from 'jszip'
 import type { ConfigMap, ConfigSchema, ConfigValue, FileSource, LangFile } from '../types'
 import { splitFlatByFileSources } from './commitHelpers'
-import { applyChangesToNested, pruneNestedToKeys } from './flattenJson'
+import { pruneNestedToKeys } from './flattenJson'
+import { prepareCommitContent } from './github'
 import { serializeConfigValue } from './configValues'
 
 /** Set a value at a dot-separated path inside a nested object. */
@@ -112,16 +113,13 @@ export const collectOriginalExportFiles = (
 
     sources.forEach((source, idx) => {
       const currentFlat = perSource[idx]
-      let content: unknown
-
-      if (source.nested && Object.keys(source.rawContent).length > 0) {
-        content = applyChangesToNested(source.rawContent, source.originalFlat, currentFlat)
-        if (keySet) content = pruneNestedToKeys(content as Record<string, unknown>, keySet)
-      } else if (keySet) {
-        content = Object.fromEntries(Object.entries(currentFlat).filter(([k]) => keySet.has(k)))
-      } else {
-        content = currentFlat
-      }
+      let content: unknown = prepareCommitContent(
+        currentFlat,
+        source.nested,
+        source.originalFlat,
+        source.rawContent,
+      )
+      if (keySet) content = pruneNestedToKeys(content as Record<string, unknown>, keySet)
 
       files.push({ path: source.path, content })
     })

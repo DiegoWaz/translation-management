@@ -268,27 +268,20 @@ export const loadMergedFiles = async (
 }
 
 /**
- * Prepare translation content for commit.
- * When rawContent + originalFlat are provided, applies only the actual changes
- * onto the original nested structure, preserving key order and untouched sections.
+ * Prepare translation content for commit — always nested JSON.
+ * Applies diffs onto the original structure when available, otherwise unflattens keys.
  */
 export const prepareCommitContent = (
   currentFlat: Record<string, string>,
   wasNested: boolean,
-  forceNest: boolean = false,
-  originalFlat?: Record<string, string>,
+  originalFlat: Record<string, string> = {},
   rawContent?: Record<string, unknown>,
-): unknown => {
-  if (wasNested && rawContent && originalFlat) {
-    // Original was nested — apply diffs onto the original structure
-    return applyChangesToNested(rawContent, originalFlat, currentFlat)
-  }
-  if (forceNest && originalFlat) {
-    // Original was flat but we want nested output — unflatten original, then apply diffs
-    const nestedBase = unflattenJson(originalFlat) as Record<string, unknown>
-    return applyChangesToNested(nestedBase, originalFlat, currentFlat)
-  }
-  return currentFlat
+): Record<string, unknown> => {
+  const nestedBase =
+    wasNested && rawContent && Object.keys(rawContent).length > 0
+      ? structuredClone(rawContent)
+      : unflattenJson(originalFlat)
+  return applyChangesToNested(nestedBase, originalFlat, currentFlat)
 }
 
 /**
