@@ -1,6 +1,10 @@
 const GITHUB_AUTHORIZE = 'https://github.com/login/oauth/authorize'
 const STATE_KEY = 'localehub:oauth_state'
 
+/** Must match the Authorization callback URL registered on the GitHub OAuth App. */
+export const getOAuthRedirectUri = (): string =>
+  `${window.location.origin}${window.location.pathname}`
+
 /** Build the GitHub OAuth authorize URL and persist a random state for CSRF protection. */
 export const buildAuthorizeUrl = (): string => {
   const clientId = import.meta.env.VITE_GH_CLIENT_ID
@@ -11,7 +15,7 @@ export const buildAuthorizeUrl = (): string => {
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${window.location.origin}${window.location.pathname}`,
+    redirect_uri: getOAuthRedirectUri(),
     scope: 'repo',
     state,
   })
@@ -39,14 +43,17 @@ export const exchangeCodeForToken = async (code: string): Promise<string> => {
   const res = await fetch('/api/github/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, redirect_uri: getOAuthRedirectUri() }),
   })
   const data = await res.json() as Record<string, unknown>
 
   if (!res.ok) {
-    throw new Error((data.error as string) ?? 'Token exchange failed')
+    const detail = (data.error_description as string) ?? (data.error as string)
+    throw new Error(detail ?? 'Token exchange failed')
   }
-  return (data.access_token as string) ?? ''
+  const token = (data.access_token as string) ?? ''
+  if (!token) throw new Error('GitHub returned an empty access token')
+  return token
 }
 
 /** Clean up OAuth query params from the URL without reload. */

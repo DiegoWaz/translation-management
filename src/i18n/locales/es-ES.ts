@@ -335,7 +335,10 @@ export const esES: UiMessages = {
     "copiedClipboard": "Copiado al portapapeles",
     "fileDownloaded": "Archivo .{ext} descargado",
     "staleResolved": "Conflictos resueltos",
-    "staleKeptLocal": "Se conservan tus cambios — alerta remota descartada"
+    "staleKeptLocal": "Se conservan tus cambios — alerta remota descartada",
+    "oauthConnected": "GitHub conectado — elige tu repositorio",
+    "oauthFailed": "Error al conectar con GitHub: {message}",
+    "oauthStateInvalid": "La conexión con GitHub expiró — inténtalo de nuevo"
   },
   "configs": {
     "empty": "Aún no hay claves de config",

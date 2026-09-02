@@ -335,7 +335,10 @@ export const enUK: UiMessages = {
     "copiedClipboard": "Copied to clipboard",
     "fileDownloaded": "File .{ext} downloaded",
     "staleResolved": "Conflicts resolved",
-    "staleKeptLocal": "Keeping your local changes — remote updates dismissed"
+    "staleKeptLocal": "Keeping your local changes — remote updates dismissed",
+    "oauthConnected": "GitHub connected — choose your repository",
+    "oauthFailed": "GitHub sign-in failed: {message}",
+    "oauthStateInvalid": "GitHub sign-in expired — please try again"
   },
   "configs": {
     "empty": "No config keys yet",

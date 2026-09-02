@@ -139,6 +139,7 @@ export type UiMessages = {
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
     staleResolved: string; staleKeptLocal: string
+    oauthConnected: string; oauthFailed: string; oauthStateInvalid: string
   }
   configs: {
     empty: string; clickToEdit: string; deleteKey: string; keyPlaceholder: string

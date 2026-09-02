@@ -354,7 +354,9 @@ const App = () => {
         />
       )}
 
-      {app.loading && <LoadingOverlay />}
+      {(app.loading || app.oauthConnecting) && (
+        <LoadingOverlay label={app.oauthConnecting ? ui.setup.connecting : undefined} />
+      )}
 
       <ToastStack toasts={app.toasts} />
     </div>

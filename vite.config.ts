@@ -28,11 +28,19 @@ function githubOAuthProxy(): Plugin {
             res.end(JSON.stringify({ error: 'GH_CLIENT_SECRET or VITE_GH_CLIENT_ID not set in .env' }))
             return
           }
-          const { code } = JSON.parse(body) as { code: string }
+          const { code, redirect_uri: redirectUri } = JSON.parse(body) as {
+            code: string
+            redirect_uri?: string
+          }
           fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+            body: JSON.stringify({
+              client_id: clientId,
+              client_secret: clientSecret,
+              code,
+              ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+            }),
           })
             .then(r => r.json())
             .then((data: Record<string, unknown>) => {

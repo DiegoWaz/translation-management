@@ -335,7 +335,10 @@ export const frFR: UiMessages = {
     "copiedClipboard": "Copié dans le presse-papiers",
     "fileDownloaded": "Fichier .{ext} téléchargé",
     "staleResolved": "Conflits résolus",
-    "staleKeptLocal": "Vos modifications sont conservées — alerte distante ignorée"
+    "staleKeptLocal": "Vos modifications sont conservées — alerte distante ignorée",
+    "oauthConnected": "GitHub connecté — choisissez votre dépôt",
+    "oauthFailed": "Échec de la connexion GitHub : {message}",
+    "oauthStateInvalid": "Connexion GitHub expirée — réessayez"
   },
   "configs": {
     "empty": "Aucune clé config pour l'instant",

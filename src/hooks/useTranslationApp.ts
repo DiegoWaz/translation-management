@@ -100,6 +100,7 @@ export const useTranslationApp = () => {
     return !isGithubConfigured(cfg) && !loadUiConfig()
   })
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
+  const [oauthConnecting, setOauthConnecting] = useState(false)
   const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>(
     () => initialDraft?.fileSources ?? {},
   )
@@ -211,23 +212,6 @@ export const useTranslationApp = () => {
     })
   }, [])
 
-  // Handle OAuth redirect callback
-  useEffect(() => {
-    const oauthResult = extractOAuthCode()
-    if (!oauthResult) return
-    if (!verifyState(oauthResult.state)) {
-      cleanOAuthParams()
-      return
-    }
-    cleanOAuthParams()
-    exchangeCodeForToken(oauthResult.code)
-      .then(accessToken => {
-        setOauthToken(accessToken)
-        setShowSetup(true)
-      })
-      .catch(() => { setShowSetup(true) })
-  }, [])
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
   }, [isDark])
@@ -256,6 +240,34 @@ export const useTranslationApp = () => {
 
   const { toasts, showToast } = useToast()
   const isConnected = isGithubConfigured(config)
+
+  // Handle OAuth redirect callback (after GitHub authorizes the app).
+  useEffect(() => {
+    const oauthResult = extractOAuthCode()
+    if (!oauthResult) return
+
+    if (!verifyState(oauthResult.state)) {
+      cleanOAuthParams()
+      setShowSetup(true)
+      showToast(ui.toast.oauthStateInvalid, 'error')
+      return
+    }
+
+    cleanOAuthParams()
+    setOauthConnecting(true)
+    setShowSetup(true)
+
+    void exchangeCodeForToken(oauthResult.code)
+      .then(accessToken => {
+        setOauthToken(accessToken)
+        showToast(ui.toast.oauthConnected, 'success')
+      })
+      .catch((e: Error) => {
+        setOauthToken(undefined)
+        showToast(t(ui.toast.oauthFailed, { message: e.message }), 'error')
+      })
+      .finally(() => setOauthConnecting(false))
+  }, [showToast])
 
   const promptSessionLost = useCallback((reason: string, userInitiated = false) => {
     if (!userInitiated) return
@@ -1171,7 +1183,7 @@ export const useTranslationApp = () => {
     activeGroup, setActiveGroup, groups,
     showSettings, setShowSettings, showLoad, setShowLoad, showCommit, setShowCommit,
     showSetup, setShowSetup, oauthToken,
-    commitMsg, setCommitMsg, loading, isDemoMode,
+    commitMsg, setCommitMsg, loading, oauthConnecting, isDemoMode,
     addingKey, setAddingKey, newKey, setNewKey, newConfigType, setNewConfigType, addKey,
     showHistory, setShowHistory, fileHistory,
     historyLoading: historyStatus[activeLang] === 'loading',

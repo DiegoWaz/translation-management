@@ -36,9 +36,11 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   let code: string | undefined
+  let redirectUri: string | undefined
   try {
-    const body = await request.json() as { code?: string }
+    const body = await request.json() as { code?: string; redirect_uri?: string }
     code = body.code
+    redirectUri = body.redirect_uri
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
       status: 400,
@@ -57,7 +59,12 @@ export default async function handler(request: Request): Promise<Response> {
     const ghRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+      }),
     })
     const data = await ghRes.json() as Record<string, unknown>
 
