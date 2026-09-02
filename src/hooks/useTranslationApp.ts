@@ -25,7 +25,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, isAlwaysNestJsonEnabled } from '../helpers/config'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
@@ -653,7 +653,7 @@ export const useTranslationApp = () => {
             const content = prepareCommitContent(
               relevantFlat,
               source.nested,
-              config.alwaysNestJson ?? false,
+              isAlwaysNestJsonEnabled(),
               source.originalFlat,
               source.rawContent,
             )
@@ -681,7 +681,7 @@ export const useTranslationApp = () => {
               refreshFileSourceAfterCommit(
                 source,
                 perSource[idx],
-                config.alwaysNestJson ?? false,
+                isAlwaysNestJsonEnabled(),
               ),
             )
           }
@@ -1060,6 +1060,7 @@ export const useTranslationApp = () => {
       configPathTemplate,
       configSchemaPath,
       translationsFolderName: cfg.translationsFolderName,
+      alwaysNestJson: isAlwaysNestJsonEnabled(),
     }
     
     setConfig(newConfig)
@@ -1155,7 +1156,7 @@ export const useTranslationApp = () => {
       translations[lang] ?? {},
       keyOwners[lang],
       resolutions,
-      config.alwaysNestJson ?? false,
+      isAlwaysNestJsonEnabled(),
     )
 
     setTranslations(prev => ({ ...prev, [lang]: nextFlat }))

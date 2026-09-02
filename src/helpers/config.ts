@@ -58,6 +58,10 @@ const envString = (key: keyof ImportMetaEnv): string | undefined => {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
 }
 
+/** Read at runtime from the Vite build env (set `VITE_ALWAYS_NEST_JSON=true` on Vercel). */
+export const isAlwaysNestJsonEnabled = (): boolean =>
+  envString('VITE_ALWAYS_NEST_JSON') === 'true'
+
 const filesFromEnv = (): LangFile[] => {
   const langs = envString('VITE_GH_LANGS')
   if (!langs) return []
@@ -150,7 +154,7 @@ export const invalidateStoredToken = (): void => {
 /** Load config from localStorage first, then fall back to env vars. */
 export const loadConfig = (): GitHubConfig => {
   const ui = loadUiConfig()
-  const alwaysNestJson = envString('VITE_ALWAYS_NEST_JSON') === 'true'
+  const alwaysNestJson = isAlwaysNestJsonEnabled()
   
   if (ui) {
     // If translationsFolderName is set (new system), generate files with the folder name

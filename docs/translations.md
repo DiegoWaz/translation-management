@@ -18,6 +18,12 @@ JSON à un ou plusieurs niveaux. Les objets imbriqués sont aplatis en notation 
 
 → clés `app.title`, `auth.login`, `auth.logout`.
 
+### Format au commit
+
+- Par défaut, LocaleHub **reprend le format du fichier sur GitHub** (flat ou nested).
+- Pour **toujours** écrire du JSON imbriqué : `VITE_ALWAYS_NEST_JSON=true` (variable Vercel / `.env`, puis **redéployer** — les `VITE_*` sont injectées au build).
+- Après connexion OAuth, l’option reste lue depuis le build (pas depuis la config locale).
+
 ### Variables `{name}`
 
 Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `{count}` et la cible non, un avertissement s’affiche (filtre **Variables**, bouton `{x}`).
