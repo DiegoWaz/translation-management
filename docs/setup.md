@@ -110,3 +110,10 @@ LocaleHub **ne fonctionne pas hors ligne** vis-à-vis de GitHub : charger, commi
 
 Si vous utilisez uniquement `VITE_GH_TOKEN` dans `.env`, un token expiré impose de **mettre à jour le `.env` et redémarrer Vite**, ou de passer par **Se connecter** (OAuth) qui stocke un token en local.
 
+## Préférences de l’assistant de configuration
+
+Lors d’une connexion OAuth (ou PAT via l’assistant), LocaleHub enregistre dans le navigateur la **dernière configuration** choisie : dépôt, branche, langue de base et langues actives (`localStorage`, clé `localehub:ui-config:v1`).
+
+- À la **reconnexion** (session expirée **ou** déconnexion manuelle), ces choix restent disponibles : bouton **Reprendre …** sur l’étape Dépôt (termine la configuration en un clic), ou pré-remplissage automatique à l’étape Langues si vous sélectionnez le même dépôt manuellement.
+- Seul le **token** (et le refresh token) est effacé ; dépôt, branche et langues sont conservés pour accélérer la reprise.
+

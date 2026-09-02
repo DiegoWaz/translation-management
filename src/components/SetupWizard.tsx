@@ -10,6 +10,7 @@ import {
   type GhRepo,
 } from '../helpers/githubBrowser'
 import { buildAuthorizeUrl } from '../helpers/githubOAuth'
+import { loadSetupPreferences, type SetupPreferences } from '../helpers/config'
 import { GithubIcon } from './Icons'
 import { Logo } from './Logo'
 import { ui, t } from '../i18n/ui'
@@ -32,10 +33,17 @@ interface Props {
   isMobile: boolean
 }
 
+const defaultBaseLang = (langs: string[]): string =>
+  langs.includes('en-GB') ? 'en-GB' : langs.find(l => l.startsWith('en')) ?? langs[0]
+
+const prefsForRepo = (prefs: SetupPreferences | null, repo: GhRepo): SetupPreferences | null =>
+  prefs?.owner === repo.owner.login && prefs?.repo === repo.name ? prefs : null
+
 export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props) => {
   const hasOAuthClientId = !!import.meta.env.VITE_GH_CLIENT_ID
   const translationsFolderName = import.meta.env.VITE_TRANSLATIONS_FOLDER_NAME || 'translations'
-  
+  const [savedPrefs] = useState(() => loadSetupPreferences())
+
   const [step, setStep] = useState<Step>(oauthToken ? 'repo' : 'auth')
   const [token, setToken] = useState(oauthToken ?? '')
   const [patInput, setPatInput] = useState('')
@@ -44,20 +52,62 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const [repos, setRepos] = useState<GhRepo[]>([])
   const [repoSearch, setRepoSearch] = useState('')
   const [selectedRepo, setSelectedRepo] = useState<GhRepo | null>(null)
-  const [branch, setBranch] = useState('main')
+  const [branch, setBranch] = useState(savedPrefs?.branch ?? 'main')
   const [branchNames, setBranchNames] = useState<string[]>([])
   const [detectedLangs, setDetectedLangs] = useState<string[]>([])
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set())
-  const [baseLang, setBaseLang] = useState('')
+  const [baseLang, setBaseLang] = useState(savedPrefs?.baseLang ?? '')
+  const [prefsRestored, setPrefsRestored] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const computeLangSelection = (langs: string[], prefs: SetupPreferences | null) => {
+    const preferredActive = prefs?.langs.filter(l => langs.includes(l)) ?? []
+    const active = preferredActive.length > 0 ? preferredActive : langs
+    const preferredBase = prefs?.baseLang && active.includes(prefs.baseLang)
+      ? prefs.baseLang
+      : defaultBaseLang(active)
+    const restored = Boolean(
+      prefs && (
+        (prefs.baseLang && active.includes(prefs.baseLang))
+        || preferredActive.length > 0
+      ),
+    )
+    return { active, baseLang: preferredBase, restored }
+  }
+
+  const applyLangSelection = (langs: string[], prefs: SetupPreferences | null): boolean => {
+    setDetectedLangs(langs)
+    const { active, baseLang: nextBase, restored } = computeLangSelection(langs, prefs)
+    setSelectedLangs(new Set(active))
+    setBaseLang(nextBase)
+    setPrefsRestored(restored)
+    return restored
+  }
+
+  const completeSetup = (
+    repo: GhRepo,
+    branchName: string,
+    langs: string[],
+    nextBaseLang: string,
+  ) => {
+    onComplete({
+      token,
+      owner: repo.owner.login,
+      repo: repo.name,
+      branch: branchName,
+      langs,
+      baseLang: nextBaseLang,
+      translationsFolderName,
+    })
+  }
 
   // Advance to repo step when OAuth token arrives
   useEffect(() => {
     if (oauthToken && step === 'auth') {
       setStep('repo')
     }
-  }, [oauthToken])
+  }, [oauthToken, step])
 
   // Sync token state with oauthToken prop (for API calls)
   useEffect(() => {
@@ -106,38 +156,74 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     }
   }
 
-  const loadLangsForBranch = async (repo: GhRepo, branchName: string) => {
+  const loadLangsForBranch = async (
+    repo: GhRepo,
+    branchName: string,
+    prefs: SetupPreferences | null,
+  ): Promise<boolean> => {
     const tree = await listTree(token, repo.owner.login, repo.name, branchName)
     const langs = detectAllLocaleFiles(tree, translationsFolderName)
     if (langs.length === 0) {
       setError(`No translation files found in '${translationsFolderName}' folders`)
       return false
     }
-    setDetectedLangs(langs)
-    setSelectedLangs(new Set(langs))
-    const defaultBase = langs.includes('en-GB') ? 'en-GB' : langs.find(l => l.startsWith('en')) ?? langs[0]
-    setBaseLang(defaultBase)
+    applyLangSelection(langs, prefs)
     return true
   }
 
-  const handleSelectRepo = async (repo: GhRepo) => {
+  const openRepoSetup = async (
+    repo: GhRepo,
+    prefs: SetupPreferences | null,
+    options?: { autoFinish?: boolean },
+  ) => {
     setSelectedRepo(repo)
     setLoading(true)
     setError('')
+    setPrefsRestored(false)
     try {
       const branchList = await listBranches(token, repo.owner.login, repo.name)
       const names = branchList.map(b => b.name).sort((a, b) => a.localeCompare(b))
       setBranchNames(names)
-      const selectedBranch = names.includes(repo.default_branch) ? repo.default_branch : names[0] || 'main'
+      const selectedBranch = prefs?.branch && names.includes(prefs.branch)
+        ? prefs.branch
+        : names.includes(repo.default_branch) ? repo.default_branch : names[0] || 'main'
       setBranch(selectedBranch)
 
-      const ok = await loadLangsForBranch(repo, selectedBranch)
-      if (ok) setStep('langs')
+      const tree = await listTree(token, repo.owner.login, repo.name, selectedBranch)
+      const langs = detectAllLocaleFiles(tree, translationsFolderName)
+      if (langs.length === 0) {
+        setError(`No translation files found in '${translationsFolderName}' folders`)
+        return
+      }
+
+      const { active, baseLang: nextBaseLang, restored } = computeLangSelection(langs, prefs)
+      applyLangSelection(langs, prefs)
+
+      if (options?.autoFinish && restored && active.length > 0) {
+        completeSetup(repo, selectedBranch, active, nextBaseLang)
+        return
+      }
+
+      setStep('langs')
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSelectRepo = (repo: GhRepo) => {
+    void openRepoSetup(repo, prefsForRepo(savedPrefs, repo))
+  }
+
+  const handleResumeLastSetup = () => {
+    if (!savedPrefs) return
+    const repo = repos.find(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+    if (!repo) {
+      setError(t(ui.setup.resumeNotFound, { repo: `${savedPrefs.owner}/${savedPrefs.repo}` }))
+      return
+    }
+    void openRepoSetup(repo, savedPrefs, { autoFinish: true })
   }
 
   const handleBranchChange = async (branchName: string) => {
@@ -146,7 +232,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     setLoading(true)
     setError('')
     try {
-      await loadLangsForBranch(selectedRepo, branchName)
+      await loadLangsForBranch(selectedRepo, branchName, prefsForRepo(savedPrefs, selectedRepo))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -156,15 +242,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
 
   const handleFinish = () => {
     if (!selectedRepo || selectedLangs.size === 0) return
-    onComplete({
-      token,
-      owner: selectedRepo.owner.login,
-      repo: selectedRepo.name,
-      branch,
-      langs: [...selectedLangs],
-      baseLang,
-      translationsFolderName,
-    })
+    completeSetup(selectedRepo, branch, [...selectedLangs], baseLang)
   }
 
   const toggleLang = (l: string) => setSelectedLangs(prev => {
@@ -176,6 +254,12 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const filteredRepos = repoSearch
     ? repos.filter(r => r.full_name.toLowerCase().includes(repoSearch.toLowerCase()))
     : repos
+
+  const canResumeLast = Boolean(
+    savedPrefs
+    && token
+    && repos.some(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo),
+  )
 
   const stepIndex = { auth: 0, repo: 1, langs: 2 }[step]
   const stepLabels = [
@@ -265,13 +349,31 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
           {step === 'repo' && (
             <div className="flex flex-col gap-3">
               <div className="text-xs text-fg-muted">{t(ui.setup.loggedAs, { user: username })}</div>
+
+              {canResumeLast && savedPrefs && (
+                <div className="rounded-lg border border-border-brand-soft bg-brand-soft-bg p-3 flex flex-col gap-2">
+                  <p className="m-0 text-[11px] text-fg-secondary leading-relaxed">{ui.setup.resumeLastHint}</p>
+                  <button
+                    type="button"
+                    onClick={handleResumeLastSetup}
+                    className={cn(btnPrimaryClass, 'w-full text-xs')}
+                  >
+                    {t(ui.setup.resumeLast, {
+                      repo: `${savedPrefs.owner}/${savedPrefs.repo}`,
+                      baseLang: savedPrefs.baseLang,
+                      count: savedPrefs.langs.length,
+                    })}
+                  </button>
+                </div>
+              )}
+
               <input
                 type="text"
                 value={repoSearch}
                 onChange={e => setRepoSearch(e.target.value)}
                 placeholder={ui.setup.searchRepo}
                 className={inputClass}
-                autoFocus
+                autoFocus={!canResumeLast}
               />
               <div className="flex flex-col gap-1 max-h-[340px] overflow-y-auto">
                 {filteredRepos.map(r => (
@@ -300,6 +402,12 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
           {/* Step 3 — Language selection */}
           {step === 'langs' && (
             <div className="flex flex-col gap-4">
+              {prefsRestored && (
+                <div className="text-xs text-fg-success bg-success-bg border border-border-success rounded-md px-3 py-2">
+                  {ui.setup.prefsRestored}
+                </div>
+              )}
+
               <div className="text-xs text-fg-muted">
                 {t(ui.setup.langsDetected, { count: detectedLangs.length })} — {detectedLangs.join(', ')}
               </div>

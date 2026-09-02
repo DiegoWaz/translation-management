@@ -85,6 +85,29 @@ export interface StoredConfig {
   configSchemaPath: string
 }
 
+/** Last wizard choices — survives token invalidation for faster reconnect. */
+export interface SetupPreferences {
+  owner: string
+  repo: string
+  branch: string
+  baseLang: string
+  langs: string[]
+  translationsFolderName?: string
+}
+
+export const loadSetupPreferences = (): SetupPreferences | null => {
+  const ui = loadUiConfig()
+  if (!ui?.owner || !ui?.repo || !ui.baseLang || ui.langs.length === 0) return null
+  return {
+    owner: ui.owner,
+    repo: ui.repo,
+    branch: ui.sourceBranch || ui.branch,
+    baseLang: ui.baseLang,
+    langs: ui.langs,
+    translationsFolderName: ui.translationsFolderName,
+  }
+}
+
 const encryptField = async (value: string): Promise<string> => {
   if (!isSecureStorageSupported()) return value
   return `${ENC_PREFIX}${await encryptForStorage(value)}`

@@ -444,6 +444,10 @@ export const esES: UiMessages = {
     "back": "Volver",
     "loading": "Cargando…",
     "disconnect": "Desconectar",
-    "connectedTo": "Conectado a {repo}"
+    "connectedTo": "Conectado a {repo}",
+    "resumeLast": "Reanudar {repo} — {baseLang}, {count} idioma(s)",
+    "resumeLastHint": "Restaura el repositorio, rama, idioma base e idiomas activos de su última sesión.",
+    "prefsRestored": "Última configuración restaurada — ajuste si hace falta y termine.",
+    "resumeNotFound": "Repositorio {repo} no encontrado en su lista de GitHub."
   }
 }

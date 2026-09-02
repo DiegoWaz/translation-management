@@ -184,6 +184,7 @@ export type UiMessages = {
     useFolder: string; finish: string
     skip: string; back: string; loading: string
     disconnect: string; connectedTo: string
+    resumeLast: string; resumeLastHint: string; prefsRestored: string; resumeNotFound: string
   }
 }
 

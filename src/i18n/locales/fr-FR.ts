@@ -444,6 +444,10 @@ export const frFR: UiMessages = {
     "back": "Retour",
     "loading": "Chargement…",
     "disconnect": "Se déconnecter",
-    "connectedTo": "Connecté à {repo}"
+    "connectedTo": "Connecté à {repo}",
+    "resumeLast": "Reprendre {repo} — {baseLang}, {count} langue(s)",
+    "resumeLastHint": "Restaure le dépôt, la branche, la langue de base et les langues actives de votre dernière session.",
+    "prefsRestored": "Dernière configuration restaurée — vous pouvez ajuster puis terminer.",
+    "resumeNotFound": "Dépôt {repo} introuvable dans votre liste GitHub."
   }
 }

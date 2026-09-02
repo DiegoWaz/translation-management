@@ -25,7 +25,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
@@ -1186,7 +1186,8 @@ export const useTranslationApp = () => {
   }
 
   const handleDisconnect = () => {
-    clearUiConfig()
+    // Keep repo / branch / langs so SetupWizard can offer « Reprendre ».
+    invalidateStoredToken()
     setConfig(loadConfigOrDefault())
     setIsDemoMode(true)
     setShowSetup(true)

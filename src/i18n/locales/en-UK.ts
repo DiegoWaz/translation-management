@@ -444,6 +444,10 @@ export const enUK: UiMessages = {
     "back": "Back",
     "loading": "Loading…",
     "disconnect": "Disconnect",
-    "connectedTo": "Connected to {repo}"
+    "connectedTo": "Connected to {repo}",
+    "resumeLast": "Resume {repo} — {baseLang}, {count} language(s)",
+    "resumeLastHint": "Restores the repo, branch, base language, and active locales from your last session.",
+    "prefsRestored": "Last configuration restored — adjust if needed, then finish.",
+    "resumeNotFound": "Repository {repo} was not found in your GitHub list."
   }
 }
