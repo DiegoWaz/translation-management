@@ -106,6 +106,7 @@ export type UiMessages = {
     placeholderText: string; placeholderTable: string; placeholderJson: string
     jsonInvalid: string; emptyHint: string; emptyArrow: string
     assignmentSummary: string; column: string; targetKey: string; choose: string
+    searchKey: string; noMatchingKeys: string
     newKeyPlaceholder: string
     localesAssigned: string; localesAssignedPlural: string
     valuesToImport: string; valuesToImportPlural: string

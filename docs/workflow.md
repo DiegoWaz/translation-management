@@ -21,12 +21,13 @@ Changer `VITE_GH_LANGS` / dépôt dans `.env` → autre clé de stockage (brouil
 
 ## Session GitHub perdue
 
-Si GitHub renvoie **401** (ou **403** avec un message d’auth explicite, ex. « Bad credentials ») lors d’une **action utilisateur** (charger, committer, assistant de configuration) :
+Si GitHub renvoie **401** (ou **403** avec un message d’auth explicite) lors d’une **action utilisateur** (charger, committer, assistant de configuration) :
 
-1. Une **modal** bloque l’app et demande **Se reconnecter à GitHub**
-2. Le **brouillon** dans ce navigateur reste intact
-3. Les actions Charger / Committer / sync sont indisponibles jusqu’à reconnexion
-4. L’assistant de connexion (OAuth ou PAT) rétablit le token ; le dépôt déjà choisi est conservé si possible
+1. LocaleHub tente d’abord un **refresh OAuth silencieux** si un `refresh_token` est stocké
+2. Seulement si le refresh échoue : une **modal** bloque l’app et demande **Se reconnecter à GitHub**
+3. Le **brouillon** dans ce navigateur reste intact
+4. Les actions Charger / Committer / sync sont indisponibles jusqu’à reconnexion
+5. L’assistant de connexion (OAuth ou PAT) rétablit le token ; le dépôt déjà choisi est conservé si possible
 
 Les tâches de fond (préchargement de l’historique, détection de conflits distant) **n’ouvrent pas** cette modal : un échec temporaire ou un chargement lent ne doit pas être confondu avec une session expirée.
 

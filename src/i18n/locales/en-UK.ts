@@ -257,6 +257,8 @@ export const enUK: UiMessages = {
     "column": "Column {index}",
     "targetKey": "Target key",
     "choose": "— choose —",
+    "searchKey": "Search for a key…",
+    "noMatchingKeys": "No matching keys",
     "newKeyPlaceholder": "my.new.key",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",

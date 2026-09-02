@@ -257,6 +257,8 @@ export const esES: UiMessages = {
     "column": "Columna {index}",
     "targetKey": "Clave destino",
     "choose": "— elegir —",
+    "searchKey": "Buscar una clave…",
+    "noMatchingKeys": "Ninguna clave coincidente",
     "newKeyPlaceholder": "mi.nueva.clave",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",

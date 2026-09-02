@@ -1,11 +1,124 @@
-import { useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ImportFormat, JsonImportResult, LangFile, ParsedImport } from '../types'
 import { cn } from '../helpers/cn'
 import { resolveLocaleCode } from '../helpers/lang'
 import { detectFormat, parseFreeText, parseJsonText, parseTableText } from '../helpers/importParsers'
-import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
+import { btnPrimaryClass, btnSecClass } from '../helpers/styles'
 import { ui, t, plural, localeSuffix } from '../i18n/ui'
 import { Overlay } from './Overlay'
+
+const KeyPicker = ({
+  keys,
+  value,
+  onChange,
+  onCreate,
+}: {
+  keys: string[]
+  value: string
+  onChange: (key: string) => void
+  onCreate: () => void
+}) => {
+  const listId = useId()
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState(value)
+
+  useEffect(() => {
+    setQuery(value)
+  }, [value])
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [open])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return keys.slice(0, 80)
+    return keys.filter(k => k.toLowerCase().includes(q)).slice(0, 80)
+  }, [keys, query])
+
+  const pick = (key: string) => {
+    onChange(key)
+    setQuery(key)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={rootRef} className="flex gap-1 min-w-0 w-full">
+      <div className="relative flex-1 min-w-0">
+        <input
+          value={query}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          placeholder={ui.import.searchKey}
+          onFocus={() => setOpen(true)}
+          onChange={e => {
+            setQuery(e.target.value)
+            setOpen(true)
+            if (!e.target.value) onChange('')
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Escape') {
+              setOpen(false)
+              setQuery(value)
+            }
+            if (e.key === 'Enter' && filtered[0]) {
+              e.preventDefault()
+              pick(filtered[0])
+            }
+          }}
+          className={cn(
+            'w-full min-w-0 bg-input rounded px-2 py-1.5 text-[11px] font-mono outline-none',
+            value ? 'border border-border-brand-soft text-fg-brand' : 'border border-border-strong text-fg',
+          )}
+        />
+        {open && (
+          <div
+            id={listId}
+            role="listbox"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-44 overflow-y-auto rounded-md border border-border bg-card shadow-lg"
+          >
+            {filtered.length === 0 ? (
+              <div className="px-2.5 py-2 text-[11px] text-fg-muted">{ui.import.noMatchingKeys}</div>
+            ) : (
+              filtered.map(key => (
+                <button
+                  key={key}
+                  type="button"
+                  role="option"
+                  aria-selected={key === value}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => pick(key)}
+                  className={cn(
+                    'w-full text-left px-2.5 py-1.5 text-[11px] font-mono border-none cursor-pointer',
+                    key === value ? 'bg-brand-soft-bg text-fg-brand' : 'bg-transparent text-fg hover:bg-row-hover',
+                  )}
+                >
+                  {key}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        title={ui.import.newKeyPlaceholder}
+        onClick={onCreate}
+        className="shrink-0 size-8 flex items-center justify-center bg-elevated border border-border-strong rounded text-fg-tertiary cursor-pointer text-base leading-none"
+      >
+        +
+      </button>
+    </div>
+  )
+}
 
 export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJson, onClose, isMobile }: {
   baseKeys: string[]; configFiles: LangFile[]
@@ -49,7 +162,7 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
   })
   const assignedCount = Object.values(assignments).filter(Boolean).length
   const totalValues = assignedCount * parsed.length
-  const allKeys = [...new Set([...baseKeys, ...Object.values(newKeyInputs).filter(Boolean)])]
+  const allKeys = [...new Set([...baseKeys, ...Object.values(newKeyInputs).filter(Boolean), ...Object.values(assignments).filter(Boolean)])].sort()
 
   const formatTabs: Array<{ key: ImportFormat; label: string; hint: string }> = [
     { key: 'text', label: ui.import.formatText, hint: ui.import.hintText },
@@ -69,7 +182,7 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
         onClick={e => e.stopPropagation()}
         className={cn(
           'bg-card flex flex-col overflow-hidden',
-          isMobile ? 'w-screen h-dvh max-h-dvh rounded-none border-none' : 'w-[800px] max-h-[90vh] rounded-xl border border-border',
+          isMobile ? 'w-screen h-dvh max-h-dvh rounded-none border-none' : 'w-[min(920px,calc(100vw-2rem))] max-h-[90vh] rounded-xl border border-border',
         )}
       >
         <div className="px-6 pt-[18px] border-b border-border shrink-0">
@@ -94,10 +207,10 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
           </div>
         </div>
 
-        <div className={cn('flex flex-1 overflow-hidden', isMobile ? 'flex-col' : 'flex-row')}>
+        <div className={cn('flex flex-1 min-h-0 overflow-hidden', isMobile ? 'flex-col' : 'flex-row')}>
           <div className={cn(
             'shrink-0 flex flex-col',
-            isMobile ? 'w-full max-h-[40%] px-4 py-3 border-b border-border' : 'w-[340px] p-4 border-r border-border',
+            isMobile ? 'w-full max-h-[40%] px-4 py-3 border-b border-border' : 'w-[320px] p-4 border-r border-border',
           )}>
             <div className="text-[11px] text-fg-muted font-mono bg-row-even border border-border-muted rounded px-2.5 py-1.5 mb-2.5 leading-relaxed whitespace-pre overflow-hidden text-ellipsis">
               {formatTabs.find(tab => tab.key === format)?.hint}
@@ -131,7 +244,7 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
             )}
           </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
             {format === 'json' && jsonResult ? (
               <JsonPreview data={jsonResult.data} configFiles={configFiles} />
             ) : parsed.length === 0 ? (
@@ -149,17 +262,17 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
                     columnsSuffix: localeSuffix(maxParagraphs),
                   })}
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden">
                   {Array.from({ length: maxParagraphs }, (_, idx) => {
                     const preview = parsed.find(p => p.paragraphs[idx])?.paragraphs[idx] ?? ''
                     const isCreating = creating[idx]
                     const assignedLocales = resolvedLangs.filter(l => l.paragraphs[idx])
                     return (
-                      <div key={idx} className="px-4 py-2.5 border-b border-border-subtle flex gap-3 items-start">
-                        <div className="flex-1 min-w-0">
+                      <div key={idx} className="px-4 py-2.5 border-b border-border-subtle grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-3 items-start">
+                        <div className="min-w-0">
                           <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-1">{t(ui.import.column, { index: idx + 1 })}</div>
                           <div className="text-xs text-fg-tertiary bg-row-even border border-border-muted rounded px-2.5 py-1.5 leading-normal max-h-[52px] overflow-hidden">{preview}</div>
-                          <div className="mt-1 flex gap-1">
+                          <div className="mt-1 flex flex-wrap gap-1">
                             {assignedLocales.slice(0, 5).map(l => (
                               <span key={l.localeCode} className="text-[9px] text-fg-muted bg-elevated px-1.5 py-px rounded-sm">{l.localeCode}</span>
                             ))}
@@ -168,44 +281,33 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
                             )}
                           </div>
                         </div>
-                        <div className="w-[210px] shrink-0">
+                        <div className="min-w-0 w-full">
                           <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-1">{ui.import.targetKey}</div>
                           {isCreating ? (
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 min-w-0">
                               <input
                                 autoFocus
                                 value={newKeyInputs[idx] ?? ''}
                                 onChange={e => setNewKeyInputs(p => ({ ...p, [idx]: e.target.value }))}
                                 onKeyDown={e => { if (e.key === 'Enter') { const k = (newKeyInputs[idx] ?? '').trim(); if (k) { setAssignments(p => ({ ...p, [idx]: k })); setCreating(p => ({ ...p, [idx]: false })) } } if (e.key === 'Escape') setCreating(p => ({ ...p, [idx]: false })) }}
                                 placeholder={ui.import.newKeyPlaceholder}
-                                className="flex-1 bg-input border border-border-brand rounded px-2 py-1.5 text-fg text-[11px] font-mono outline-none"
+                                className="flex-1 min-w-0 bg-input border border-border-brand rounded px-2 py-1.5 text-fg text-[11px] font-mono outline-none"
                               />
                               <button
                                 onClick={() => { const k = (newKeyInputs[idx] ?? '').trim(); if (k) { setAssignments(p => ({ ...p, [idx]: k })); setCreating(p => ({ ...p, [idx]: false })) } }}
-                                className="bg-brand border-none rounded px-2 text-fg-on-brand cursor-pointer"
+                                className="shrink-0 bg-brand border-none rounded px-2 text-fg-on-brand cursor-pointer"
                               >{ui.common.check}</button>
                             </div>
                           ) : (
-                            <div className="flex gap-1">
-                              <select
-                                value={assignments[idx] ?? ''}
-                                onChange={e => setAssignments(p => ({ ...p, [idx]: e.target.value }))}
-                                className={cn(
-                                  'flex-1 bg-input rounded px-2 py-1.5 text-[11px] font-mono outline-none cursor-pointer',
-                                  assignments[idx] ? 'border border-border-brand-soft text-fg-brand' : 'border border-border-strong text-fg-muted',
-                                )}
-                              >
-                                <option value="">{ui.import.choose}</option>
-                                {allKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                              </select>
-                              <button
-                                onClick={() => setCreating(p => ({ ...p, [idx]: true }))}
-                                className="bg-elevated border border-border-strong rounded px-2 text-fg-tertiary cursor-pointer text-base"
-                              >+</button>
-                            </div>
+                            <KeyPicker
+                              keys={allKeys}
+                              value={assignments[idx] ?? ''}
+                              onChange={key => setAssignments(p => ({ ...p, [idx]: key }))}
+                              onCreate={() => setCreating(p => ({ ...p, [idx]: true }))}
+                            />
                           )}
                           {assignments[idx] && (
-                            <div className="text-[9px] text-fg-success mt-0.5">
+                            <div className="text-[9px] text-fg-success mt-0.5 truncate">
                               {ui.common.check}{' '}
                               {t(plural(assignedLocales.length, ui.import.localesAssigned, ui.import.localesAssignedPlural), { count: assignedLocales.length })}
                             </div>
@@ -220,8 +322,8 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
           </div>
         </div>
 
-        <div className="px-6 py-3.5 border-t border-border flex justify-between items-center shrink-0">
-          <div className="text-xs text-fg-muted">
+        <div className="px-6 py-3.5 border-t border-border flex justify-between items-center shrink-0 gap-3">
+          <div className="text-xs text-fg-muted min-w-0">
             {format === 'json' && jsonResult && (
               <span className="text-fg-success">
                 {t(ui.import.detected, {
@@ -239,7 +341,7 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
             )}
             {format !== 'json' && parsed.length > 0 && assignedCount === 0 && ui.import.assignAtLeastOne}
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex gap-2.5 shrink-0">
             <button onClick={onClose} className={btnSecClass}>{ui.common.cancel}</button>
             {format === 'json' ? (
               <button onClick={() => jsonResult && onApplyJson(jsonResult.data)} disabled={!jsonResult} className={btnPrimaryClass}>{ui.import.applyJson}</button>

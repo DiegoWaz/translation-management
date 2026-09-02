@@ -1,10 +1,14 @@
 import type { ConfigMap, ConfigSchema, ConfigValue, ConfigValueType, GitHubConfig, LangFile } from '../types'
 import { DEFAULT_CONFIG_PATH_TEMPLATE, DEFAULT_CONFIG_SCHEMA_PATH, DEFAULT_PATH_TEMPLATE } from './defaults'
 import { buildLangFile } from './lang'
+import { refreshAccessToken, type GitHubOAuthTokens } from './githubOAuth'
 import { encryptForStorage, decryptFromStorage, isSecureStorageSupported } from './secureStorage'
 
 const UI_CONFIG_KEY = 'localehub:config:v1'
 const SOURCE_BRANCH_KEY = 'localehub:sourceBranch:v1'
+const ENC_PREFIX = 'enc:'
+/** Refresh access token this many ms before expiry. */
+const REFRESH_SKEW_MS = 5 * 60_000
 
 const sourceBranchStorageKey = (owner: string, repo: string): string =>
   `${SOURCE_BRANCH_KEY}:${owner}/${repo}`
@@ -41,14 +45,12 @@ export const persistSourceBranch = (config: GitHubConfig, sourceBranch: string):
 export const preferExistingCommitBranch = (config: GitHubConfig): boolean =>
   config.sourceBranch !== config.branch
 
-// The GitHub token is the only genuinely sensitive value we persist. It is
-// encrypted at rest (see secureStorage.ts) so it never sits as plain text in
-// localStorage. Because storage APIs here are used synchronously in many
-// places (React useState initializers), decryption happens once in the
-// background after load and is cached in memory; `tokenReady` lets callers
-// await the real token becoming available and re-read the config.
+// Access + refresh tokens are encrypted at rest. Decryption is async; caches
+// keep synchronous reads working after the first waitForTokenReady().
 let tokenCache: string | null = null
+let refreshTokenCache: string | null = null
 let tokenReady: Promise<void> = Promise.resolve()
+let refreshInFlight: Promise<GitHubOAuthTokens | null> | null = null
 
 /** Await this, then re-call loadConfig()/loadUiConfig() to get the decrypted token. */
 export const waitForTokenReady = (): Promise<void> => tokenReady
@@ -67,6 +69,10 @@ const filesFromEnv = (): LangFile[] => {
 
 export interface StoredConfig {
   token: string
+  /** OAuth refresh token (encrypted at rest when present). */
+  refreshToken?: string
+  /** Epoch ms when `token` expires (OAuth expiring tokens only). */
+  tokenExpiresAt?: number
   owner: string
   repo: string
   branch: string
@@ -79,37 +85,61 @@ export interface StoredConfig {
   configSchemaPath: string
 }
 
-const ENC_PREFIX = 'enc:'
+const encryptField = async (value: string): Promise<string> => {
+  if (!isSecureStorageSupported()) return value
+  return `${ENC_PREFIX}${await encryptForStorage(value)}`
+}
 
-/** Persist cfg. The token is encrypted at rest; encryption happens in the background. */
+const resolveEncryptedField = (
+  value: string | undefined,
+  cache: string | null,
+  setCache: (plain: string) => void,
+): { plain: string; pending?: Promise<void> } => {
+  if (!value) return { plain: '' }
+  if (!value.startsWith(ENC_PREFIX)) return { plain: value }
+  const encValue = value.slice(ENC_PREFIX.length)
+  if (cache !== null) return { plain: cache }
+  if (encValue === 'pending') return { plain: '' }
+  return {
+    plain: '',
+    pending: decryptFromStorage(encValue).then(plain => { setCache(plain) }),
+  }
+}
+
+/** Persist cfg. Tokens are encrypted at rest. */
 export const saveUiConfig = (cfg: StoredConfig): void => {
   tokenCache = cfg.token
-  // Write immediately with a placeholder token so nothing sensitive ever hits
-  // disk unencrypted, then swap in the encrypted value once it's ready.
-  try { localStorage.setItem(UI_CONFIG_KEY, JSON.stringify({ ...cfg, token: `${ENC_PREFIX}pending` })) } catch { /* ignore */ }
+  refreshTokenCache = cfg.refreshToken ?? null
 
-  const persistEncrypted = (token: string) => {
+  const placeholder: StoredConfig = {
+    ...cfg,
+    token: `${ENC_PREFIX}pending`,
+    refreshToken: cfg.refreshToken ? `${ENC_PREFIX}pending` : undefined,
+  }
+  try { localStorage.setItem(UI_CONFIG_KEY, JSON.stringify(placeholder)) } catch { /* ignore */ }
+
+  tokenReady = (async () => {
+    const [tokenEnc, refreshEnc] = await Promise.all([
+      encryptField(cfg.token),
+      cfg.refreshToken ? encryptField(cfg.refreshToken) : Promise.resolve(undefined),
+    ])
     try {
       const raw = localStorage.getItem(UI_CONFIG_KEY)
       if (!raw) return
-      const parsed = JSON.parse(raw)
-      parsed.token = token
+      const parsed = JSON.parse(raw) as StoredConfig
+      parsed.token = tokenEnc
+      if (refreshEnc) parsed.refreshToken = refreshEnc
+      else delete parsed.refreshToken
+      if (cfg.tokenExpiresAt) parsed.tokenExpiresAt = cfg.tokenExpiresAt
+      else delete parsed.tokenExpiresAt
       localStorage.setItem(UI_CONFIG_KEY, JSON.stringify(parsed))
     } catch { /* ignore */ }
-  }
-
-  tokenReady = isSecureStorageSupported()
-    ? encryptForStorage(cfg.token).then(enc => persistEncrypted(`${ENC_PREFIX}${enc}`))
-    : Promise.resolve(persistEncrypted(cfg.token))
+  })()
 }
 
 /**
- * Load the stored config. If the token is encrypted and not yet decrypted in
- * memory, it comes back as an empty string and `waitForTokenReady()` +
- * `loadUiConfig()` again will yield the real value shortly after.
- * Returns null only when there's no usable stored config (missing owner/repo),
- * so presence-checks (e.g. "has the user set up GitHub?") stay accurate even
- * mid-decrypt.
+ * Load the stored config. Encrypted tokens come back empty until
+ * `waitForTokenReady()` finishes, then re-call this helper.
  */
 export const loadUiConfig = (): StoredConfig | null => {
   try {
@@ -118,41 +148,105 @@ export const loadUiConfig = (): StoredConfig | null => {
     const parsed = JSON.parse(raw) as StoredConfig
     if (!parsed.owner || !parsed.repo) return null
 
-    if (typeof parsed.token === 'string' && parsed.token.startsWith(ENC_PREFIX)) {
-      const encValue = parsed.token.slice(ENC_PREFIX.length)
-      if (tokenCache !== null) {
-        parsed.token = tokenCache
-      } else {
-        parsed.token = ''
-        if (encValue !== 'pending') {
-          tokenReady = decryptFromStorage(encValue).then(plain => { tokenCache = plain })
-        }
-      }
-    }
+    const token = resolveEncryptedField(parsed.token, tokenCache, v => { tokenCache = v })
+    const refresh = resolveEncryptedField(parsed.refreshToken, refreshTokenCache, v => { refreshTokenCache = v })
+    parsed.token = token.plain
+    parsed.refreshToken = refresh.plain || undefined
+
+    const pending = [token.pending, refresh.pending].filter(Boolean) as Promise<void>[]
+    if (pending.length > 0) tokenReady = Promise.all(pending).then(() => undefined)
+
     return parsed
   } catch { return null }
 }
 
 export const clearUiConfig = (): void => {
+  tokenCache = null
+  refreshTokenCache = null
   try { localStorage.removeItem(UI_CONFIG_KEY) } catch { /* ignore */ }
 }
 
 /** Clear an invalid token but keep repo / langs so reconnect is faster. */
 export const invalidateStoredToken = (): void => {
   tokenCache = null
-  const ui = loadUiConfig()
-  if (!ui) return
+  refreshTokenCache = null
   try {
-    localStorage.setItem(UI_CONFIG_KEY, JSON.stringify({ ...ui, token: '' }))
+    const raw = localStorage.getItem(UI_CONFIG_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw) as StoredConfig
+    parsed.token = ''
+    delete parsed.refreshToken
+    delete parsed.tokenExpiresAt
+    localStorage.setItem(UI_CONFIG_KEY, JSON.stringify(parsed))
   } catch { /* ignore */ }
+}
+
+/** Update only auth fields after a successful OAuth refresh. */
+export const updateStoredOAuthTokens = (tokens: GitHubOAuthTokens): void => {
+  const ui = loadUiConfig()
+  if (!ui) {
+    tokenCache = tokens.accessToken
+    refreshTokenCache = tokens.refreshToken ?? null
+    return
+  }
+  saveUiConfig({
+    ...ui,
+    token: tokens.accessToken,
+    refreshToken: tokens.refreshToken ?? ui.refreshToken,
+    tokenExpiresAt: tokens.expiresAt,
+  })
+}
+
+/** True when access token is missing an expiry, or expires within the skew window. */
+export const shouldRefreshAccessToken = (expiresAt?: number): boolean => {
+  if (!expiresAt) return false
+  return Date.now() >= expiresAt - REFRESH_SKEW_MS
+}
+
+/**
+ * Silently rotate the OAuth access token when a refresh token is available.
+ * Dedupes concurrent callers. Returns null if refresh is impossible.
+ */
+export const refreshGitHubSession = async (): Promise<GitHubOAuthTokens | null> => {
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    await waitForTokenReady()
+    const ui = loadUiConfig()
+    const refreshToken = ui?.refreshToken || refreshTokenCache || ''
+    if (!refreshToken) return null
+
+    try {
+      const tokens = await refreshAccessToken(refreshToken)
+      updateStoredOAuthTokens(tokens)
+      return tokens
+    } catch {
+      return null
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+
+  return refreshInFlight
+}
+
+/** Proactively refresh if we know the access token is about to expire. */
+export const ensureFreshAccessToken = async (): Promise<string | null> => {
+  await waitForTokenReady()
+  const ui = loadUiConfig()
+  if (!ui?.token && !tokenCache) return null
+  if (shouldRefreshAccessToken(ui?.tokenExpiresAt)) {
+    const refreshed = await refreshGitHubSession()
+    if (refreshed) return refreshed.accessToken
+  }
+  return tokenCache ?? ui?.token ?? null
 }
 
 /** Load config from localStorage first, then fall back to env vars. */
 export const loadConfig = (): GitHubConfig => {
   const ui = loadUiConfig()
-  
+
   if (ui) {
-    // If translationsFolderName is set (new system), generate files with the folder name
     let files: LangFile[]
     if (ui.translationsFolderName) {
       files = ui.langs.map(code => ({
@@ -166,7 +260,7 @@ export const loadConfig = (): GitHubConfig => {
     } else {
       files = []
     }
-    
+
     const branch = ui.branch
     return {
       token: ui.token,

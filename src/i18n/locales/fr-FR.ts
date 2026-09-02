@@ -257,6 +257,8 @@ export const frFR: UiMessages = {
     "column": "Colonne {index}",
     "targetKey": "Clé cible",
     "choose": "— choisir —",
+    "searchKey": "Rechercher une clé…",
+    "noMatchingKeys": "Aucune clé correspondante",
     "newKeyPlaceholder": "ma.nouvelle.cle",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",

@@ -101,9 +101,12 @@ Après autorisation GitHub, l'app échange le `code` contre un token via `/api/g
 LocaleHub **ne fonctionne pas hors ligne** vis-à-vis de GitHub : charger, committer et synchroniser nécessitent un token valide.
 
 - Le token (PAT ou OAuth) est stocké **chiffré dans le navigateur** — voir [security.md](security.md).
-- Si le token **expire ou est révoqué** (réponse API `401`, ou `403` avec message d’auth explicite), une **modal bloquante** s’affiche **uniquement lors d’une action utilisateur** (charger, committer, configuration initiale) — pas pendant les tâches de fond (historique, détection de conflits).
+- Avec OAuth, si GitHub renvoie un **`refresh_token`** (tokens d’accès expirants, typiquement ~8 h), LocaleHub le conserve chiffré et **renouvelle silencieusement** l’access token avant expiration, ou au premier `401` sur Charger / Committer.
+- La modal de reconnexion ne s’affiche que si le refresh échoue aussi (token révoqué, refresh expiré ~6 mois, ou PAT invalide).
 - Le brouillon local non commité est **conservé** tant que vous ne rechargez pas depuis GitHub.
-- Les appels API en arrière-plan (historique, synchronisation) n’ouvrent pas la modal : en cas d’échec, réessayez via **Charger** ou **Actualiser** l’historique.
+- Les appels API en arrière-plan (historique, synchronisation) n’ouvrent pas la modal.
+
+> Sur l’OAuth App GitHub, activez **Expire user authorization tokens** pour obtenir des refresh tokens. Sans cette option, GitHub ne renvoie qu’un access token longue durée (pas de refresh) — les déconnexions viennent alors plutôt d’une révocation manuelle ou d’un PAT expiré.
 
 Si vous utilisez uniquement `VITE_GH_TOKEN` dans `.env`, un token expiré impose de **mettre à jour le `.env` et redémarrer Vite**, ou de passer par **Se connecter** (OAuth) qui stocke un token en local.
 

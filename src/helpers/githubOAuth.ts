@@ -2,6 +2,13 @@ const GITHUB_AUTHORIZE = 'https://github.com/login/oauth/authorize'
 const STATE_KEY = 'localehub:oauth_state'
 const STATE_MAX_AGE_MS = 10 * 60_000
 
+export type GitHubOAuthTokens = {
+  accessToken: string
+  refreshToken?: string
+  /** Epoch ms when accessToken expires (if GitHub returned expires_in). */
+  expiresAt?: number
+}
+
 /** Must match the Authorization callback URL registered on the GitHub OAuth App. */
 export const getOAuthRedirectUri = (): string =>
   `${window.location.origin}${window.location.pathname}`
@@ -68,8 +75,21 @@ export const hasOAuthCallback = (): boolean => {
   return Boolean(params.get('code') && params.get('state'))
 }
 
-/** Exchange the authorization code for an access token via our server proxy. */
-export const exchangeCodeForToken = async (code: string): Promise<string> => {
+export const parseOAuthTokenResponse = (data: Record<string, unknown>): GitHubOAuthTokens => {
+  const accessToken = (data.access_token as string) ?? ''
+  if (!accessToken) throw new Error('GitHub returned an empty access token')
+  const refreshToken = typeof data.refresh_token === 'string' && data.refresh_token
+    ? data.refresh_token
+    : undefined
+  const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : undefined
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
+  }
+}
+
+const postTokenEndpoint = async (body: Record<string, string>): Promise<GitHubOAuthTokens> => {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 20_000)
 
@@ -78,7 +98,7 @@ export const exchangeCodeForToken = async (code: string): Promise<string> => {
     res = await fetch('/api/github/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, redirect_uri: getOAuthRedirectUri() }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     })
   } catch (e) {
@@ -101,10 +121,16 @@ export const exchangeCodeForToken = async (code: string): Promise<string> => {
     const detail = (data.error_description as string) ?? (data.error as string)
     throw new Error(detail ?? 'Token exchange failed')
   }
-  const token = (data.access_token as string) ?? ''
-  if (!token) throw new Error('GitHub returned an empty access token')
-  return token
+  return parseOAuthTokenResponse(data)
 }
+
+/** Exchange the authorization code for access (+ optional refresh) tokens. */
+export const exchangeCodeForToken = async (code: string): Promise<GitHubOAuthTokens> =>
+  postTokenEndpoint({ code, redirect_uri: getOAuthRedirectUri() })
+
+/** Rotate an expired access token using the stored refresh token. */
+export const refreshAccessToken = async (refreshToken: string): Promise<GitHubOAuthTokens> =>
+  postTokenEndpoint({ refresh_token: refreshToken })
 
 /** Clean up OAuth query params from the URL without reload. */
 export const cleanOAuthParams = (): void => {

@@ -28,19 +28,34 @@ function githubOAuthProxy(): Plugin {
             res.end(JSON.stringify({ error: 'GH_CLIENT_SECRET or VITE_GH_CLIENT_ID not set in .env' }))
             return
           }
-          const { code, redirect_uri: redirectUri } = JSON.parse(body) as {
-            code: string
+          const { code, redirect_uri: redirectUri, refresh_token: refreshToken } = JSON.parse(body) as {
+            code?: string
             redirect_uri?: string
+            refresh_token?: string
           }
+          if (!code && !refreshToken) {
+            res.statusCode = 400
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Missing code or refresh_token' }))
+            return
+          }
+          const payload = refreshToken
+            ? {
+                client_id: clientId,
+                client_secret: clientSecret,
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+              }
+            : {
+                client_id: clientId,
+                client_secret: clientSecret,
+                code,
+                ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+              }
           fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              client_id: clientId,
-              client_secret: clientSecret,
-              code,
-              ...(redirectUri ? { redirect_uri: redirectUri } : {}),
-            }),
+            body: JSON.stringify(payload),
           })
             .then(r => r.json())
             .then((data: Record<string, unknown>) => {

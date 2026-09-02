@@ -25,7 +25,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, clearUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
 import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
@@ -81,6 +81,7 @@ import {
   extractOAuthCode,
   verifyState,
   hasOAuthCallback,
+  type GitHubOAuthTokens,
 } from '../helpers/githubOAuth'
 
 // Load config with fallback to demo config if empty
@@ -90,8 +91,18 @@ const loadConfigOrDefault = () => {
 }
 
 const PAGE_SIZE_KEY = 'localehub:pageSize:v1'
+const THEME_KEY = 'localehub:theme:v1'
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const
 const DEFAULT_PAGE_SIZE = 50
+
+const loadStoredIsDark = (): boolean => {
+  try {
+    const stored = localStorage.getItem(THEME_KEY)
+    if (stored === 'light') return false
+    if (stored === 'dark') return true
+  } catch { /* ignore */ }
+  return true
+}
 
 export const useTranslationApp = () => {
   const [config, setConfig] = useState(loadConfigOrDefault)
@@ -103,6 +114,7 @@ export const useTranslationApp = () => {
   })
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
   const [oauthConnecting, setOauthConnecting] = useState(false)
+  const pendingOAuthRef = useRef<GitHubOAuthTokens | null>(null)
   const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>(
     () => initialDraft?.fileSources ?? {},
   )
@@ -184,7 +196,7 @@ export const useTranslationApp = () => {
   const [varValidation, setVarValidation] = useState(true)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [searchMode, setSearchMode] = useState<SearchMode>('locale')
-  const [isDark, setIsDark] = useState(true)
+  const [isDark, setIsDark] = useState(loadStoredIsDark)
   const [uiLocale, setUiLocaleState] = useState<UiLocale>(detectUiLocale)
   const [draftRestored] = useState(() => {
     if (!initialDraft) return false
@@ -206,17 +218,24 @@ export const useTranslationApp = () => {
     return modifiedTx.length > 0 || modifiedCfg.length > 0 || schemaChanged
   })
 
-  // Encrypted token storage decrypts asynchronously; once ready, refresh config.
+  // Encrypted token storage decrypts asynchronously; once ready, refresh config
+  // and proactively rotate OAuth access tokens that are about to expire.
   useEffect(() => {
-    void waitForTokenReady().then(() => {
+    void waitForTokenReady().then(async () => {
+      const fresh = await ensureFreshAccessToken()
       const c = loadConfigOrDefault()
-      if (c.token) setConfig(prev => (prev.token ? prev : c))
+      if (fresh) {
+        setConfig(prev => ({ ...prev, ...c, token: fresh }))
+      } else if (c.token) {
+        setConfig(prev => (prev.token ? prev : c))
+      }
       setGithubReady(true)
     })
   }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+    try { localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light') } catch { /* ignore */ }
   }, [isDark])
 
   useEffect(() => {
@@ -263,17 +282,48 @@ export const useTranslationApp = () => {
     setShowSetup(true)
 
     void exchangeCodeForToken(oauthResult.code)
-      .then(accessToken => {
-        setOauthToken(accessToken)
+      .then(tokens => {
+        pendingOAuthRef.current = tokens
+        setOauthToken(tokens.accessToken)
         showToast(ui.toast.oauthConnected, 'success')
       })
       .catch((e: Error) => {
         oauthHandledRef.current = false
+        pendingOAuthRef.current = null
         setOauthToken(undefined)
         showToast(t(ui.toast.oauthFailed, { message: e.message }), 'error')
       })
       .finally(() => setOauthConnecting(false))
   }, [showToast])
+
+  const applyOAuthTokens = useCallback((tokens: GitHubOAuthTokens) => {
+    pendingOAuthRef.current = tokens
+    setConfig(prev => ({ ...prev, token: tokens.accessToken }))
+    setSessionLostReason(null)
+  }, [])
+
+  const trySilentRefresh = useCallback(async (): Promise<boolean> => {
+    const tokens = await refreshGitHubSession()
+    if (!tokens) return false
+    applyOAuthTokens(tokens)
+    return true
+  }, [applyOAuthTokens])
+
+  const withSessionRetry = useCallback(async <T>(fn: (token: string) => Promise<T>): Promise<T> => {
+    const run = async () => {
+      const token = (await ensureFreshAccessToken()) || loadConfig().token
+      if (!token) throw new Error(ui.sessionLost.expired)
+      return fn(token)
+    }
+    try {
+      return await run()
+    } catch (e) {
+      if (!isGitHubSessionError(e)) throw e
+      const recovered = await trySilentRefresh()
+      if (!recovered) throw e
+      return await run()
+    }
+  }, [trySilentRefresh])
 
   const promptSessionLost = useCallback((reason: string, userInitiated = false) => {
     if (!userInitiated) return
@@ -420,9 +470,10 @@ export const useTranslationApp = () => {
     if (!isConnected) { setShowSettings(true); return }
     if (!githubReady) return
     const sourceBranch = branch ?? config.sourceBranch
-    const loadConfigRef = loadRefConfig({ ...config, sourceBranch })
     setLoading(true)
     try {
+      await withSessionRetry(async token => {
+      const loadConfigRef = loadRefConfig({ ...config, token, sourceBranch })
       const newTrans: Record<string, Record<string, string>> = {}
       const newShas: Record<string, string> = {}
       const newFileSources: Record<string, FileSource[]> = {}
@@ -461,7 +512,7 @@ export const useTranslationApp = () => {
         flag: '🌐',
         path: sources[0]?.path ?? `translations/${lang}.json`,
       }))
-      const updatedConfig = { ...config, sourceBranch, files: discoveredFiles }
+      const updatedConfig = { ...config, token, sourceBranch, files: discoveredFiles }
       setConfig(updatedConfig)
       persistSourceBranch(updatedConfig, sourceBranch)
       const draftConfig = loadRefConfig(updatedConfig)
@@ -497,6 +548,7 @@ export const useTranslationApp = () => {
           : t(ui.toast.loadedFromBranch, { branch: sourceBranch }),
         'success',
       )
+      })
     } catch (e) {
       if (isGitHubSessionError(e)) {
         promptSessionLost(e.message, true)
@@ -664,12 +716,14 @@ export const useTranslationApp = () => {
           return
         }
 
-        const { prNumber, prUrl, branchName: headBranch } = await commitJsonFilesAsPR(
-          config,
-          files,
-          message,
-          prTitle || message,
-          branchName,
+        const { prNumber, prUrl, branchName: headBranch } = await withSessionRetry(token =>
+          commitJsonFilesAsPR(
+            { ...config, token },
+            files,
+            message,
+            prTitle || message,
+            branchName,
+          ),
         )
         setOriginal(cloneTranslations(translations))
         setFileSources(prev => {
@@ -683,7 +737,7 @@ export const useTranslationApp = () => {
           return next
         })
 
-        const loadConfigRef = loadRefConfig({ ...config, sourceBranch: headBranch })
+        const loadConfigRef = loadRefConfig({ ...config, token: loadConfig().token || config.token, sourceBranch: headBranch })
         const committedPaths = files.map(f => f.path)
         void Promise.all(committedPaths.map(async path => {
           const { sha } = await loadFile(loadConfigRef, path)
@@ -700,7 +754,7 @@ export const useTranslationApp = () => {
             return next
           })
         }).catch(() => { /* shas refresh is best-effort */ })
-        const updatedConfig = { ...config, sourceBranch: headBranch }
+        const updatedConfig = { ...config, token: loadConfig().token || config.token, sourceBranch: headBranch }
         setConfig(updatedConfig)
         persistSourceBranch(updatedConfig, headBranch)
         for (const lang of langs) {
@@ -1031,8 +1085,11 @@ export const useTranslationApp = () => {
     const configSchemaPath = cfg.translationsFolderName ? `${cfg.translationsFolderName}/configs/schema.json` : DEFAULT_CONFIG_SCHEMA_PATH
     
     // Save config with translationsFolderName
+    const oauth = pendingOAuthRef.current
     saveUiConfig({
       token: cfg.token,
+      refreshToken: oauth?.refreshToken,
+      tokenExpiresAt: oauth?.expiresAt,
       owner: cfg.owner,
       repo: cfg.repo,
       branch: cfg.branch,
@@ -1043,6 +1100,7 @@ export const useTranslationApp = () => {
       configPathTemplate,
       configSchemaPath,
     })
+    pendingOAuthRef.current = null
     
     const newConfig: typeof config = {
       token: cfg.token,
