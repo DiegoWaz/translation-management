@@ -185,6 +185,7 @@ export type UiMessages = {
     skip: string; back: string; loading: string
     disconnect: string; connectedTo: string
     resumeLast: string; resumeLastHint: string; prefsRestored: string; resumeNotFound: string
+    folderLabel: string; folderHint: string; folderMatched: string; folderNoMatch: string; folderSuggestions: string
   }
 }
 

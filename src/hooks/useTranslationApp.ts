@@ -37,6 +37,7 @@ import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
+import { loadConfigBundle, loadTranslationBundle } from '../helpers/loadBundle'
 import {
   buildKeyGroups,
   buildLangStats,
@@ -483,66 +484,37 @@ export const useTranslationApp = () => {
     try {
       await withSessionRetry(async token => {
       const loadConfigRef = loadRefConfig({ ...config, token, sourceBranch })
-      const newTrans: Record<string, Record<string, string>> = {}
-      const newShas: Record<string, string> = {}
-      const newFileSources: Record<string, FileSource[]> = {}
-
-      // Discover all translation files in the repo
       const tree = await listTree(loadConfigRef.token, loadConfigRef.owner, loadConfigRef.repo, loadConfigRef.branch)
       const folderName = config.translationsFolderName || 'translations'
       const filePaths = getTranslationFilePaths(tree, folderName)
 
-      // Load all discovered files (not just those in config.files)
-      for (const [lang, paths] of Object.entries(filePaths)) {
-       if (paths.length === 0) continue
+      const { translations: newTrans, shas: newShas, fileSources: newFileSources } =
+        await loadTranslationBundle(loadConfigRef, filePaths)
 
-       // Load ALL files for this language (don't filter, merge all)
-       const sources: FileSource[] = []
-       const merged: Record<string, string> = {}
-         
-       for (const path of paths) {
-         const { content, sha, nested, rawContent } = await loadFile(loadConfigRef, path)
-         sources.push({ path, rawContent, originalFlat: { ...content }, sha, nested })
-         Object.assign(merged, content)
-       }
-
-       newFileSources[lang] = sources
-       newTrans[lang] = merged
-       newShas[lang] = sources[0]?.sha ?? ''
-      }
       setFileSources(newFileSources)
       setKeyOwners(buildKeyOwnersFromSources(newFileSources))
       resetHistoryCache()
 
-      // Update config.files to match discovered languages & paths
       const discoveredFiles = Object.entries(newFileSources).map(([lang, sources]) => ({
         lang,
         label: lang,
         flag: '🌐',
-        path: sources[0]?.path ?? `translations/${lang}.json`,
+        path: sources[0]?.path ?? `${folderName}/${lang}.json`,
       }))
       const updatedConfig = { ...config, token, sourceBranch, files: discoveredFiles }
       setConfig(updatedConfig)
       persistSourceBranch(updatedConfig, sourceBranch)
       const draftConfig = loadRefConfig(updatedConfig)
 
-      const schemaResult = await loadJsonFile<unknown>(draftConfig, updatedConfig.configSchemaPath, {})
-      const schema = normalizeSchema(schemaResult.content)
-      const newConfigs: Record<string, ConfigMap> = {}
-      const newConfigShas: Record<string, string> = {}
-      for (const f of updatedConfig.files) {
-        const cfgPath = defaultPath(f.lang, updatedConfig.configPathTemplate)
-        const { content, sha } = await loadJsonFile<unknown>(draftConfig, cfgPath, {})
-        newConfigs[f.lang] = normalizeConfigMap(content, schema)
-        newConfigShas[f.lang] = sha
-      }
+      const { schema, schemaSha, configs: newConfigs, configShas: newConfigShas } =
+        await loadConfigBundle(draftConfig, updatedConfig.files)
 
       setTranslations(newTrans)
       setOriginal(cloneTranslations(newTrans))
       setShas(newShas)
       setConfigSchema(schema)
       setConfigSchemaOriginal(cloneSchema(schema))
-      setSchemaSha(schemaResult.sha)
+      setSchemaSha(schemaSha)
       setConfigs(newConfigs)
       setConfigsOriginal(cloneConfigs(newConfigs))
       setConfigShas(newConfigShas)
@@ -1103,10 +1075,12 @@ export const useTranslationApp = () => {
   const handleSetupComplete = async (cfg: {
     token: string; owner: string; repo: string; branch: string
     langs: string[]; baseLang: string; translationsFolderName: string
+    filePaths?: Record<string, string[]>
   }) => {
-    // Load repo tree to discover all translation files
-    const tree = await listTree(cfg.token, cfg.owner, cfg.repo, cfg.branch)
-    const filePaths = getTranslationFilePaths(tree, cfg.translationsFolderName)
+    const filePaths = cfg.filePaths ?? getTranslationFilePaths(
+      await listTree(cfg.token, cfg.owner, cfg.repo, cfg.branch),
+      cfg.translationsFolderName,
+    )
     
     // Build LangFile array with all discovered files
     const files = cfg.langs.map(lang => ({
@@ -1156,51 +1130,22 @@ export const useTranslationApp = () => {
 
     setLoading(true)
     try {
-      const newTrans: Record<string, Record<string, string>> = {}
-      const newShas: Record<string, string> = {}
-      const newFileSources: Record<string, FileSource[]> = {}
-      
-      // Load ALL discovered files (not just cfg.langs)
-      for (const [lang, paths] of Object.entries(filePaths)) {
-        if (paths.length === 0) continue
+      const { translations: newTrans, shas: newShas, fileSources: newFileSources } =
+        await loadTranslationBundle(newConfig, filePaths, cfg.langs)
 
-        const sources: FileSource[] = []
-        const merged: Record<string, string> = {}
-
-        for (const path of paths) {
-          const { content, sha, nested, rawContent } = await loadFile(newConfig, path)
-          sources.push({ path, rawContent, originalFlat: { ...content }, sha, nested })
-          Object.assign(merged, content)
-        }
-
-        newFileSources[lang] = sources
-        newTrans[lang] = merged
-        newShas[lang] = sources[0]?.sha ?? ''
-      }
       setFileSources(newFileSources)
       setKeyOwners(buildKeyOwnersFromSources(newFileSources))
       resetHistoryCache()
 
-      // Configs are optional — don't fail if they don't exist
-      const schemaPath = newConfig.configSchemaPath
-      const schemaResult = await loadJsonFile<unknown>(newConfig, schemaPath, {})
-      const schema = normalizeSchema(schemaResult.content)
-      const newConfigs: Record<string, ConfigMap> = {}
-      const newConfigShas: Record<string, string> = {}
-      
-      for (const f of newConfig.files) {
-        const configPath = defaultPath(f.lang, newConfig.configPathTemplate)
-        const { content, sha } = await loadJsonFile<unknown>(newConfig, configPath, {})
-        newConfigs[f.lang] = normalizeConfigMap(content, schema)
-        newConfigShas[f.lang] = sha
-      }
+      const { schema, schemaSha, configs: newConfigs, configShas: newConfigShas } =
+        await loadConfigBundle(newConfig, newConfig.files)
 
       setTranslations(newTrans)
       setOriginal(cloneTranslations(newTrans))
       setShas(newShas)
       setConfigSchema(schema)
       setConfigSchemaOriginal(cloneSchema(schema))
-      setSchemaSha(schemaResult.sha)
+      setSchemaSha(schemaSha)
       setConfigs(newConfigs)
       setConfigsOriginal(cloneConfigs(newConfigs))
       setConfigShas(newConfigShas)

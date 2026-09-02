@@ -448,6 +448,11 @@ export const enUK: UiMessages = {
     "resumeLast": "Resume {repo} — {baseLang}, {count} language(s)",
     "resumeLastHint": "Restores the repo, branch, base language, and active locales from your last session.",
     "prefsRestored": "Last configuration restored — adjust if needed, then finish.",
-    "resumeNotFound": "Repository {repo} was not found in your GitHub list."
+    "resumeNotFound": "Repository {repo} was not found in your GitHub list.",
+    "folderLabel": "Translations folder",
+    "folderHint": "Folder name (e.g. translations) or full path (e.g. apps/web/translations). Multiple folders with the same name are supported.",
+    "folderMatched": "{count} folder(s): {paths}",
+    "folderNoMatch": "No translation files found for \"{folder}\".",
+    "folderSuggestions": "Folders detected in the repo"
   }
 }

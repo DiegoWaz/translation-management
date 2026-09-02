@@ -448,6 +448,11 @@ export const frFR: UiMessages = {
     "resumeLast": "Reprendre {repo} — {baseLang}, {count} langue(s)",
     "resumeLastHint": "Restaure le dépôt, la branche, la langue de base et les langues actives de votre dernière session.",
     "prefsRestored": "Dernière configuration restaurée — vous pouvez ajuster puis terminer.",
-    "resumeNotFound": "Dépôt {repo} introuvable dans votre liste GitHub."
+    "resumeNotFound": "Dépôt {repo} introuvable dans votre liste GitHub.",
+    "folderLabel": "Dossier des traductions",
+    "folderHint": "Nom de dossier (ex. translations) ou chemin complet (ex. apps/web/translations). Plusieurs dossiers du même nom sont pris en charge.",
+    "folderMatched": "{count} dossier(s) : {paths}",
+    "folderNoMatch": "Aucun fichier de traduction trouvé pour « {folder} ».",
+    "folderSuggestions": "Dossiers détectés dans le dépôt"
   }
 }

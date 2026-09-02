@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '../helpers/cn'
 import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
 import {
   detectAllLocaleFiles,
+  getTranslationFilePaths,
   listBranches,
   listRepos,
+  listTranslationFolderCandidates,
   listTree,
+  resolveFolderPaths,
   validateToken,
   type GhRepo,
+  type GhTreeEntry,
 } from '../helpers/githubBrowser'
 import { buildAuthorizeUrl } from '../helpers/githubOAuth'
 import { loadSetupPreferences, type SetupPreferences } from '../helpers/config'
@@ -18,7 +22,6 @@ import { ui, t } from '../i18n/ui'
 type Step = 'auth' | 'repo' | 'langs'
 
 interface Props {
-  /** Pre-filled token from OAuth redirect (if available). */
   oauthToken?: string
   onComplete: (cfg: {
     token: string
@@ -28,6 +31,7 @@ interface Props {
     langs: string[]
     baseLang: string
     translationsFolderName: string
+    filePaths: Record<string, string[]>
   }) => void
   onSkip: () => void
   isMobile: boolean
@@ -39,9 +43,13 @@ const defaultBaseLang = (langs: string[]): string =>
 const prefsForRepo = (prefs: SetupPreferences | null, repo: GhRepo): SetupPreferences | null =>
   prefs?.owner === repo.owner.login && prefs?.repo === repo.name ? prefs : null
 
+const defaultFolderInput = (prefs: SetupPreferences | null): string =>
+  prefs?.translationsFolderName
+  || import.meta.env.VITE_TRANSLATIONS_FOLDER_NAME
+  || 'translations'
+
 export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props) => {
   const hasOAuthClientId = !!import.meta.env.VITE_GH_CLIENT_ID
-  const translationsFolderName = import.meta.env.VITE_TRANSLATIONS_FOLDER_NAME || 'translations'
   const [savedPrefs] = useState(() => loadSetupPreferences())
 
   const [step, setStep] = useState<Step>(oauthToken ? 'repo' : 'auth')
@@ -54,12 +62,17 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const [selectedRepo, setSelectedRepo] = useState<GhRepo | null>(null)
   const [branch, setBranch] = useState(savedPrefs?.branch ?? 'main')
   const [branchNames, setBranchNames] = useState<string[]>([])
+  const [folderInput, setFolderInput] = useState(() => defaultFolderInput(savedPrefs))
+  const [folderCandidates, setFolderCandidates] = useState<string[]>([])
+  const [matchedFolders, setMatchedFolders] = useState<string[]>([])
   const [detectedLangs, setDetectedLangs] = useState<string[]>([])
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set())
   const [baseLang, setBaseLang] = useState(savedPrefs?.baseLang ?? '')
   const [prefsRestored, setPrefsRestored] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const treeCacheRef = useRef<{ repo: string; branch: string; tree: GhTreeEntry[] } | null>(null)
 
   const computeLangSelection = (langs: string[], prefs: SetupPreferences | null) => {
     const preferredActive = prefs?.langs.filter(l => langs.includes(l)) ?? []
@@ -85,12 +98,41 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     return restored
   }
 
+  const detectFromTree = (
+    tree: GhTreeEntry[],
+    folder: string,
+    prefs: SetupPreferences | null,
+  ): string[] => {
+    const folders = resolveFolderPaths(tree, folder)
+    setMatchedFolders(folders)
+    setFolderCandidates(listTranslationFolderCandidates(tree))
+    const langs = detectAllLocaleFiles(tree, folder)
+    if (langs.length > 0) applyLangSelection(langs, prefs)
+    else {
+      setDetectedLangs([])
+      setSelectedLangs(new Set())
+      setBaseLang('')
+    }
+    return langs
+  }
+
+  const fetchTree = async (repo: GhRepo, branchName: string): Promise<GhTreeEntry[]> => {
+    const cacheKey = `${repo.full_name}:${branchName}`
+    const cached = treeCacheRef.current
+    if (cached && `${cached.repo}:${cached.branch}` === cacheKey) return cached.tree
+    const tree = await listTree(token, repo.owner.login, repo.name, branchName)
+    treeCacheRef.current = { repo: repo.full_name, branch: branchName, tree }
+    return tree
+  }
+
   const completeSetup = (
     repo: GhRepo,
     branchName: string,
     langs: string[],
     nextBaseLang: string,
+    tree: GhTreeEntry[],
   ) => {
+    const folder = folderInput.trim()
     onComplete({
       token,
       owner: repo.owner.login,
@@ -98,25 +140,19 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
       branch: branchName,
       langs,
       baseLang: nextBaseLang,
-      translationsFolderName,
+      translationsFolderName: folder,
+      filePaths: getTranslationFilePaths(tree, folder),
     })
   }
 
-  // Advance to repo step when OAuth token arrives
   useEffect(() => {
-    if (oauthToken && step === 'auth') {
-      setStep('repo')
-    }
+    if (oauthToken && step === 'auth') setStep('repo')
   }, [oauthToken, step])
 
-  // Sync token state with oauthToken prop (for API calls)
   useEffect(() => {
-    if (oauthToken) {
-      setToken(oauthToken)
-    }
+    if (oauthToken) setToken(oauthToken)
   }, [oauthToken])
 
-  // When an OAuth token is provided, immediately load repos
   useEffect(() => {
     if (oauthToken && step === 'repo' && repos.length === 0) {
       setLoading(true)
@@ -156,30 +192,19 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     }
   }
 
-  const loadLangsForBranch = async (
-    repo: GhRepo,
-    branchName: string,
-    prefs: SetupPreferences | null,
-  ): Promise<boolean> => {
-    const tree = await listTree(token, repo.owner.login, repo.name, branchName)
-    const langs = detectAllLocaleFiles(tree, translationsFolderName)
-    if (langs.length === 0) {
-      setError(`No translation files found in '${translationsFolderName}' folders`)
-      return false
-    }
-    applyLangSelection(langs, prefs)
-    return true
-  }
-
   const openRepoSetup = async (
     repo: GhRepo,
     prefs: SetupPreferences | null,
     options?: { autoFinish?: boolean },
   ) => {
     setSelectedRepo(repo)
+    treeCacheRef.current = null
     setLoading(true)
     setError('')
     setPrefsRestored(false)
+    const folder = prefs?.translationsFolderName ?? folderInput
+    if (prefs?.translationsFolderName) setFolderInput(prefs.translationsFolderName)
+
     try {
       const branchList = await listBranches(token, repo.owner.login, repo.name)
       const names = branchList.map(b => b.name).sort((a, b) => a.localeCompare(b))
@@ -189,18 +214,17 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
         : names.includes(repo.default_branch) ? repo.default_branch : names[0] || 'main'
       setBranch(selectedBranch)
 
-      const tree = await listTree(token, repo.owner.login, repo.name, selectedBranch)
-      const langs = detectAllLocaleFiles(tree, translationsFolderName)
+      const tree = await fetchTree(repo, selectedBranch)
+      const langs = detectFromTree(tree, folder, prefs)
       if (langs.length === 0) {
-        setError(`No translation files found in '${translationsFolderName}' folders`)
+        setError(t(ui.setup.folderNoMatch, { folder }))
         return
       }
 
       const { active, baseLang: nextBaseLang, restored } = computeLangSelection(langs, prefs)
-      applyLangSelection(langs, prefs)
 
       if (options?.autoFinish && restored && active.length > 0) {
-        completeSetup(repo, selectedBranch, active, nextBaseLang)
+        completeSetup(repo, selectedBranch, active, nextBaseLang, tree)
         return
       }
 
@@ -232,7 +256,9 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     setLoading(true)
     setError('')
     try {
-      await loadLangsForBranch(selectedRepo, branchName, prefsForRepo(savedPrefs, selectedRepo))
+      const tree = await fetchTree(selectedRepo, branchName)
+      const langs = detectFromTree(tree, folderInput, prefsForRepo(savedPrefs, selectedRepo))
+      if (langs.length === 0) setError(t(ui.setup.folderNoMatch, { folder: folderInput.trim() }))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -240,9 +266,20 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     }
   }
 
+  const handleFolderChange = (nextFolder: string) => {
+    setFolderInput(nextFolder)
+    setError('')
+    const cached = treeCacheRef.current
+    if (!cached || !selectedRepo) return
+    const langs = detectFromTree(cached.tree, nextFolder, prefsForRepo(savedPrefs, selectedRepo))
+    if (langs.length === 0) setError(t(ui.setup.folderNoMatch, { folder: nextFolder.trim() }))
+  }
+
   const handleFinish = () => {
     if (!selectedRepo || selectedLangs.size === 0) return
-    completeSetup(selectedRepo, branch, [...selectedLangs], baseLang)
+    const cached = treeCacheRef.current
+    if (!cached) return
+    completeSetup(selectedRepo, branch, [...selectedLangs], baseLang, cached.tree)
   }
 
   const toggleLang = (l: string) => setSelectedLangs(prev => {
@@ -262,11 +299,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   )
 
   const stepIndex = { auth: 0, repo: 1, langs: 2 }[step]
-  const stepLabels = [
-    ui.setup.stepToken,
-    ui.setup.stepRepo,
-    ui.setup.stepLangs,
-  ]
+  const stepLabels = [ui.setup.stepToken, ui.setup.stepRepo, ui.setup.stepLangs]
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-[4px] bg-overlay">
@@ -276,7 +309,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
           isMobile ? 'w-screen h-dvh rounded-none border-none' : 'w-[600px] max-h-[85vh] rounded-xl border border-border',
         )}
       >
-        {/* Header */}
         <div className="px-6 py-4 border-b border-border">
           <Logo size="md" showWordmark className="mb-3" />
           <p className="m-0 text-xs text-fg-muted">{ui.setup.subtitle}</p>
@@ -290,7 +322,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
           {error && (
             <div className="mb-3 p-2.5 rounded-lg bg-error-bg border border-border-error text-fg-error text-xs">
@@ -298,7 +329,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
             </div>
           )}
 
-          {/* Step 1 — Auth: OAuth button + PAT fallback */}
           {step === 'auth' && (
             <div className="flex flex-col gap-5 items-center py-4">
               {hasOAuthClientId && (
@@ -345,7 +375,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
             </div>
           )}
 
-          {/* Step 2 — Repo */}
           {step === 'repo' && (
             <div className="flex flex-col gap-3">
               <div className="text-xs text-fg-muted">{t(ui.setup.loggedAs, { user: username })}</div>
@@ -399,7 +428,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
             </div>
           )}
 
-          {/* Step 3 — Language selection */}
           {step === 'langs' && (
             <div className="flex flex-col gap-4">
               {prefsRestored && (
@@ -408,8 +436,55 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
                 </div>
               )}
 
+              <div>
+                <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-2">{ui.setup.folderLabel}</div>
+                <input
+                  type="text"
+                  value={folderInput}
+                  onChange={e => handleFolderChange(e.target.value)}
+                  placeholder="translations"
+                  className={cn(inputClass, 'w-full font-mono text-xs')}
+                  list="folder-suggestions"
+                />
+                <datalist id="folder-suggestions">
+                  {folderCandidates.map(path => (
+                    <option key={path} value={path} />
+                  ))}
+                </datalist>
+                <p className="m-0 mt-1.5 text-[11px] text-fg-muted leading-relaxed">{ui.setup.folderHint}</p>
+                {matchedFolders.length > 0 && (
+                  <p className="m-0 mt-1 text-[11px] text-fg-secondary">
+                    {t(ui.setup.folderMatched, { count: matchedFolders.length, paths: matchedFolders.join(', ') })}
+                  </p>
+                )}
+              </div>
+
+              {folderCandidates.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-2">{ui.setup.folderSuggestions}</div>
+                  <div className="flex flex-wrap gap-1.5 max-h-[88px] overflow-y-auto">
+                    {folderCandidates.map(path => (
+                      <button
+                        key={path}
+                        type="button"
+                        onClick={() => handleFolderChange(path)}
+                        className={cn(
+                          'px-2 py-1 rounded-md text-[11px] font-mono cursor-pointer border',
+                          folderInput === path
+                            ? 'bg-brand-soft-bg border-border-brand-soft text-fg-brand'
+                            : 'bg-elevated border-border text-fg-muted hover:text-fg',
+                        )}
+                      >
+                        {path}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="text-xs text-fg-muted">
-                {t(ui.setup.langsDetected, { count: detectedLangs.length })} — {detectedLangs.join(', ')}
+                {t(ui.setup.langsDetected, { count: detectedLangs.length })}
+                {detectedLangs.length > 0 && ` — ${detectedLangs.join(', ')}`}
               </div>
 
               <div>
@@ -440,7 +515,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
 
               <div>
                 <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-2">{ui.setup.selectLangs}</div>
-                <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto">
+                <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto">
                   {detectedLangs.map(l => (
                     <button
                       key={l}
@@ -464,7 +539,6 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-3.5 border-t border-border flex items-center justify-between gap-2">
           <button type="button" onClick={onSkip} className={cn(btnSecClass, 'text-xs')}>{ui.setup.skip}</button>
 

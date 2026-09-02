@@ -96,7 +96,6 @@ export const detectAllFoldersWithName = (tree: GhTreeEntry[], folderName: string
   tree
     .filter(e => e.type === 'tree')
     .forEach(e => {
-      // Extract path components and find any that match folderName
       const parts = e.path.split('/')
       parts.forEach((part, idx) => {
         if (part === folderName) {
@@ -108,9 +107,36 @@ export const detectAllFoldersWithName = (tree: GhTreeEntry[], folderName: string
   return Array.from(results).sort()
 }
 
+/**
+ * Resolve folder input to concrete paths in the tree.
+ * - `translations` → every folder named translations (any depth)
+ * - `apps/web/translations` → that exact prefix
+ */
+export const resolveFolderPaths = (tree: GhTreeEntry[], folderInput: string): string[] => {
+  const trimmed = folderInput.trim().replace(/\/+$/, '')
+  if (!trimmed) return []
+  if (trimmed.includes('/')) {
+    return detectLocaleFiles(tree, trimmed).length > 0 ? [trimmed] : []
+  }
+  return detectAllFoldersWithName(tree, trimmed)
+}
+
+/** Parent paths of locale JSON files — suggestions for the setup folder picker. */
+export const listTranslationFolderCandidates = (tree: GhTreeEntry[]): string[] => {
+  const candidates = new Set<string>()
+  for (const e of tree) {
+    if (e.type !== 'blob') continue
+    const fileName = e.path.split('/').pop()!
+    if (!LOCALE_PATTERN.test(fileName)) continue
+    const parent = e.path.slice(0, e.path.lastIndexOf('/'))
+    if (parent) candidates.add(parent)
+  }
+  return Array.from(candidates).sort()
+}
+
 /** Detect locale files from ALL folders with a given name. */
-export const detectAllLocaleFiles = (tree: GhTreeEntry[], folderName: string): string[] => {
-  const folders = detectAllFoldersWithName(tree, folderName)
+export const detectAllLocaleFiles = (tree: GhTreeEntry[], folderInput: string): string[] => {
+  const folders = resolveFolderPaths(tree, folderInput)
   const allFiles = new Set<string>()
   folders.forEach(folder => {
     detectLocaleFiles(tree, folder).forEach(lang => allFiles.add(lang))
@@ -118,13 +144,12 @@ export const detectAllLocaleFiles = (tree: GhTreeEntry[], folderName: string): s
   return Array.from(allFiles).sort()
 }
 
-/** Get all file paths for each locale from ALL folders with a given name.
- * Recurses into subfolders so structures like `translations/locale/{lang}.json` are found. */
+/** Get all file paths for each locale from ALL folders matching folderInput. */
 export const getTranslationFilePaths = (
   tree: GhTreeEntry[],
-  folderName: string,
+  folderInput: string,
 ): Record<string, string[]> => {
-  const folders = detectAllFoldersWithName(tree, folderName)
+  const folders = resolveFolderPaths(tree, folderInput)
   const result: Record<string, string[]> = {}
 
   folders.forEach(folder => {

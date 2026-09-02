@@ -448,6 +448,11 @@ export const esES: UiMessages = {
     "resumeLast": "Reanudar {repo} — {baseLang}, {count} idioma(s)",
     "resumeLastHint": "Restaura el repositorio, rama, idioma base e idiomas activos de su última sesión.",
     "prefsRestored": "Última configuración restaurada — ajuste si hace falta y termine.",
-    "resumeNotFound": "Repositorio {repo} no encontrado en su lista de GitHub."
+    "resumeNotFound": "Repositorio {repo} no encontrado en su lista de GitHub.",
+    "folderLabel": "Carpeta de traducciones",
+    "folderHint": "Nombre de carpeta (ej. translations) o ruta completa (ej. apps/web/translations). Se admiten varias carpetas con el mismo nombre.",
+    "folderMatched": "{count} carpeta(s): {paths}",
+    "folderNoMatch": "No se encontraron archivos de traducción para « {folder} ».",
+    "folderSuggestions": "Carpetas detectadas en el repositorio"
   }
 }
