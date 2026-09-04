@@ -32,6 +32,8 @@ export const TranslationTable = ({
   onDelete,
   onRename,
   onShowKeyHistory,
+  onExportKey,
+  onDuplicateKey,
 }: {
   searchMode: SearchMode
   isMobile: boolean
@@ -57,6 +59,8 @@ export const TranslationTable = ({
   onDelete: (key: string) => void
   onRename?: (oldKey: string, newKey: string) => boolean
   onShowKeyHistory?: (key: string) => void
+  onExportKey?: (key: string, asKey?: string) => void
+  onDuplicateKey?: (sourceKey: string, newKey: string) => boolean
 }) => {
   const baseFile = config.files.find(f => f.lang === config.baseLang)
   const pad = isMobile ? 'px-3' : 'px-5'
@@ -80,6 +84,8 @@ export const TranslationTable = ({
       onDelete={() => onDelete(key)}
       onRename={onRename}
       onShowKeyHistory={onShowKeyHistory}
+      onExportKey={onExportKey}
+      onDuplicateKey={onDuplicateKey}
       searchQuery={search}
       matchedLangs={searchMatchMap[key] ?? []}
       configFiles={config.files}
@@ -169,6 +175,8 @@ export const TranslationTable = ({
               onDelete={() => onDelete(key)}
               onRename={onRename}
               onShowKeyHistory={onShowKeyHistory}
+              onExportKey={onExportKey}
+              onDuplicateKey={onDuplicateKey}
               searchQuery={search}
             />
           ))}

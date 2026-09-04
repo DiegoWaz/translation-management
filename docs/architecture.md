@@ -6,11 +6,12 @@ SPA React (**LocaleHub**). Pas de backend : le navigateur parle à `api.github.c
 
 ```
 src/main.tsx
-  └─ App.tsx                 # composition UI
-       └─ useTranslationApp  # état métier unique
-            ├─ helpers/*     # GitHub, draft, filtering, configs…
-            ├─ components/*  # UI
-            └─ i18n/*        # chaînes UI (fr / en / es)
+  └─ BrowserRouter
+       └─ App.tsx                 # routes + composition UI
+            ├─ /welcome           # OnboardingPage
+            ├─ /features          # FeaturesPage
+            ├─ /                  # éditeur (+ AppFooter)
+            └─ useTranslationApp  # état métier unique
 ```
 
 ## Fichiers d’entrée

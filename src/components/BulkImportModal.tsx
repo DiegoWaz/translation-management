@@ -16,7 +16,7 @@ const KeyPicker = ({
   keys: string[]
   value: string
   onChange: (key: string) => void
-  onCreate: () => void
+  onCreate: (seed?: string) => void
 }) => {
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -48,6 +48,16 @@ const KeyPicker = ({
     setOpen(false)
   }
 
+  const createFromQuery = () => {
+    const seed = query.trim()
+    if (!seed) {
+      onCreate()
+      return
+    }
+    onCreate(seed)
+    setOpen(false)
+  }
+
   return (
     <div ref={rootRef} className="flex gap-1 min-w-0 w-full">
       <div className="relative flex-1 min-w-0">
@@ -69,9 +79,10 @@ const KeyPicker = ({
               setOpen(false)
               setQuery(value)
             }
-            if (e.key === 'Enter' && filtered[0]) {
+            if (e.key === 'Enter') {
               e.preventDefault()
-              pick(filtered[0])
+              if (filtered[0]) pick(filtered[0])
+              else if (query.trim()) createFromQuery()
             }
           }}
           className={cn(
@@ -86,7 +97,19 @@ const KeyPicker = ({
             className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-44 overflow-y-auto rounded-md border border-border bg-card shadow-lg"
           >
             {filtered.length === 0 ? (
-              <div className="px-2.5 py-2 text-[11px] text-fg-muted">{ui.import.noMatchingKeys}</div>
+              <div className="p-1.5 flex flex-col gap-1">
+                <div className="px-1 py-1 text-[11px] text-fg-muted">{ui.import.noMatchingKeys}</div>
+                {query.trim() && (
+                  <button
+                    type="button"
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={createFromQuery}
+                    className="w-full text-left px-2.5 py-2 rounded-md text-[11px] font-mono border border-border-brand-soft bg-brand-soft-bg text-fg-brand cursor-pointer"
+                  >
+                    {t(ui.import.createKeyFromSearch, { key: query.trim() })}
+                  </button>
+                )}
+              </div>
             ) : (
               filtered.map(key => (
                 <button
@@ -111,7 +134,7 @@ const KeyPicker = ({
       <button
         type="button"
         title={ui.import.newKeyPlaceholder}
-        onClick={onCreate}
+        onClick={() => onCreate(query.trim() || undefined)}
         className="shrink-0 size-8 flex items-center justify-center bg-elevated border border-border-strong rounded text-fg-tertiary cursor-pointer text-base leading-none"
       >
         +
@@ -303,7 +326,16 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
                               keys={allKeys}
                               value={assignments[idx] ?? ''}
                               onChange={key => setAssignments(p => ({ ...p, [idx]: key }))}
-                              onCreate={() => setCreating(p => ({ ...p, [idx]: true }))}
+                              onCreate={seed => {
+                                if (seed) {
+                                  setAssignments(p => ({ ...p, [idx]: seed }))
+                                  setNewKeyInputs(p => ({ ...p, [idx]: seed }))
+                                  setCreating(p => ({ ...p, [idx]: false }))
+                                  return
+                                }
+                                setNewKeyInputs(p => ({ ...p, [idx]: '' }))
+                                setCreating(p => ({ ...p, [idx]: true }))
+                              }}
                             />
                           )}
                           {assignments[idx] && (

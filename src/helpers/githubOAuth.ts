@@ -9,9 +9,10 @@ export type GitHubOAuthTokens = {
   expiresAt?: number
 }
 
-/** Must match the Authorization callback URL registered on the GitHub OAuth App. */
+/** Must match the Authorization callback URL registered on the GitHub OAuth App.
+ * Always the site root so `/welcome` (or any path) can start OAuth safely. */
 export const getOAuthRedirectUri = (): string =>
-  `${window.location.origin}${window.location.pathname}`
+  `${window.location.origin}/`
 
 const storeOAuthState = (state: string): void => {
   const payload = JSON.stringify({ state, at: Date.now() })

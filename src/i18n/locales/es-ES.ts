@@ -113,7 +113,17 @@ export const esES: UiMessages = {
     "renameKeyConfirmTitle": "Confirmar renombrado",
     "renameKeyCancelTitle": "Cancelar",
     "deleteKeyConfirm": "¿Eliminar la clave \"{key}\" de todos los idiomas? Esta acción no se puede deshacer.",
-    "deleteKeyConfirmShort": "¿Eliminar?"
+    "deleteKeyConfirmShort": "¿Eliminar?",
+    "exportKeyTitle": "Descargar esta clave (todos los idiomas, CSV)",
+    "duplicateKeyTitle": "Duplicar / exportar con otro nombre",
+    "duplicateKeyPlaceholder": "nueva.clave",
+    "duplicateKeyHint": "Copiar « {key} » a una nueva clave, o exportar CSV con ese nombre",
+    "duplicateKeyCreate": "Crear",
+    "duplicateKeyConfirmTitle": "Crear la clave con los valores de todos los idiomas",
+    "duplicateKeyExport": "CSV",
+    "duplicateKeyExportTitle": "Descargar CSV con este nombre (para reimportar en otro sitio)",
+    "duplicateKeySame": "Elige un nombre de clave distinto",
+    "duplicateKeyTranslationsOnly": "La duplicación solo está disponible para traducciones"
   },
   "empty": {
     "noMissing": "Ninguna clave faltante",
@@ -208,7 +218,7 @@ export const esES: UiMessages = {
     "branchLabel": "Rama fuente",
     "baseBranchSuffix": "base PR",
     "prTargetHint": "Los commits abrirán una PR hacia {branch}.",
-    "draftWarning": "Los cambios sin confirmar se perderán al cargar.",
+    "draftWarning": "El borrador de esta rama se conserva. Si la rama de destino ya tiene un borrador local, se restaurará.",
     "confirm": "Cargar",
     "loading": "Cargando…",
     "branchesLoading": "Cargando ramas…",
@@ -259,6 +269,7 @@ export const esES: UiMessages = {
     "choose": "— elegir —",
     "searchKey": "Buscar una clave…",
     "noMatchingKeys": "Ninguna clave coincidente",
+    "createKeyFromSearch": "Crear « {key} »",
     "newKeyPlaceholder": "mi.nueva.clave",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",
@@ -311,6 +322,7 @@ export const esES: UiMessages = {
     "keys": "Claves",
     "keysAll": "Todas ({count})",
     "keysFiltered": "Vista actual ({count})",
+    "keysFilteredHint": "Claves visibles tras búsqueda / grupo / filtro",
     "languages": "Idiomas",
     "preview": "Vista previa",
     "close": "Cerrar",
@@ -322,6 +334,7 @@ export const esES: UiMessages = {
     "loadedFromGithub": "Archivos cargados desde GitHub",
     "loadedFromBranch": "Archivos cargados desde la rama {branch}",
     "draftRestored": "Borrador sin confirmar restaurado desde este navegador",
+    "draftRestoredOnBranch": "Borrador local restaurado para esta rama",
     "error": "Error: {message}",
     "historyError": "Error de historial: {message}",
     "nothingToCommit": "Nada que confirmar",
@@ -330,6 +343,9 @@ export const esES: UiMessages = {
     "keyRestored": "Clave \"{key}\" restaurada",
     "keyAdded": "Clave \"{key}\" añadida",
     "keyRenamed": "Clave \"{oldKey}\" renombrada a \"{newKey}\"",
+    "keyExported": "Clave « {key} » descargada (CSV, todos los idiomas)",
+    "keyExportedAs": "Clave « {key} » exportada como « {asKey} » (CSV)",
+    "keyDuplicated": "Clave « {sourceKey} » duplicada como « {newKey} »",
     "configKeyAdded": "Clave config \"{key}\" añadida",
     "valuesImported": "{count} valores importados",
     "valuesImportedJson": "{count} valores importados (JSON)",
@@ -454,5 +470,114 @@ export const esES: UiMessages = {
     "folderMatched": "{count} carpeta(s): {paths}",
     "folderNoMatch": "No se encontraron archivos de traducción para « {folder} ».",
     "folderSuggestions": "Carpetas detectadas en el repositorio"
+  },
+  "onboarding": {
+    "headline": "Edita tus JSON i18n directamente en GitHub",
+    "lead": "LocaleHub es un editor Git-native para desarrolladores. Tu repositorio sigue siendo la fuente de verdad — borrador local, commit multi-archivo vía pull request.",
+    "audience": "Para desarrolladores — no es un TMS para PO / QA / traductores.",
+    "pointEdit": "Edita claves y traducciones en el navegador, todos los idiomas juntos",
+    "pointDraft": "Borrador automático en el navegador — nada se pierde antes del commit",
+    "pointPr": "Un solo commit / PR para todos los archivos de idioma",
+    "connect": "Conectar GitHub",
+    "demo": "Probar en modo demo",
+    "backToApp": "Volver al editor"
+  },
+  "footer": {
+    "welcome": "Acerca de",
+    "features": "Funciones",
+    "app": "Editor"
+  },
+  "featuresPage": {
+    "title": "Funciones",
+    "lead": "LocaleHub es un editor i18n Git-native para desarrolladores. Editas JSON de traducción en el navegador; el repositorio GitHub sigue siendo la fuente de verdad. No es un TMS ni un flujo PO / QA / traductor.",
+    "flow": "Navegador → API GitHub → tu repo  ·  localStorage (borrador)",
+    "audienceTitle": "Para quién",
+    "audienceDevTitle": "Desarrolladores",
+    "audienceDev": "Añadir claves, traducir, commit vía PR, resolver conflictos Git.",
+    "audienceOutTitle": "Fuera de alcance",
+    "audienceOut": "PO, QA, traductores externos, revisión de negocio, asignación de tareas.",
+    "absentTitle": "Ausente a propósito",
+    "absent": [
+      "Roles y permisos en la app",
+      "Traducción automática, memoria de traducción, glosario",
+      "Estados « por validar / aprobado », comentarios por clave",
+      "Capturas, contexto Figma, formatos PO / XLIFF / YAML",
+      "Backend o base de datos (datos = navegador + GitHub)",
+      "Push directo a main — siempre una Pull Request"
+    ],
+    "sections": [
+      {
+        "title": "Conexión y configuración",
+        "items": [
+          "Modo demo sin token (datos de ejemplo)",
+          "Asistente Conectar: OAuth GitHub o PAT, repo, rama, idiomas auto-detectados",
+          "Páginas /welcome y /features — enlaces en el pie",
+          "Config de equipo vía .env (VITE_GH_*)",
+          "Token cifrado en local (AES-GCM + IndexedDB)",
+          "Reconexión obligatoria si el token caduca (borrador local conservado)",
+          "Ajustes de solo lectura · desconexión · UI es / en / fr · tema claro / oscuro"
+        ]
+      },
+      {
+        "title": "GitHub y ramas",
+        "items": [
+          "API REST + Git Data (commit multi-archivo)",
+          "Rama cargada vs rama destino de la PR, persistidas",
+          "Cargar desde una rama (diálogo + loader)",
+          "Descubrimiento de carpetas translations/ en monorepo",
+          "Commit en rama nueva o existente (PR de seguimiento)",
+          "Cambio a la rama de la PR tras crearla"
+        ]
+      },
+      {
+        "title": "Edición de traducciones",
+        "items": [
+          "Tabla: clave · base · destino · última modificación",
+          "Edición inline, modo clave (todos los idiomas), + / renombrar / borrar / duplicar",
+          "Búsqueda (clave + todos los idiomas), grupos por namespace, paginación, virtualización",
+          "Indicadores: modificado ◆, faltante ⊘, variables {x} ⚠️",
+          "Filtros: todas · faltantes · modificadas · variables",
+          "Stats por idioma (completado %, contadores)"
+        ]
+      },
+      {
+        "title": "Multi-archivo y JSON",
+        "items": [
+          "JSON plano o anidado; estructura conservada al commit",
+          "Varias carpetas translations/ por idioma; enrutado keyOwners",
+          "Aviso de claves duplicadas entre archivos"
+        ]
+      },
+      {
+        "title": "Importar / exportar",
+        "items": [
+          "Importar: texto, tabla locale:, JSON multi-idioma",
+          "Exportar: CSV, TSV, JSON, ZIP por namespace, ZIP archivos originales",
+          "Exportar / duplicar una sola clave (todos los idiomas)"
+        ]
+      },
+      {
+        "title": "Colab ligera (vía Git)",
+        "items": [
+          "Poll stale (30 s) + resolución clave a clave o recarga",
+          "Historial Git por idioma + restaurar un valor"
+        ]
+      },
+      {
+        "title": "Flujo dev",
+        "items": [
+          "Borrador auto en localStorage (por rama)",
+          "Contador de cambios · un solo commit multi-archivo vía PR",
+          "Mensaje con idiomas modificados · overlay durante load / commit"
+        ]
+      },
+      {
+        "title": "Configs y DTO (hechos, pestañas desactivadas)",
+        "items": [
+          "Configs: esquema camelCase, Excel/JSON — aún no en la TopBar",
+          "DTO: validación Zod + JSON — igual"
+        ]
+      }
+    ]
   }
 }

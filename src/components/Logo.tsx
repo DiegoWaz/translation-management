@@ -37,18 +37,21 @@ export const Logo = ({
   showWordmark = false,
   className,
 }: {
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   showWordmark?: boolean
   className?: string
 }) => {
   const gradientId = useId()
-  const markSize = size === 'md' ? 32 : 26
+  const markSize = size === 'lg' ? 40 : size === 'md' ? 32 : 26
 
   return (
-    <div className={cn('flex items-center gap-2 shrink-0', className)} aria-label={ui.app.name}>
+    <div className={cn('flex items-center gap-2 shrink-0', size === 'lg' && 'gap-3', className)} aria-label={ui.app.name}>
       <LogoMark size={markSize} gradientId={gradientId} />
       {showWordmark && (
-        <span className="text-[13px] font-semibold text-fg tracking-tight whitespace-nowrap">
+        <span className={cn(
+          'font-semibold text-fg tracking-tight whitespace-nowrap',
+          size === 'lg' ? 'text-2xl' : 'text-[13px]',
+        )}>
           {ui.app.name}
         </span>
       )}

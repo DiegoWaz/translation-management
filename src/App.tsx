@@ -1,3 +1,4 @@
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { useTranslationApp } from './hooks/useTranslationApp'
 import { TopBar } from './components/TopBar'
 import { MobileLangStrip } from './components/MobileLangStrip'
@@ -21,6 +22,9 @@ import { SettingsModal } from './components/SettingsModal'
 import { CommitDialog } from './components/CommitDialog'
 import { LoadDialog } from './components/LoadDialog'
 import { SetupWizard } from './components/SetupWizard'
+import { OnboardingPage } from './components/OnboardingPage'
+import { FeaturesPage } from './components/FeaturesPage'
+import { AppFooter } from './components/AppFooter'
 import { defaultPath } from './helpers/lang'
 import { configMapsToStringMaps } from './helpers/exportGenerators'
 import { SchemaValidateWorkspace } from './components/SchemaValidateWorkspace'
@@ -28,9 +32,31 @@ import { ToastStack } from './components/ToastStack'
 import { LoadingOverlay } from './components/LoadingOverlay'
 import { SessionLostModal } from './components/SessionLostModal'
 import { ui } from './i18n/ui'
+import { ROUTES } from './routes'
+import { dismissWelcome, shouldLandOnWelcome } from './helpers/welcome'
 
-const App = () => {
-  const app = useTranslationApp()
+type AppState = ReturnType<typeof useTranslationApp>
+
+const WelcomeRoute = ({ app }: { app: AppState }) => {
+  const navigate = useNavigate()
+  return (
+    <OnboardingPage
+      isMobile={app.isMobile}
+      showBackToApp={!shouldLandOnWelcome()}
+      onConnect={() => {
+        dismissWelcome()
+        navigate(ROUTES.app)
+        app.setShowSetup(true)
+      }}
+      onDemo={() => {
+        dismissWelcome()
+        navigate(ROUTES.app)
+      }}
+    />
+  )
+}
+
+const EditorRoute = ({ app }: { app: AppState }) => {
   const isConfigs = app.workspace === 'configs'
   const isSchema = app.workspace === 'schema'
   const configColTemplate = app.isMobile
@@ -50,8 +76,12 @@ const App = () => {
   const exportKeys = isConfigs ? app.configKeys : app.baseKeys
   const exportFilteredKeys = isConfigs ? app.filteredConfigKeys : app.filteredKeys
 
+  if (shouldLandOnWelcome()) {
+    return <Navigate to={ROUTES.welcome} replace />
+  }
+
   return (
-    <div className="font-sans bg-page text-fg min-h-screen flex flex-col">
+    <div className="font-sans bg-page text-fg h-dvh flex flex-col overflow-hidden">
       <TopBar
         config={app.config}
         isDemoMode={app.isDemoMode}
@@ -74,7 +104,7 @@ const App = () => {
         onToggleTheme={() => app.setIsDark(v => !v)}
       />
 
-      <div className="flex flex-1 overflow-hidden h-[calc(100vh-56px)] flex-col">
+      <div className="flex flex-1 overflow-hidden min-h-0 flex-col">
         {isSchema ? (
           <SchemaValidateWorkspace isMobile={app.isMobile} />
         ) : (
@@ -90,7 +120,7 @@ const App = () => {
           />
         )}
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           {!app.isMobile && (
             <Sidebar
               langs={app.langStats}
@@ -207,6 +237,8 @@ const App = () => {
                 onDelete={app.deleteKey}
                 onRename={app.renameKey}
                 onShowKeyHistory={(key) => { app.setKeyHistoryFilter(key); app.setShowHistory(true) }}
+                onExportKey={app.exportKey}
+                onDuplicateKey={app.duplicateKey}
               />
             )}
 
@@ -245,6 +277,8 @@ const App = () => {
         )}
       </div>
 
+      <AppFooter isMobile={app.isMobile} />
+
       {app.showHistory && app.isMobile && !isSchema && (
         <HistoryDrawer
           lang={app.activeLang}
@@ -268,7 +302,7 @@ const App = () => {
           isMobile={app.isMobile}
         />
       )}
-      {app.showLoad && (
+      {app.showLoad && app.isConnected && !app.isDemoMode && !app.sessionLostReason && (
         <LoadDialog
           config={app.config}
           hasUnsavedChanges={app.hasUnsavedChanges}
@@ -347,12 +381,34 @@ const App = () => {
           onReconnect={app.handleReconnect}
         />
       )}
+    </div>
+  )
+}
+
+const App = () => {
+  const app = useTranslationApp()
+  const navigate = useNavigate()
+
+  return (
+    <>
+      <Routes>
+        <Route path={ROUTES.welcome} element={<WelcomeRoute app={app} />} />
+        <Route path={ROUTES.features} element={<FeaturesPage isMobile={app.isMobile} />} />
+        <Route path={ROUTES.app} element={<EditorRoute app={app} />} />
+        <Route path="*" element={<Navigate to={ROUTES.app} replace />} />
+      </Routes>
 
       {app.showSetup && (
         <SetupWizard
           oauthToken={app.oauthToken}
-          onComplete={app.handleSetupComplete}
-          onSkip={() => app.setShowSetup(false)}
+          onComplete={async cfg => {
+            await app.handleSetupComplete(cfg)
+            navigate(ROUTES.app)
+          }}
+          onSkip={() => {
+            app.setShowSetup(false)
+            navigate(ROUTES.app)
+          }}
           isMobile={app.isMobile}
         />
       )}
@@ -362,7 +418,7 @@ const App = () => {
       )}
 
       <ToastStack toasts={app.toasts} />
-    </div>
+    </>
   )
 }
 

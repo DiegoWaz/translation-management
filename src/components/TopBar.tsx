@@ -149,7 +149,7 @@ export const TopBar = ({
         {isDark ? ui.theme.lightIcon : ui.theme.darkIcon}
       </button>
 
-      {!compact && (
+      {!compact && isConnected && !isDemoMode && (
         <button
           onClick={onLoad}
           disabled={loading}
@@ -174,11 +174,11 @@ export const TopBar = ({
 
       <button
         onClick={onCommit}
-        disabled={loading || modifiedCount === 0}
+        disabled={loading || modifiedCount === 0 || !isConnected || isDemoMode}
         title={ui.topBar.commitTitle}
         className={cn(
           'flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium shrink-0 border font-inherit',
-          modifiedCount > 0 ? 'bg-brand border-brand-hover text-fg-on-brand cursor-pointer' : 'bg-elevated border-border-strong text-fg-muted cursor-default',
+          modifiedCount > 0 && isConnected && !isDemoMode ? 'bg-brand border-brand-hover text-fg-on-brand cursor-pointer' : 'bg-elevated border-border-strong text-fg-muted cursor-default',
           loading && 'opacity-50',
         )}
       >

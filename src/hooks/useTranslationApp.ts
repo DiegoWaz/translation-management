@@ -37,6 +37,7 @@ import { buildKeyLastModified, mergeCommitRecords } from '../helpers/history'
 import { commitJsonFilesAsPR, fetchFileCommits, loadFile, loadJsonFile, prepareCommitContent } from '../helpers/github'
 import { isGitHubSessionError } from '../helpers/githubAuth'
 import { listTree, getTranslationFilePaths } from '../helpers/githubBrowser'
+import { downloadKeyCsv } from '../helpers/exportGenerators'
 import { loadConfigBundle, loadTranslationBundle } from '../helpers/loadBundle'
 import {
   buildKeyGroups,
@@ -53,6 +54,7 @@ import {
   addKeyToAll,
   applyBulkAssignments,
   cloneTranslations,
+  duplicateKeyInAll,
   mergeTranslationMaps,
   removeKeyFromAll,
   renameKeyInAll,
@@ -82,7 +84,8 @@ import {
   resolveKeySourceIndex,
   type KeyOwnerMap,
 } from '../helpers/fileSources'
-import { loadDraft, saveDraft } from '../helpers/draftStorage'
+import { isDraftDirty, loadDraft, saveDraft } from '../helpers/draftStorage'
+import { dismissWelcome } from '../helpers/welcome'
 import { detectUiLocale, setUiLocale, t, ui, type UiLocale } from '../i18n/ui'
 import {
   cleanOAuthParams,
@@ -94,7 +97,7 @@ import {
 } from '../helpers/githubOAuth'
 
 // Load config with fallback to demo config if empty
-const loadConfigOrDefault = () => {
+export const loadConfigOrDefault = () => {
   const c = loadConfig()
   return c.files.length > 0 ? c : DEFAULT_DEMO_CONFIG
 }
@@ -116,14 +119,12 @@ const loadStoredIsDark = (): boolean => {
 export const useTranslationApp = () => {
   const [config, setConfig] = useState(loadConfigOrDefault)
   const [initialDraft] = useState(() => loadDraft(loadConfigOrDefault()))
-  const [showSetup, setShowSetup] = useState(() => {
-    if (hasOAuthCallback()) return true
-    const cfg = loadConfigOrDefault()
-    return !isGithubConfigured(cfg) && !loadUiConfig()
-  })
+  const [showSetup, setShowSetup] = useState(() => hasOAuthCallback())
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
   const [oauthConnecting, setOauthConnecting] = useState(false)
   const pendingOAuthRef = useRef<GitHubOAuthTokens | null>(null)
+  /** Skip autosave while Load swaps branches so we don't clobber another branch's draft. */
+  const suppressDraftSaveRef = useRef(false)
   const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>(
     () => initialDraft?.fileSources ?? {},
   )
@@ -365,6 +366,13 @@ export const useTranslationApp = () => {
 
   const githubApiReady = isConnected && githubReady && !isDemoMode
 
+  // Never leave Load/Commit open without a valid GitHub session.
+  useEffect(() => {
+    if (isConnected && !sessionLostReason && !isDemoMode) return
+    setShowLoad(false)
+    setShowCommit(false)
+  }, [isConnected, sessionLostReason, isDemoMode])
+
   useEffect(() => {
     if (!draftRestored) return
     showToast(ui.toast.draftRestored, 'info')
@@ -372,8 +380,9 @@ export const useTranslationApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Persist working copy so reload keeps uncommitted edits
+  // Persist working copy so reload keeps uncommitted edits (per source branch).
   useEffect(() => {
+    if (suppressDraftSaveRef.current) return
     saveDraft(config, {
       isDemoMode,
       workspace,
@@ -480,7 +489,28 @@ export const useTranslationApp = () => {
     if (!isConnected) { setShowSettings(true); return }
     if (!githubReady) return
     const sourceBranch = branch ?? config.sourceBranch
+    const previousConfig = config
+
+    // Flush current branch draft before switching so edits survive Load.
+    saveDraft(previousConfig, {
+      isDemoMode,
+      workspace,
+      activeLang,
+      translations,
+      original,
+      configs,
+      configsOriginal,
+      configSchema,
+      configSchemaOriginal,
+      shas,
+      configShas,
+      schemaSha,
+      fileSources,
+      keyOwners,
+    })
+
     setLoading(true)
+    suppressDraftSaveRef.current = true
     try {
       await withSessionRetry(async token => {
       const loadConfigRef = loadRefConfig({ ...config, token, sourceBranch })
@@ -491,10 +521,6 @@ export const useTranslationApp = () => {
       const { translations: newTrans, shas: newShas, fileSources: newFileSources } =
         await loadTranslationBundle(loadConfigRef, filePaths)
 
-      setFileSources(newFileSources)
-      setKeyOwners(buildKeyOwnersFromSources(newFileSources))
-      resetHistoryCache()
-
       const discoveredFiles = Object.entries(newFileSources).map(([lang, sources]) => ({
         lang,
         label: lang,
@@ -502,33 +528,73 @@ export const useTranslationApp = () => {
         path: sources[0]?.path ?? `${folderName}/${lang}.json`,
       }))
       const updatedConfig = { ...config, token, sourceBranch, files: discoveredFiles }
-      setConfig(updatedConfig)
-      persistSourceBranch(updatedConfig, sourceBranch)
       const draftConfig = loadRefConfig(updatedConfig)
 
-      const { schema, schemaSha, configs: newConfigs, configShas: newConfigShas } =
+      const { schema, schemaSha: remoteSchemaSha, configs: newConfigs, configShas: newConfigShas } =
         await loadConfigBundle(draftConfig, updatedConfig.files)
 
-      setTranslations(newTrans)
-      setOriginal(cloneTranslations(newTrans))
-      setShas(newShas)
-      setConfigSchema(schema)
-      setConfigSchemaOriginal(cloneSchema(schema))
-      setSchemaSha(schemaSha)
-      setConfigs(newConfigs)
-      setConfigsOriginal(cloneConfigs(newConfigs))
-      setConfigShas(newConfigShas)
+      const existingDraft = loadDraft(updatedConfig)
+        ?? loadDraft({ ...updatedConfig, files: previousConfig.files })
+      const restoreDraft = Boolean(existingDraft && isDraftDirty(existingDraft))
+
+      setConfig(updatedConfig)
+      persistSourceBranch(updatedConfig, sourceBranch)
+      resetHistoryCache()
       setIsDemoMode(false)
       setStaleConflicts([])
       staleDismissedRef.current.clear()
       setSessionLostReason(null)
       setShowLoad(false)
-      showToast(
-        sourceBranch === config.branch
-          ? ui.toast.loadedFromGithub
-          : t(ui.toast.loadedFromBranch, { branch: sourceBranch }),
-        'success',
-      )
+
+      if (restoreDraft && existingDraft) {
+        setFileSources(existingDraft.fileSources ?? newFileSources)
+        setKeyOwners(existingDraft.keyOwners ?? buildKeyOwnersFromSources(existingDraft.fileSources ?? newFileSources))
+        setTranslations(existingDraft.translations)
+        setOriginal(existingDraft.original)
+        setShas(existingDraft.shas)
+        setConfigSchema(existingDraft.configSchema)
+        setConfigSchemaOriginal(existingDraft.configSchemaOriginal)
+        setSchemaSha(existingDraft.schemaSha)
+        setConfigs(existingDraft.configs)
+        setConfigsOriginal(existingDraft.configsOriginal)
+        setConfigShas(existingDraft.configShas)
+        if (existingDraft.activeLang) setActiveLang(existingDraft.activeLang)
+        showToast(ui.toast.draftRestoredOnBranch, 'info')
+      } else {
+        setFileSources(newFileSources)
+        setKeyOwners(buildKeyOwnersFromSources(newFileSources))
+        setTranslations(newTrans)
+        setOriginal(cloneTranslations(newTrans))
+        setShas(newShas)
+        setConfigSchema(schema)
+        setConfigSchemaOriginal(cloneSchema(schema))
+        setSchemaSha(remoteSchemaSha)
+        setConfigs(newConfigs)
+        setConfigsOriginal(cloneConfigs(newConfigs))
+        setConfigShas(newConfigShas)
+        saveDraft(updatedConfig, {
+          isDemoMode: false,
+          workspace,
+          activeLang,
+          translations: newTrans,
+          original: cloneTranslations(newTrans),
+          configs: newConfigs,
+          configsOriginal: cloneConfigs(newConfigs),
+          configSchema: schema,
+          configSchemaOriginal: cloneSchema(schema),
+          shas: newShas,
+          configShas: newConfigShas,
+          schemaSha: remoteSchemaSha,
+          fileSources: newFileSources,
+          keyOwners: buildKeyOwnersFromSources(newFileSources),
+        })
+        showToast(
+          sourceBranch === previousConfig.branch
+            ? ui.toast.loadedFromGithub
+            : t(ui.toast.loadedFromBranch, { branch: sourceBranch }),
+          'success',
+        )
+      }
       })
     } catch (e) {
       if (isGitHubSessionError(e)) {
@@ -537,17 +603,28 @@ export const useTranslationApp = () => {
       }
       showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')
     } finally {
+      suppressDraftSaveRef.current = false
       setLoading(false)
     }
   }
 
   const openLoadDialog = () => {
     if (sessionLostReason) { setShowSetup(true); return }
-    if (!isConnected) { setShowSettings(true); return }
+    if (!isConnected || isDemoMode) {
+      setShowLoad(false)
+      if (!isConnected) setShowSetup(true)
+      else setShowSettings(true)
+      return
+    }
     setShowLoad(true)
   }
 
   const handleLoadConfirm = (branch: string) => {
+    if (sessionLostReason || !isConnected || isDemoMode) {
+      setShowLoad(false)
+      if (sessionLostReason || !isConnected) setShowSetup(true)
+      return
+    }
     void handleLoad(branch)
   }
 
@@ -873,6 +950,50 @@ export const useTranslationApp = () => {
     })
   }
 
+  const exportKey = (key: string, asKey?: string) => {
+    const langs = config.files.map(f => f.lang)
+    const target = asKey?.trim() || key
+    downloadKeyCsv(translations, langs, key, target)
+    showToast(
+      target === key
+        ? t(ui.toast.keyExported, { key })
+        : t(ui.toast.keyExportedAs, { key, asKey: target }),
+      'success',
+    )
+  }
+
+  /** Copy all locale values from `sourceKey` to a new key. Returns false if invalid / duplicate. */
+  const duplicateKey = (sourceKey: string, rawNewKey: string): boolean => {
+    const newKey = rawNewKey.trim()
+    if (!newKey || newKey === sourceKey) {
+      showToast(ui.table.duplicateKeySame, 'error')
+      return false
+    }
+    if (workspace === 'configs') {
+      showToast(ui.table.duplicateKeyTranslationsOnly, 'error')
+      return false
+    }
+    if (baseKeys.includes(newKey)) {
+      showToast(ui.configs.errorDuplicate, 'error')
+      return false
+    }
+    setTranslations(prev => duplicateKeyInAll(prev, sourceKey, newKey))
+    setKeyOwners(prev => {
+      const next: KeyOwnerMap = { ...prev }
+      for (const f of config.files) {
+        const sources = fileSources[f.lang] ?? []
+        if (sources.length === 0) continue
+        const langOwners = { ...(next[f.lang] ?? {}) }
+        if (sourceKey in langOwners) langOwners[newKey] = langOwners[sourceKey]
+        else langOwners[newKey] = resolveKeySourceIndex(sources, newKey, langOwners)
+        next[f.lang] = langOwners
+      }
+      return next
+    })
+    showToast(t(ui.toast.keyDuplicated, { sourceKey, newKey }), 'success')
+    return true
+  }
+
   /** Rename a key across all locales. Returns false (and shows a toast) if the new name is invalid or already used. */
   const renameKey = (oldKey: string, rawNewKey: string): boolean => {
     const newKey = rawNewKey.trim()
@@ -1127,6 +1248,7 @@ export const useTranslationApp = () => {
     setConfig(newConfig)
     setShowSetup(false)
     setOauthToken(undefined)
+    dismissWelcome()
 
     setLoading(true)
     try {
@@ -1222,7 +1344,7 @@ export const useTranslationApp = () => {
     activeGroup, setActiveGroup, groups,
     showSettings, setShowSettings, showLoad, setShowLoad, showCommit, setShowCommit,
     showSetup, setShowSetup, oauthToken,
-    commitMsg, setCommitMsg, loading, oauthConnecting, isDemoMode,
+    commitMsg, setCommitMsg, loading, oauthConnecting, isDemoMode, isConnected,
     addingKey, setAddingKey, newKey, setNewKey, newConfigType, setNewConfigType, addKey, startAddKey,
     showHistory, setShowHistory, fileHistory,
     historyLoading: historyStatus[activeLang] === 'loading',
@@ -1269,7 +1391,7 @@ export const useTranslationApp = () => {
       })
     },
     reloadHistory: () => { void handleLoadHistory(activeLang, { force: true }) },
-    updateValue, updateConfigValue, restoreKey, deleteKey, renameKey, clearConfigOnLang,
+    updateValue, updateConfigValue, restoreKey, deleteKey, renameKey, duplicateKey, exportKey, clearConfigOnLang,
     handleBulkApply, handleJsonApply, handleConfigImport,
   }
 }

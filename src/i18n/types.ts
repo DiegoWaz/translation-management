@@ -45,6 +45,16 @@ export type UiMessages = {
     editKeyTitle: string; deleteKeyTitle: string; renameKeyPlaceholder: string
     renameKeyConfirmTitle: string; renameKeyCancelTitle: string
     deleteKeyConfirm: string; deleteKeyConfirmShort: string
+    exportKeyTitle: string
+    duplicateKeyTitle: string
+    duplicateKeyPlaceholder: string
+    duplicateKeyHint: string
+    duplicateKeyCreate: string
+    duplicateKeyConfirmTitle: string
+    duplicateKeyExport: string
+    duplicateKeyExportTitle: string
+    duplicateKeySame: string
+    duplicateKeyTranslationsOnly: string
   }
   empty: {
     noMissing: string; noModified: string; noResult: string; noKey: string
@@ -107,6 +117,7 @@ export type UiMessages = {
     jsonInvalid: string; emptyHint: string; emptyArrow: string
     assignmentSummary: string; column: string; targetKey: string; choose: string
     searchKey: string; noMatchingKeys: string
+    createKeyFromSearch: string
     newKeyPlaceholder: string
     localesAssigned: string; localesAssignedPlural: string
     valuesToImport: string; valuesToImportPlural: string
@@ -130,13 +141,14 @@ export type UiMessages = {
     formatCsv: string; formatCsvHint: string
     formatTsv: string; formatTsvHint: string
     tableView: string; rawView: string
-    keys: string; keysAll: string; keysFiltered: string; languages: string
+    keys: string; keysAll: string; keysFiltered: string; keysFilteredHint: string; languages: string
     preview: string; close: string; copy: string; copied: string; download: string
   }
   toast: {
-    loadedFromGithub: string; loadedFromBranch: string; draftRestored: string; error: string; historyError: string
+    loadedFromGithub: string; loadedFromBranch: string; draftRestored: string; draftRestoredOnBranch: string; error: string; historyError: string
     nothingToCommit: string; prCreated: string; prCreatedOnBranch: string
     keyRestored: string; keyAdded: string; configKeyAdded: string; keyRenamed: string
+    keyExported: string; keyExportedAs: string; keyDuplicated: string
     valuesImported: string; valuesImportedJson: string; configsImported: string
     copiedClipboard: string; fileDownloaded: string
     staleResolved: string; staleKeptLocal: string
@@ -186,6 +198,35 @@ export type UiMessages = {
     disconnect: string; connectedTo: string
     resumeLast: string; resumeLastHint: string; prefsRestored: string; resumeNotFound: string
     folderLabel: string; folderHint: string; folderMatched: string; folderNoMatch: string; folderSuggestions: string
+  }
+  onboarding: {
+    headline: string
+    lead: string
+    audience: string
+    pointEdit: string
+    pointDraft: string
+    pointPr: string
+    connect: string
+    demo: string
+    backToApp: string
+  }
+  footer: {
+    welcome: string
+    features: string
+    app: string
+  }
+  featuresPage: {
+    title: string
+    lead: string
+    flow: string
+    audienceTitle: string
+    audienceDevTitle: string
+    audienceDev: string
+    audienceOutTitle: string
+    audienceOut: string
+    absentTitle: string
+    absent: string[]
+    sections: Array<{ title: string; items: string[] }>
   }
 }
 

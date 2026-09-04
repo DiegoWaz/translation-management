@@ -14,8 +14,10 @@ Les données de travail (traductions, configs, schéma, SHAs, chemins source par
 | Action | Effet |
 |---|---|
 | Édition locale | Sauvegarde continue |
-| **Charger** depuis GitHub | Ouvre un dialogue de choix de branche ; remplace l’état local par le distant, puis resauvegarde |
+| **Charger** depuis GitHub | Remplace l’état local par le distant **sur la branche cible** ; le brouillon de la branche quittée reste en `localStorage`. Si la branche cible a déjà un brouillon sale, il est **restauré** (toast). |
 | **Commit** réussi | Les « originaux » sont alignés sur l’état poussé ; brouillon mis à jour |
+
+Les brouillons sont **par branche** (`sourceBranch`). Changer de branche puis y revenir conserve vos edits non commités de chaque branche. Recharger la page restaure aussi le brouillon de la branche courante.
 
 Changer `VITE_GH_LANGS` / dépôt dans `.env` → autre clé de stockage (brouillon précédent non réutilisé).
 

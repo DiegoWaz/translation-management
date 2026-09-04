@@ -43,6 +43,7 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 - **Colonnes** : glisser le bord droit d’un en-tête pour agrandir / rétrécir ; double-clic pour réinitialiser (largeurs mémorisées)
 - **Recherche** : filtre sur le nom de clé **et** les valeurs de toutes les locales
 - **+ Clé** dans un groupe (ex. `common`) : préremplit `common.`
+- **⎘ sur une ligne** : dupliquer la clé sous un autre nom (toutes les locales, in-app) **ou** exporter un CSV sous ce nom (réimport ailleurs sans retaper les valeurs). Entrée = créer ; bouton **CSV** = télécharger.
 
 ### Filtres
 
@@ -55,11 +56,12 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 
 ### Import / export
 
-- **Exporter** : JSON ou TSV (locales en colonnes), ou **Fichiers d'origine (ZIP)** — mêmes chemins et arborescence JSON que sur GitHub (`fileSources` / `rawContent`). Si le dépôt contient **plusieurs dossiers `translations/`** (ex. `apps/web/translations/` et `packages/ui/translations/`), tous les fichiers découverts sont chargés, commités et exportés séparément ; les clés sont réparties via `keyOwners` (fichier d’origine + routage namespace/chemin pour les nouvelles clés).
+- **Exporter** (toolbar) : JSON, CSV/TSV, ou **Fichiers d'origine (ZIP)**. Scope **Vue courante** = clés visibles après recherche / groupe / filtre (pas « une clé au hasard » — pour une seule clé, utiliser ⎘ sur la ligne).
+- Si le dépôt contient **plusieurs dossiers `translations/`**, tous les fichiers découverts sont chargés, commités et exportés séparément ; les clés sont réparties via `keyOwners`.
 - **Clés dupliquées** : bannière d’avertissement si la même clé existe dans plusieurs fichiers d’une même locale.
 - **Conflits distants** : détection stale (poll 30 s) → bouton **Voir les différences** → résolution clé par clé (garder la mienne / prendre la distante) ou rechargement complet.
 - **Performance** : virtualisation du tableau (mode locale, > 40 lignes visibles sur la page courante).
-- **Importer** : texte libre, tableau `locale: valeur`, ou JSON
+- **Importer** : texte libre, tableau `locale: valeur`, ou JSON. Dans l’assignation de clé, si la recherche ne trouve rien, un CTA crée la clé avec le texte saisi.
 - **+ Clé** : ajoute la clé sur toutes les locales
 
 Voir aussi [workflow.md](workflow.md) pour brouillon et commit.

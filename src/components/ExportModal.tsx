@@ -214,6 +214,9 @@ export const ExportModal = ({
                   )}
                 >{label}</button>
               ))}
+              {keyScope === 'filtered' && (
+                <p className="m-0 mt-1 text-[10px] text-fg-muted leading-relaxed">{ui.export.keysFilteredHint}</p>
+              )}
             </div>
             <div>
               <div className="text-[10px] text-fg-muted font-semibold tracking-wider uppercase mb-2">{ui.export.languages}</div>

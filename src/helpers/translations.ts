@@ -12,6 +12,19 @@ export const addKeyToAll = (prev: TranslationMap, key: string): TranslationMap =
   }, { ...prev })
 }
 
+/** Copy all locale values from `sourceKey` onto a new `newKey` (source kept). */
+export const duplicateKeyInAll = (
+  prev: TranslationMap,
+  sourceKey: string,
+  newKey: string,
+): TranslationMap => {
+  return Object.keys(prev).reduce<TranslationMap>((next, lang) => {
+    const map = prev[lang] ?? {}
+    next[lang] = { ...map, [newKey]: map[sourceKey] ?? '' }
+    return next
+  }, { ...prev })
+}
+
 export const removeKeyFromAll = (prev: TranslationMap, key: string): TranslationMap => {
   return Object.keys(prev).reduce<TranslationMap>((next, lang) => {
     const copy = { ...prev[lang] }

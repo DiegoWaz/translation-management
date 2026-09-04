@@ -30,6 +30,8 @@ Navigateur  →  GitHub API  →  votre dépôt
 
 - Mode **démo** sans token (données fictives)
 - Assistant **Se connecter** : OAuth GitHub ou PAT, repo, branche, langues auto-détectées
+- **Onboarding** page routée `/welcome` (première visite sans config ; accessible via le footer **À propos**)
+- Page **Fonctionnalités** routée `/features` (catalogue produit ; lien footer)
 - Config équipe via **`.env`** (`VITE_GH_*`)
 - Token **chiffré** localement (AES-GCM + IndexedDB)
 - **Reconnexion obligatoire** si le token expire ou est révoqué (modal bloquante — le brouillon local est conservé)

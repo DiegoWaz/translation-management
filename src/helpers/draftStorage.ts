@@ -96,3 +96,27 @@ export const clearDraft = (config: GitHubConfig): void => {
     // ignore
   }
 }
+
+/** True when the draft has uncommitted translation, config, or schema edits. */
+export const isDraftDirty = (draft: DraftSnapshot): boolean => {
+  for (const lang of Object.keys(draft.translations)) {
+    const current = draft.translations[lang] ?? {}
+    const orig = draft.original[lang] ?? {}
+    const keys = new Set([...Object.keys(current), ...Object.keys(orig)])
+    for (const key of keys) {
+      if ((current[key] ?? '') !== (orig[key] ?? '')) return true
+    }
+  }
+  for (const lang of Object.keys(draft.original)) {
+    if (!(lang in draft.translations)) return true
+  }
+  for (const lang of Object.keys(draft.configs)) {
+    const current = draft.configs[lang] ?? {}
+    const orig = draft.configsOriginal[lang] ?? {}
+    const keys = new Set([...Object.keys(current), ...Object.keys(orig)])
+    for (const key of keys) {
+      if (JSON.stringify(current[key]) !== JSON.stringify(orig[key])) return true
+    }
+  }
+  return JSON.stringify(draft.configSchema) !== JSON.stringify(draft.configSchemaOriginal)
+}

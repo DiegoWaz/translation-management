@@ -35,7 +35,7 @@ La config équipe passe **uniquement** par `.env` (gitignored). Pas d’édition
 | `VITE_GH_CONFIG_PATH_TEMPLATE` | non | Chemin configs | `configs/{lang}.json` |
 | `VITE_GH_CONFIG_SCHEMA_PATH` | non | Fichier schéma | `configs/schema.json` |
 
-\*Sans token + owner + repo → **mode démo**.
+\*Sans token + owner + repo → redirection vers **`/welcome`**, puis mode démo ou assistant de connexion.
 
 > Les variables `VITE_*` sont exposées au **navigateur**. Ne committez jamais un token.
 

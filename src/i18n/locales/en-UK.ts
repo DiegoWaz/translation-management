@@ -113,7 +113,17 @@ export const enUK: UiMessages = {
     "renameKeyConfirmTitle": "Confirm rename",
     "renameKeyCancelTitle": "Cancel",
     "deleteKeyConfirm": "Delete key \"{key}\" from all languages? This cannot be undone.",
-    "deleteKeyConfirmShort": "Delete?"
+    "deleteKeyConfirmShort": "Delete?",
+    "exportKeyTitle": "Download this key (all languages, CSV)",
+    "duplicateKeyTitle": "Duplicate / export under another name",
+    "duplicateKeyPlaceholder": "new.key",
+    "duplicateKeyHint": "Copy “{key}” to a new key, or export CSV under that name",
+    "duplicateKeyCreate": "Create",
+    "duplicateKeyConfirmTitle": "Create the key with all language values",
+    "duplicateKeyExport": "CSV",
+    "duplicateKeyExportTitle": "Download CSV under this name (for re-import elsewhere)",
+    "duplicateKeySame": "Choose a different key name",
+    "duplicateKeyTranslationsOnly": "Duplication is only available for translations"
   },
   "empty": {
     "noMissing": "No missing keys",
@@ -208,7 +218,7 @@ export const enUK: UiMessages = {
     "branchLabel": "Source branch",
     "baseBranchSuffix": "PR base",
     "prTargetHint": "Commits will open a PR targeting {branch}.",
-    "draftWarning": "Uncommitted changes will be lost when loading.",
+    "draftWarning": "This branch’s draft is kept. If the target branch already has a local draft, it will be restored.",
     "confirm": "Load",
     "loading": "Loading…",
     "branchesLoading": "Loading branches…",
@@ -259,6 +269,7 @@ export const enUK: UiMessages = {
     "choose": "— choose —",
     "searchKey": "Search for a key…",
     "noMatchingKeys": "No matching keys",
+    "createKeyFromSearch": "Create \"{key}\"",
     "newKeyPlaceholder": "my.new.key",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",
@@ -311,6 +322,7 @@ export const enUK: UiMessages = {
     "keys": "Keys",
     "keysAll": "All ({count})",
     "keysFiltered": "Current view ({count})",
+    "keysFilteredHint": "Keys visible after search / group / filter",
     "languages": "Languages",
     "preview": "Preview",
     "close": "Close",
@@ -322,6 +334,7 @@ export const enUK: UiMessages = {
     "loadedFromGithub": "Files loaded from GitHub",
     "loadedFromBranch": "Files loaded from branch {branch}",
     "draftRestored": "Uncommitted draft restored from this browser",
+    "draftRestoredOnBranch": "Local draft restored for this branch",
     "error": "Error: {message}",
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",
@@ -330,6 +343,9 @@ export const enUK: UiMessages = {
     "keyRestored": "Key \"{key}\" restored",
     "keyAdded": "Key \"{key}\" added",
     "keyRenamed": "Key \"{oldKey}\" renamed to \"{newKey}\"",
+    "keyExported": "Key \"{key}\" downloaded (CSV, all languages)",
+    "keyExportedAs": "Key \"{key}\" exported as \"{asKey}\" (CSV)",
+    "keyDuplicated": "Key \"{sourceKey}\" duplicated as \"{newKey}\"",
     "configKeyAdded": "Config key \"{key}\" added",
     "valuesImported": "{count} values imported",
     "valuesImportedJson": "{count} values imported (JSON)",
@@ -454,5 +470,114 @@ export const enUK: UiMessages = {
     "folderMatched": "{count} folder(s): {paths}",
     "folderNoMatch": "No translation files found for \"{folder}\".",
     "folderSuggestions": "Folders detected in the repo"
+  },
+  "onboarding": {
+    "headline": "Edit your i18n JSON straight on GitHub",
+    "lead": "LocaleHub is a Git-native editor for developers. Your repo stays the source of truth — local draft, multi-file commit via pull request.",
+    "audience": "For developers — not a TMS for PMs / QA / translators.",
+    "pointEdit": "Edit keys and translations in the browser, all locales side by side",
+    "pointDraft": "Auto draft in the browser — nothing lost before you commit",
+    "pointPr": "One commit / PR for every locale file",
+    "connect": "Connect GitHub",
+    "demo": "Try demo mode",
+    "backToApp": "Back to editor"
+  },
+  "footer": {
+    "welcome": "About",
+    "features": "Features",
+    "app": "Editor"
+  },
+  "featuresPage": {
+    "title": "Features",
+    "lead": "LocaleHub is a Git-native i18n editor for developers. Edit translation JSON in the browser; your GitHub repo stays the source of truth. Not a TMS — no PO / QA / translator workflow.",
+    "flow": "Browser → GitHub API → your repo  ·  localStorage (draft)",
+    "audienceTitle": "Who it's for",
+    "audienceDevTitle": "Developers",
+    "audienceDev": "Add keys, translate, commit via PR, resolve Git conflicts.",
+    "audienceOutTitle": "Out of scope",
+    "audienceOut": "PMs, QA, external translators, business review, task assignment.",
+    "absentTitle": "Intentionally missing",
+    "absent": [
+      "In-app roles and permissions",
+      "Machine translation, translation memory, glossary",
+      "“To review / approved” states, per-key comments",
+      "Screenshots, Figma context, PO / XLIFF / YAML formats",
+      "Backend or database (data = browser + GitHub)",
+      "Direct push to main — always a Pull Request"
+    ],
+    "sections": [
+      {
+        "title": "Sign-in & setup",
+        "items": [
+          "Demo mode without a token (sample data)",
+          "Connect wizard: GitHub OAuth or PAT, repo, branch, auto-detected languages",
+          "/welcome and /features pages — linked from the footer",
+          "Team config via .env (VITE_GH_*)",
+          "Token encrypted locally (AES-GCM + IndexedDB)",
+          "Forced reconnect if the token expires (local draft kept)",
+          "Read-only settings · disconnect · UI en / fr / es · light / dark theme"
+        ]
+      },
+      {
+        "title": "GitHub & branches",
+        "items": [
+          "REST API + Git Data (multi-file commit)",
+          "Loaded branch vs PR target branch, persisted",
+          "Load from a branch (dialog + full-screen loader)",
+          "Discover translations/ folders in a monorepo",
+          "Commit on a new or existing branch (follow-up PR)",
+          "Switch to the PR branch after creation"
+        ]
+      },
+      {
+        "title": "Translation editing",
+        "items": [
+          "Table: key · base · target · last modified",
+          "Inline edit, key mode (all locales), add / rename / delete / duplicate",
+          "Search (key + all locales), namespace groups, pagination, virtualisation",
+          "Indicators: modified ◆, missing ⊘, variables {x} ⚠️",
+          "Filters: all · missing · modified · variables",
+          "Per-language stats (completion %, counters)"
+        ]
+      },
+      {
+        "title": "Multi-file & JSON",
+        "items": [
+          "Flat or nested JSON; structure preserved on commit",
+          "Multiple translations/ folders per locale; keyOwners routing",
+          "Duplicate-key warning across files"
+        ]
+      },
+      {
+        "title": "Import / export",
+        "items": [
+          "Import: free text, locale: table, multi-locale JSON",
+          "Export: CSV, TSV, JSON, ZIP by namespace, original-files ZIP",
+          "Single-key export / duplicate (all languages)"
+        ]
+      },
+      {
+        "title": "Light collab (via Git)",
+        "items": [
+          "Stale poll (30 s) + per-key resolve or full reload",
+          "Git history per locale + restore a value"
+        ]
+      },
+      {
+        "title": "Dev workflow",
+        "items": [
+          "Auto draft in localStorage (per branch)",
+          "Change counter · single multi-file commit via PR",
+          "Message lists modified locales · overlay during load / commit"
+        ]
+      },
+      {
+        "title": "Configs & DTO (built, tabs disabled)",
+        "items": [
+          "Configs: camelCase schema, Excel/JSON — not in the TopBar yet",
+          "DTO: Zod + JSON validation — same"
+        ]
+      }
+    ]
   }
 }

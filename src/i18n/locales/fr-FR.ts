@@ -113,7 +113,17 @@ export const frFR: UiMessages = {
     "renameKeyConfirmTitle": "Confirmer le renommage",
     "renameKeyCancelTitle": "Annuler",
     "deleteKeyConfirm": "Supprimer la clé \"{key}\" de toutes les langues ? Cette action est irréversible.",
-    "deleteKeyConfirmShort": "Supprimer ?"
+    "deleteKeyConfirmShort": "Supprimer ?",
+    "exportKeyTitle": "Télécharger cette clé (toutes les langues, CSV)",
+    "duplicateKeyTitle": "Dupliquer / exporter sous un autre nom",
+    "duplicateKeyPlaceholder": "nouvelle.cle",
+    "duplicateKeyHint": "Copier « {key} » vers une nouvelle clé, ou exporter en CSV sous ce nom",
+    "duplicateKeyCreate": "Créer",
+    "duplicateKeyConfirmTitle": "Créer la clé avec les valeurs de toutes les langues",
+    "duplicateKeyExport": "CSV",
+    "duplicateKeyExportTitle": "Télécharger un CSV sous ce nom (pour réimporter ailleurs)",
+    "duplicateKeySame": "Choisissez un nom de clé différent",
+    "duplicateKeyTranslationsOnly": "La duplication n’est disponible que pour les traductions"
   },
   "empty": {
     "noMissing": "Aucune clé manquante",
@@ -208,7 +218,7 @@ export const frFR: UiMessages = {
     "branchLabel": "Branche source",
     "baseBranchSuffix": "base PR",
     "prTargetHint": "Les commits ouvriront une PR vers {branch}.",
-    "draftWarning": "Des modifications non commitées seront perdues au chargement.",
+    "draftWarning": "Le brouillon de cette branche est conservé. Si la branche cible a déjà un brouillon local, il sera restauré.",
     "confirm": "Charger",
     "loading": "Chargement…",
     "branchesLoading": "Chargement des branches…",
@@ -259,6 +269,7 @@ export const frFR: UiMessages = {
     "choose": "— choisir —",
     "searchKey": "Rechercher une clé…",
     "noMatchingKeys": "Aucune clé correspondante",
+    "createKeyFromSearch": "Créer « {key} »",
     "newKeyPlaceholder": "ma.nouvelle.cle",
     "localesAssigned": "{count} locale",
     "localesAssignedPlural": "{count} locales",
@@ -311,6 +322,7 @@ export const frFR: UiMessages = {
     "keys": "Clés",
     "keysAll": "Toutes ({count})",
     "keysFiltered": "Vue courante ({count})",
+    "keysFilteredHint": "Clés visibles après recherche / groupe / filtre",
     "languages": "Langues",
     "preview": "Aperçu",
     "close": "Fermer",
@@ -322,6 +334,7 @@ export const frFR: UiMessages = {
     "loadedFromGithub": "Fichiers chargés depuis GitHub",
     "loadedFromBranch": "Fichiers chargés depuis la branche {branch}",
     "draftRestored": "Brouillon non commité restauré depuis ce navigateur",
+    "draftRestoredOnBranch": "Brouillon local restauré pour cette branche",
     "error": "Erreur: {message}",
     "historyError": "Erreur historique: {message}",
     "nothingToCommit": "Aucune modification à committer",
@@ -330,6 +343,9 @@ export const frFR: UiMessages = {
     "keyRestored": "Clé \"{key}\" restaurée",
     "keyAdded": "Clé \"{key}\" ajoutée",
     "keyRenamed": "Clé \"{oldKey}\" renommée en \"{newKey}\"",
+    "keyExported": "Clé « {key} » téléchargée (CSV, toutes les langues)",
+    "keyExportedAs": "Clé « {key} » exportée sous « {asKey} » (CSV)",
+    "keyDuplicated": "Clé « {sourceKey} » dupliquée en « {newKey} »",
     "configKeyAdded": "Clé config \"{key}\" ajoutée",
     "valuesImported": "{count} valeurs importées",
     "valuesImportedJson": "{count} valeurs importées (JSON)",
@@ -454,5 +470,114 @@ export const frFR: UiMessages = {
     "folderMatched": "{count} dossier(s) : {paths}",
     "folderNoMatch": "Aucun fichier de traduction trouvé pour « {folder} ».",
     "folderSuggestions": "Dossiers détectés dans le dépôt"
+  },
+  "onboarding": {
+    "headline": "Éditez vos JSON i18n directement sur GitHub",
+    "lead": "LocaleHub est un éditeur Git-native pour développeurs. La source de vérité reste votre dépôt — brouillon local, commit multi-fichiers via pull request.",
+    "audience": "Pour les développeurs — pas un TMS pour PO / QA / traducteurs.",
+    "pointEdit": "Modifier clés et traductions dans le navigateur, toutes locales côte à côte",
+    "pointDraft": "Brouillon auto dans le navigateur — rien n’est perdu avant le commit",
+    "pointPr": "Un seul commit / PR pour tous les fichiers de locale",
+    "connect": "Connecter GitHub",
+    "demo": "Essayer en mode démo",
+    "backToApp": "Retour à l’éditeur"
+  },
+  "footer": {
+    "welcome": "À propos",
+    "features": "Fonctionnalités",
+    "app": "Éditeur"
+  },
+  "featuresPage": {
+    "title": "Fonctionnalités",
+    "lead": "LocaleHub est un éditeur i18n Git-native pour les développeurs. Les JSON de traduction se modifient dans le navigateur ; la source de vérité reste le dépôt GitHub. Pas de TMS, pas de workflow PO / QA / traducteur métier.",
+    "flow": "Navigateur → GitHub API → votre dépôt  ·  localStorage (brouillon)",
+    "audienceTitle": "Pour qui",
+    "audienceDevTitle": "Développeurs",
+    "audienceDev": "Ajout de clés, traductions, commit via PR, résolution de conflits Git.",
+    "audienceOutTitle": "Hors scope",
+    "audienceOut": "PO, QA, traducteurs externes, relecture métier, assignation de tâches.",
+    "absentTitle": "Volontairement absent",
+    "absent": [
+      "Rôles et permissions dans l’app",
+      "Machine translation, mémoire de traduction, glossaire",
+      "États « à valider / approuvé », commentaires par clé",
+      "Screenshots, contexte Figma, formats PO / XLIFF / YAML",
+      "Backend ou base de données (données = navigateur + GitHub)",
+      "Push direct sur main — toujours une Pull Request"
+    ],
+    "sections": [
+      {
+        "title": "Connexion & configuration",
+        "items": [
+          "Mode démo sans token (données fictives)",
+          "Assistant Se connecter : OAuth GitHub ou PAT, repo, branche, langues auto-détectées",
+          "Pages /welcome (onboarding) et /features — accessibles depuis le footer",
+          "Config équipe via .env (VITE_GH_*)",
+          "Token chiffré localement (AES-GCM + IndexedDB)",
+          "Reconnexion obligatoire si le token expire (brouillon local conservé)",
+          "Settings en lecture seule · déconnexion · UI fr / en / es · thème clair / sombre"
+        ]
+      },
+      {
+        "title": "GitHub & branches",
+        "items": [
+          "API REST + Git Data (commit multi-fichiers)",
+          "Branche chargée vs branche cible PR, persistées",
+          "Charger depuis une branche (dialogue + loader)",
+          "Découverte des dossiers translations/ du mono-repo",
+          "Commit sur nouvelle branche ou branche existante (PR de suivi)",
+          "Bascule sur la branche de la PR après création"
+        ]
+      },
+      {
+        "title": "Édition des traductions",
+        "items": [
+          "Tableau clé · base · cible · dernière modification",
+          "Édition inline, mode clé (toutes les langues), + / renommer / supprimer / dupliquer",
+          "Recherche (clé + toutes locales), groupes par namespace, pagination, virtualisation",
+          "Indicateurs : modifié ◆, manquant ⊘, variables {x} ⚠️",
+          "Filtres : toutes · manquantes · modifiées · variables",
+          "Stats par langue (complétion %, compteurs)"
+        ]
+      },
+      {
+        "title": "Multi-fichiers & JSON",
+        "items": [
+          "JSON plat ou imbriqué ; structure préservée au commit",
+          "Plusieurs dossiers translations/ par langue ; routage keyOwners",
+          "Alerte clés dupliquées entre fichiers"
+        ]
+      },
+      {
+        "title": "Import / export",
+        "items": [
+          "Import : texte, tableau locale:, JSON multi-locales",
+          "Export : CSV, TSV, JSON, ZIP par namespace, ZIP fichiers d’origine",
+          "Export / duplication d’une clé seule (toutes les langues)"
+        ]
+      },
+      {
+        "title": "Collab légère (via Git)",
+        "items": [
+          "Poll stale (30 s) + résolution clé par clé ou rechargement",
+          "Historique Git par locale + restauration d’une valeur"
+        ]
+      },
+      {
+        "title": "Workflow dev",
+        "items": [
+          "Brouillon auto localStorage (par branche)",
+          "Compteur de modifications · commit unique multi-fichiers via PR",
+          "Message listant les locales modifiées · overlay pendant load / commit"
+        ]
+      },
+      {
+        "title": "Configs & DTO (codés, onglets désactivés)",
+        "items": [
+          "Configs : schéma camelCase, Excel/JSON — non accessible depuis la TopBar",
+          "DTO : validation Zod + JSON — idem"
+        ]
+      }
+    ]
   }
 }

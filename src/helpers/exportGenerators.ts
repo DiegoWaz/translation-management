@@ -216,6 +216,37 @@ export const generateCsvExport = (
   return `\uFEFF${body}`
 }
 
+/** Trigger a browser download for a text export (CSV/TSV/JSON). */
+export const downloadTextFile = (filename: string, content: string, mime = 'text/plain;charset=utf-8'): void => {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** One-key CSV across all locales — handy for copying existing translations.
+ * Pass `asKey` to write a different key name in the file (re-import under a new id). */
+export const downloadKeyCsv = (
+  translations: Record<string, Record<string, string>>,
+  langs: string[],
+  key: string,
+  asKey?: string,
+): void => {
+  const exportKey = (asKey?.trim() || key)
+  const data = Object.fromEntries(
+    langs.map(lang => [lang, { [exportKey]: translations[lang]?.[key] ?? '' }]),
+  )
+  const safe = exportKey.replace(/[^\w.-]+/g, '_').slice(0, 80) || 'key'
+  downloadTextFile(
+    `${safe}.csv`,
+    generateCsvExport(data, langs, [exportKey]),
+    'text/csv;charset=utf-8',
+  )
+}
+
 export const configMapsToStringMaps = (
   configs: Record<string, ConfigMap>,
   schema: ConfigSchema,
