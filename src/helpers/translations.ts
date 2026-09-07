@@ -52,13 +52,19 @@ export const applyBulkAssignments = (
   parsed: ParsedImport[],
 ): { next: TranslationMap; count: number } => {
   let count = 0
-  const next = { ...prev }
+  let next = { ...prev }
   for (const { paragraphIndex, key } of assignments) {
     if (!key) continue
+    // Ensure the key exists on every known locale (empty where not imported).
+    if (!Object.values(next).some(map => key in (map ?? {}))) {
+      next = addKeyToAll(next, key)
+    }
     for (const { localeCode, paragraphs } of parsed) {
       const lang = resolveLocaleCode(localeCode)
       const value = paragraphs[paragraphIndex]
-      if (value === undefined) continue
+      if (value === undefined || value === '') continue
+      // Only write into locales already present in the workspace.
+      if (!(lang in next)) continue
       next[lang] = { ...(next[lang] ?? {}), [key]: value }
       count++
     }

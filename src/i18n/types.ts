@@ -120,7 +120,7 @@ export type UiMessages = {
     jsonInvalid: string; emptyHint: string; emptyArrow: string
     assignmentSummary: string; column: string; targetKey: string; choose: string
     searchKey: string; noMatchingKeys: string
-    createKeyFromSearch: string
+    createKeyFromSearch: string; createKeyAction: string
     newKeyPlaceholder: string
     localesAssigned: string; localesAssignedPlural: string
     valuesToImport: string; valuesToImportPlural: string

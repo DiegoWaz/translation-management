@@ -97,16 +97,21 @@ const KeyPicker = ({
             className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-44 overflow-y-auto rounded-md border border-border bg-card shadow-lg"
           >
             {filtered.length === 0 ? (
-              <div className="p-1.5 flex flex-col gap-1">
+              <div className="p-1.5 flex flex-col gap-1 min-w-0">
                 <div className="px-1 py-1 text-[11px] text-fg-muted">{ui.import.noMatchingKeys}</div>
                 {query.trim() && (
                   <button
                     type="button"
                     onMouseDown={e => e.preventDefault()}
                     onClick={createFromQuery}
-                    className="w-full text-left px-2.5 py-2 rounded-md text-[11px] font-mono border border-border-brand-soft bg-brand-soft-bg text-fg-brand cursor-pointer"
+                    className="w-full min-w-0 text-left px-2.5 py-2 rounded-md border border-border-brand-soft bg-brand-soft-bg text-fg-brand cursor-pointer whitespace-normal"
                   >
-                    {t(ui.import.createKeyFromSearch, { key: query.trim() })}
+                    <span className="block text-[10px] font-sans text-fg-muted mb-0.5">
+                      {ui.import.createKeyAction}
+                    </span>
+                    <span className="block text-[11px] font-mono break-all leading-snug">
+                      {query.trim()}
+                    </span>
                   </button>
                 )}
               </div>
@@ -120,7 +125,7 @@ const KeyPicker = ({
                   onMouseDown={e => e.preventDefault()}
                   onClick={() => pick(key)}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 text-[11px] font-mono border-none cursor-pointer',
+                    'w-full min-w-0 text-left px-2.5 py-1.5 text-[11px] font-mono border-none cursor-pointer break-all whitespace-normal',
                     key === value ? 'bg-brand-soft-bg text-fg-brand' : 'bg-transparent text-fg hover:bg-row-hover',
                   )}
                 >
@@ -149,7 +154,7 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
   onApplyJson: (data: Record<string, Record<string, string>>) => void
   onClose: () => void; isMobile: boolean
 }) => {
-  const [format, setFormat] = useState<ImportFormat>('text')
+  const [format, setFormat] = useState<ImportFormat>('table')
   const [rawText, setRawText] = useState('')
   const [parsed, setParsed] = useState<ParsedImport[]>([])
   const [jsonResult, setJsonResult] = useState<JsonImportResult | null>(null)
@@ -184,7 +189,17 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
     return { ...p, langCode, file: configFiles.find(f => f.lang === langCode), inConfig: Boolean(configFiles.find(f => f.lang === langCode)) }
   })
   const assignedCount = Object.values(assignments).filter(Boolean).length
-  const totalValues = assignedCount * parsed.length
+  const totalValues = useMemo(() => {
+    let n = 0
+    for (const [idxStr, key] of Object.entries(assignments)) {
+      if (!key) continue
+      const idx = Number(idxStr)
+      for (const row of parsed) {
+        if ((row.paragraphs[idx] ?? '').trim()) n++
+      }
+    }
+    return n
+  }, [assignments, parsed])
   const allKeys = [...new Set([...baseKeys, ...Object.values(newKeyInputs).filter(Boolean), ...Object.values(assignments).filter(Boolean)])].sort()
 
   const formatTabs: Array<{ key: ImportFormat; label: string; hint: string }> = [
@@ -287,9 +302,9 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
                 </div>
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
                   {Array.from({ length: maxParagraphs }, (_, idx) => {
-                    const preview = parsed.find(p => p.paragraphs[idx])?.paragraphs[idx] ?? ''
+                    const preview = parsed.map(p => p.paragraphs[idx]).find(v => (v ?? '').trim()) ?? ''
                     const isCreating = creating[idx]
-                    const assignedLocales = resolvedLangs.filter(l => l.paragraphs[idx])
+                    const assignedLocales = resolvedLangs.filter(l => (l.paragraphs[idx] ?? '').trim())
                     return (
                       <div key={idx} className="px-4 py-2.5 border-b border-border-subtle grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-3 items-start">
                         <div className="min-w-0">
