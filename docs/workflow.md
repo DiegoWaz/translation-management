@@ -1,14 +1,15 @@
 # Workflow : brouillon, commit, historique
 
-## Brouillon local (`localStorage`)
+## Brouillon local (IndexedDB + `localStorage`)
 
 Les données de travail (traductions, configs, schéma, SHAs, chemins source par locale, workspace, locale active…) sont sauvegardées automatiquement dans le navigateur.
 
-- **Recharger la page** : le brouillon non commité est restauré
-- Toast si des modifications non pushées étaient présentes
-- Clé de stockage liée à `owner/repo/sourceBranch` (préfixe `localehub:draft:v1`, voir `src/helpers/draftStorage.ts`) — **sans** la liste des langues (sinon un refresh après découverte multi-locales ratissait le brouillon). Inclut `fileSources` (chemins repo + JSON d’origine) pour l’export « fichiers d’origine » après rechargement, y compris quand plusieurs dossiers `translations/` existent.
+- **Stockage principal : IndexedDB** (supporte les gros dépôts multi-locales). `localStorage` reste un miroir best-effort ; s’il est saturé (~5 Mo), le brouillon IDB reste valide.
+- **Recharger la page** : le brouillon non commité est restauré (toast)
+- Clé de stockage liée à `owner/repo/sourceBranch` (préfixe `localehub:draft:v1`, voir `src/helpers/draftStorage.ts`) — **sans** la liste des langues.
 - Les **langues découvertes** au Load sont persistées pour reconstruire la même liste au refresh.
-- La **branche chargée** (`sourceBranch`) est persistée entre les sessions (`localStorage`, ou `StoredConfig` après l’assistant OAuth). La **branche de base** (`branch`) reste la cible des Pull Requests.
+- La **branche chargée** (`sourceBranch`) est persistée entre les sessions. La **branche de base** (`branch`) reste la cible des Pull Requests.
+- Si l’enregistrement échoue complètement, un toast d’erreur s’affiche (plus d’échec silencieux).
 
 ### Quand le brouillon est remplacé
 

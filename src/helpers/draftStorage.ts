@@ -11,6 +11,10 @@ const STORAGE_PREFIX = 'localehub:draft:v1'
 /** Previous product key — still read once for migration. */
 const LEGACY_STORAGE_PREFIX = 'tm:draft:v1'
 
+const IDB_NAME = 'localehub-drafts'
+const IDB_STORE = 'drafts'
+const IDB_VERSION = 1
+
 export type DraftSnapshot = {
   v: 1
   savedAt: number
@@ -31,6 +35,8 @@ export type DraftSnapshot = {
   /** Explicit routing for keys across multiple source files per locale. */
   keyOwners?: Record<string, Record<string, number>>
 }
+
+export type DraftSaveResult = { ok: true; via: 'idb' | 'localStorage' } | { ok: false; reason: string }
 
 /**
  * Draft key is owner/repo/branch only — NOT langs.
@@ -68,6 +74,15 @@ const parseDraft = (raw: string | null): DraftSnapshot | null => {
   }
 }
 
+const isDraftSnapshot = (value: unknown): value is DraftSnapshot => {
+  if (!value || typeof value !== 'object') return false
+  const parsed = value as DraftSnapshot
+  return parsed.v === 1
+    && Boolean(parsed.translations && parsed.original)
+    && Boolean(parsed.configs && parsed.configsOriginal)
+    && Boolean(parsed.configSchema && parsed.configSchemaOriginal)
+}
+
 const readDraftRaw = (key: string): DraftSnapshot | null =>
   parseDraft(localStorage.getItem(key))
 
@@ -98,7 +113,6 @@ const findLegacyLangSuffixedDraft = (config: GitHubConfig): { key: string; draft
     if (draft) return { key, draft }
   }
 
-  // Scan localStorage for any draft of this ref (langs unknown after refresh).
   try {
     const prefixes = [`${base}:`, `${legacyBase}:`]
     for (let i = 0; i < localStorage.length; i++) {
@@ -114,7 +128,90 @@ const findLegacyLangSuffixedDraft = (config: GitHubConfig): { key: string; draft
   return null
 }
 
-export const loadDraft = (config: GitHubConfig): DraftSnapshot | null => {
+const openDraftDb = (): Promise<IDBDatabase> =>
+  new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB unavailable'))
+      return
+    }
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE)
+      }
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'))
+  })
+
+const idbGet = async (key: string): Promise<DraftSnapshot | null> => {
+  try {
+    const db = await openDraftDb()
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const req = tx.objectStore(IDB_STORE).get(key)
+      req.onsuccess = () => {
+        const value = req.result
+        resolve(isDraftSnapshot(value) ? value : null)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  } catch {
+    return null
+  }
+}
+
+const idbPut = async (key: string, draft: DraftSnapshot): Promise<boolean> => {
+  try {
+    const db = await openDraftDb()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite')
+      tx.objectStore(IDB_STORE).put(draft, key)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+const idbDelete = async (key: string): Promise<void> => {
+  try {
+    const db = await openDraftDb()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite')
+      tx.objectStore(IDB_STORE).delete(key)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } catch {
+    // ignore
+  }
+}
+
+const clearLocalDraftKeys = (config: GitHubConfig, keepCanonical = false): void => {
+  try {
+    const canonical = draftStorageKey(config)
+    if (!keepCanonical) localStorage.removeItem(canonical)
+    const base = draftRefKey(STORAGE_PREFIX, config)
+    const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key) continue
+      if (keepCanonical && key === canonical) continue
+      if (key === legacyBase || key.startsWith(`${base}:`) || key.startsWith(`${legacyBase}:`)) {
+        localStorage.removeItem(key)
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/** Sync read from localStorage only (boot fast-path / legacy). */
+export const loadDraftFromLocalStorage = (config: GitHubConfig): DraftSnapshot | null => {
   const canonical = draftStorageKey(config)
   const current = readDraftRaw(canonical)
   if (current) return current
@@ -126,47 +223,78 @@ export const loadDraft = (config: GitHubConfig): DraftSnapshot | null => {
   return legacy.draft
 }
 
-export const saveDraft = (config: GitHubConfig, draft: Omit<DraftSnapshot, 'v' | 'savedAt'>): void => {
-  try {
-    const payload: DraftSnapshot = {
-      v: 1,
-      savedAt: Date.now(),
-      ...draft,
-    }
-    const canonical = draftStorageKey(config)
-    localStorage.setItem(canonical, JSON.stringify(payload))
+/** @deprecated Prefer loadDraftAsync — kept as sync alias for boot. */
+export const loadDraft = (config: GitHubConfig): DraftSnapshot | null =>
+  loadDraftFromLocalStorage(config)
 
-    // Drop old langs-suffixed keys for this ref so refresh can't pick a stale one.
-    const base = draftRefKey(STORAGE_PREFIX, config)
-    const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i)
-      if (!key || key === canonical) continue
-      if (key === legacyBase || key.startsWith(`${base}:`) || key.startsWith(`${legacyBase}:`)) {
-        localStorage.removeItem(key)
-      }
-    }
+const pickNewer = (a: DraftSnapshot | null, b: DraftSnapshot | null): DraftSnapshot | null => {
+  if (!a) return b
+  if (!b) return a
+  return (a.savedAt ?? 0) >= (b.savedAt ?? 0) ? a : b
+}
+
+/** Full draft load: IndexedDB (prod-scale) + localStorage migration. */
+export const loadDraftAsync = async (config: GitHubConfig): Promise<DraftSnapshot | null> => {
+  const key = draftStorageKey(config)
+  const fromIdb = await idbGet(key)
+  const fromLs = loadDraftFromLocalStorage(config)
+  const draft = pickNewer(fromIdb, fromLs)
+  if (!draft) return null
+
+  // Promote localStorage-only drafts into IDB so the next refresh survives quota.
+  if (!fromIdb && fromLs) {
+    await idbPut(key, fromLs)
+  }
+  return draft
+}
+
+const tryLocalStorageSave = (key: string, payload: DraftSnapshot): boolean => {
+  try {
+    localStorage.setItem(key, JSON.stringify(payload))
+    return true
   } catch {
-    // Quota / private mode — ignore
+    return false
   }
 }
 
-export const clearDraft = (config: GitHubConfig): void => {
-  try {
-    const canonical = draftStorageKey(config)
-    localStorage.removeItem(canonical)
-    const base = draftRefKey(STORAGE_PREFIX, config)
-    const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i)
-      if (!key) continue
-      if (key === legacyBase || key.startsWith(`${base}:`) || key.startsWith(`${legacyBase}:`)) {
-        localStorage.removeItem(key)
-      }
-    }
-  } catch {
-    // ignore
+/** Persist draft — IndexedDB first (large repos), localStorage best-effort mirror. */
+export const saveDraft = async (
+  config: GitHubConfig,
+  draft: Omit<DraftSnapshot, 'v' | 'savedAt'>,
+): Promise<DraftSaveResult> => {
+  const payload: DraftSnapshot = {
+    v: 1,
+    savedAt: Date.now(),
+    ...draft,
   }
+  const canonical = draftStorageKey(config)
+
+  const idbOk = await idbPut(canonical, payload)
+  const lsOk = tryLocalStorageSave(canonical, payload)
+  if (lsOk) {
+    clearLocalDraftKeys(config, true)
+  } else {
+    // Quota exceeded — drop LS copies so they don't block; IDB remains source of truth.
+    clearLocalDraftKeys(config, false)
+  }
+
+  if (idbOk) return { ok: true, via: 'idb' }
+  if (lsOk) return { ok: true, via: 'localStorage' }
+  return { ok: false, reason: 'quota' }
+}
+
+/** Fire-and-forget wrapper for call sites that cannot await. */
+export const saveDraftFireAndForget = (
+  config: GitHubConfig,
+  draft: Omit<DraftSnapshot, 'v' | 'savedAt'>,
+  onResult?: (result: DraftSaveResult) => void,
+): void => {
+  void saveDraft(config, draft).then(result => onResult?.(result))
+}
+
+export const clearDraft = async (config: GitHubConfig): Promise<void> => {
+  clearLocalDraftKeys(config, false)
+  await idbDelete(draftStorageKey(config))
 }
 
 /** True when the draft has uncommitted translation, config, or schema edits. */

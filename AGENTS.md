@@ -8,7 +8,7 @@ This repo is **LocaleHub**: a SPA to manage **i18n translations** and **per-loca
 - **Audience: developers only** — not a TMS for PO/QA/translators; see `docs/features.md`
 - Two workspaces: **translations** and **configs** (configs/DTO tabs currently disabled in UI)
 - GitHub config is **env-only** (`.env` / `VITE_GH_*`) — see `docs/setup.md`
-- Uncommitted work is persisted in **localStorage** (`src/helpers/draftStorage.ts`, prefix `localehub:draft:v1`)
+- Uncommitted work is persisted in **IndexedDB** (+ localStorage mirror) via `src/helpers/draftStorage.ts` (prefix `localehub:draft:v1`)
 - Commits are **one Git commit** for all changed locale files via Git Data API (`commitJsonFiles` in `src/helpers/github.ts`)
 - **Session lost**: 401/403 from GitHub → `SessionLostModal` + `invalidateStoredToken`; user must reconnect via SetupWizard (`src/helpers/githubAuth.ts`)
 - Config keys must be **camelCase**; values may be unset per locale

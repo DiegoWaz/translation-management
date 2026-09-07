@@ -343,6 +343,7 @@ export const enUK: UiMessages = {
     "loadedFromBranch": "Files loaded from branch {branch}",
     "draftRestored": "Uncommitted draft restored from this browser",
     "draftRestoredOnBranch": "Local draft restored for this branch",
+    "draftSaveFailed": "Could not save the draft (browser storage full)",
     "error": "Error: {message}",
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",

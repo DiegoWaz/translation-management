@@ -343,6 +343,7 @@ export const esES: UiMessages = {
     "loadedFromBranch": "Archivos cargados desde la rama {branch}",
     "draftRestored": "Borrador sin confirmar restaurado desde este navegador",
     "draftRestoredOnBranch": "Borrador local restaurado para esta rama",
+    "draftSaveFailed": "No se pudo guardar el borrador (almacenamiento del navegador lleno)",
     "error": "Error: {message}",
     "historyError": "Error de historial: {message}",
     "nothingToCommit": "Nada que confirmar",

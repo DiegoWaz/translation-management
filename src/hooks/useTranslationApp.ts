@@ -84,7 +84,7 @@ import {
   resolveKeySourceIndex,
   type KeyOwnerMap,
 } from '../helpers/fileSources'
-import { isDraftDirty, loadDraft, saveDraft } from '../helpers/draftStorage'
+import { isDraftDirty, loadDraft, loadDraftAsync, saveDraft, saveDraftFireAndForget, type DraftSnapshot } from '../helpers/draftStorage'
 import { dismissWelcome } from '../helpers/welcome'
 import { detectUiLocale, setUiLocale, t, ui, type UiLocale } from '../i18n/ui'
 import {
@@ -105,7 +105,7 @@ export const loadConfigOrDefault = () => {
 /** Expand `files` from a restored draft when storage langs were incomplete. */
 const hydrateConfigFromDraft = (
   config: ReturnType<typeof loadConfigOrDefault>,
-  draft: ReturnType<typeof loadDraft>,
+  draft: DraftSnapshot | null,
 ) => {
   if (!draft || draft.isDemoMode) return config
   const draftLangs = Object.keys(draft.translations)
@@ -154,6 +154,10 @@ export const useTranslationApp = () => {
   const pendingOAuthRef = useRef<GitHubOAuthTokens | null>(null)
   /** Skip autosave while Load swaps branches so we don't clobber another branch's draft. */
   const suppressDraftSaveRef = useRef(false)
+  /** Block autosave until IndexedDB hydration finishes (prod drafts exceed localStorage). */
+  const [draftReady, setDraftReady] = useState(false)
+  const draftQuotaWarnedRef = useRef(false)
+  const initialDraftSavedAtRef = useRef(initialDraft?.savedAt ?? 0)
   const [fileSources, setFileSources] = useState<Record<string, FileSource[]>>(
     () => initialDraft?.fileSources ?? {},
   )
@@ -243,7 +247,7 @@ export const useTranslationApp = () => {
   const [columnWidths, setColumnWidths] = useState<TranslationColumnWidths>(loadColumnWidths)
   const [isDark, setIsDark] = useState(loadStoredIsDark)
   const [uiLocale, setUiLocaleState] = useState<UiLocale>(detectUiLocale)
-  const [draftRestored] = useState(() => {
+  const [draftRestored, setDraftRestored] = useState(() => {
     if (!initialDraft) return false
     const modifiedTx = getModifiedKeys(
       initialDraft.translations,
@@ -419,16 +423,55 @@ export const useTranslationApp = () => {
   useEffect(() => {
     if (!draftRestored) return
     showToast(ui.toast.draftRestored, 'info')
-    // once on mount when an uncommitted draft was restored
+    // once when an uncommitted draft was restored (sync LS or async IDB)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRestored])
+
+  // Hydrate from IndexedDB — localStorage silently fails on large Sephora-scale drafts.
+  useEffect(() => {
+    let cancelled = false
+    suppressDraftSaveRef.current = true
+    void (async () => {
+      try {
+        const draft = await loadDraftAsync(config)
+        if (cancelled) return
+        if (draft && (draft.savedAt ?? 0) > initialDraftSavedAtRef.current) {
+          setConfig(prev => hydrateConfigFromDraft(prev, draft))
+          setFileSources(draft.fileSources ?? {})
+          setKeyOwners(draft.keyOwners ?? buildKeyOwnersFromSources(draft.fileSources ?? {}))
+          setTranslations(draft.translations)
+          setOriginal(draft.original)
+          setShas(draft.shas)
+          setConfigSchema(draft.configSchema)
+          setConfigSchemaOriginal(draft.configSchemaOriginal)
+          setSchemaSha(draft.schemaSha)
+          setConfigs(draft.configs)
+          setConfigsOriginal(draft.configsOriginal)
+          setConfigShas(draft.configShas)
+          if (draft.activeLang) setActiveLang(draft.activeLang)
+          setIsDemoMode(draft.isDemoMode)
+          initialDraftSavedAtRef.current = draft.savedAt ?? 0
+          if (isDraftDirty(draft)) setDraftRestored(true)
+        }
+      } finally {
+        if (!cancelled) {
+          suppressDraftSaveRef.current = false
+          setDraftReady(true)
+        }
+      }
+    })()
+    return () => { cancelled = true }
+    // once on mount — config identity at boot is enough for the storage key
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Persist working copy so reload keeps uncommitted edits (per source branch).
-  // Wait for token decrypt so we don't write a demo snapshot under the real key first.
+  // Wait for token decrypt + IDB hydrate so we don't clobber a real draft.
   useEffect(() => {
+    if (!draftReady) return
     if (!githubReady && config.owner && config.repo) return
     if (loading || suppressDraftSaveRef.current) return
-    saveDraft(config, {
+    saveDraftFireAndForget(config, {
       isDemoMode,
       workspace,
       activeLang,
@@ -443,8 +486,13 @@ export const useTranslationApp = () => {
       schemaSha,
       fileSources,
       keyOwners,
+    }, result => {
+      if (result.ok || draftQuotaWarnedRef.current) return
+      draftQuotaWarnedRef.current = true
+      showToast(ui.toast.draftSaveFailed, 'error')
     })
   }, [
+    draftReady,
     githubReady,
     loading,
     config,
@@ -462,6 +510,7 @@ export const useTranslationApp = () => {
     schemaSha,
     fileSources,
     keyOwners,
+    showToast,
   ])
 
   useEffect(() => {
@@ -557,7 +606,7 @@ export const useTranslationApp = () => {
       keyOwners,
     }
     const leavingDirty = isDraftDirty({ v: 1, savedAt: 0, ...flushedDraft })
-    saveDraft(previousConfig, flushedDraft)
+    await saveDraft(previousConfig, flushedDraft)
 
     setLoading(true)
     suppressDraftSaveRef.current = true
@@ -584,8 +633,8 @@ export const useTranslationApp = () => {
         await loadConfigBundle(draftConfig, updatedConfig.files)
 
       const sameBranch = sourceBranch === previousConfig.sourceBranch
-      const storedDraft = loadDraft(updatedConfig)
-        ?? loadDraft({ ...updatedConfig, files: previousConfig.files })
+      const storedDraft = await loadDraftAsync(updatedConfig)
+        ?? await loadDraftAsync({ ...updatedConfig, files: previousConfig.files })
       // Same branch + dirty session: keep the flushed snapshot (not remote).
       // Other branch: restore that branch's dirty draft from storage when present.
       const draftToRestore = sameBranch && leavingDirty
@@ -614,7 +663,7 @@ export const useTranslationApp = () => {
         setConfigsOriginal(draftToRestore.configsOriginal)
         setConfigShas(draftToRestore.configShas)
         if (draftToRestore.activeLang) setActiveLang(draftToRestore.activeLang)
-        saveDraft(updatedConfig, {
+        await saveDraft(updatedConfig, {
           isDemoMode: false,
           workspace: draftToRestore.workspace ?? workspace,
           activeLang: draftToRestore.activeLang ?? activeLang,
@@ -643,7 +692,7 @@ export const useTranslationApp = () => {
         setConfigs(newConfigs)
         setConfigsOriginal(cloneConfigs(newConfigs))
         setConfigShas(newConfigShas)
-        saveDraft(updatedConfig, {
+        await saveDraft(updatedConfig, {
           isDemoMode: false,
           workspace,
           activeLang,

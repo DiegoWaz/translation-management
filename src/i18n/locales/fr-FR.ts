@@ -343,6 +343,7 @@ export const frFR: UiMessages = {
     "loadedFromBranch": "Fichiers chargés depuis la branche {branch}",
     "draftRestored": "Brouillon non commité restauré depuis ce navigateur",
     "draftRestoredOnBranch": "Brouillon local restauré pour cette branche",
+    "draftSaveFailed": "Impossible d’enregistrer le brouillon (stockage navigateur saturé)",
     "error": "Erreur: {message}",
     "historyError": "Erreur historique: {message}",
     "nothingToCommit": "Aucune modification à committer",

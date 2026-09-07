@@ -5,7 +5,7 @@ LocaleHub est un **éditeur i18n Git-native pour les développeurs**. Les devs m
 ```
 Navigateur  →  GitHub API  →  votre dépôt
      ↕
- localStorage (brouillon non commité)
+ localStorage / IndexedDB (brouillon non commité)
 ```
 
 ## Pour qui / pas pour qui

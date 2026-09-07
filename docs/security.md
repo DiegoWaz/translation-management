@@ -5,7 +5,7 @@ Ce document résume, en clair, ce que LocaleHub fait — et ne fait **jamais** �
 ## Aucune donnée conservée côté serveur
 
 - LocaleHub n'a **pas de backend applicatif ni de base de données**. Le seul « serveur » est une fonction serverless (Vercel) qui relaie l'échange OAuth `code` → `access_token` avec GitHub, sans jamais stocker ni logger le token.
-- Toutes les données (traductions, configs, brouillon en cours) restent **dans le navigateur** : `localStorage` (préfixe `localehub:draft:v1`) et rien d'autre. Rien n'est envoyé vers un serveur tiers.
+- Toutes les données (traductions, configs, brouillon en cours) restent **dans le navigateur** : IndexedDB (brouillon) + `localStorage` (miroir / préférences), préfixe `localehub:draft:v1`. Rien n'est envoyé vers un serveur tiers.
 - Fermer l'onglet ou vider le cache du navigateur suffit à tout effacer côté client — aucune copie n'existe ailleurs.
 
 ## Le token GitHub reste local et chiffré
