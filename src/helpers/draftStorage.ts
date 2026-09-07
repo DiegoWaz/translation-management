@@ -233,17 +233,40 @@ const pickNewer = (a: DraftSnapshot | null, b: DraftSnapshot | null): DraftSnaps
   return (a.savedAt ?? 0) >= (b.savedAt ?? 0) ? a : b
 }
 
+const hasFileSources = (draft: DraftSnapshot | null | undefined): boolean =>
+  Boolean(draft?.fileSources && Object.keys(draft.fileSources).some(lang => (draft.fileSources?.[lang]?.length ?? 0) > 0))
+
+/**
+ * Prefer the newer snapshot, but never drop fileSources from the other store —
+ * a newer localStorage mirror can omit them after a quota trim / partial boot.
+ */
+const mergeDraftStores = (
+  fromIdb: DraftSnapshot | null,
+  fromLs: DraftSnapshot | null,
+): DraftSnapshot | null => {
+  const newer = pickNewer(fromIdb, fromLs)
+  if (!newer) return null
+  if (hasFileSources(newer)) return newer
+  const other = newer === fromIdb ? fromLs : fromIdb
+  if (!hasFileSources(other)) return newer
+  return {
+    ...newer,
+    fileSources: other!.fileSources,
+    keyOwners: other!.keyOwners ?? newer.keyOwners,
+  }
+}
+
 /** Full draft load: IndexedDB (prod-scale) + localStorage migration. */
 export const loadDraftAsync = async (config: GitHubConfig): Promise<DraftSnapshot | null> => {
   const key = draftStorageKey(config)
   const fromIdb = await idbGet(key)
   const fromLs = loadDraftFromLocalStorage(config)
-  const draft = pickNewer(fromIdb, fromLs)
+  const draft = mergeDraftStores(fromIdb, fromLs)
   if (!draft) return null
 
   // Promote localStorage-only drafts into IDB so the next refresh survives quota.
   if (!fromIdb && fromLs) {
-    await idbPut(key, fromLs)
+    await idbPut(key, draft)
   }
   return draft
 }
@@ -262,12 +285,26 @@ export const saveDraft = async (
   config: GitHubConfig,
   draft: Omit<DraftSnapshot, 'v' | 'savedAt'>,
 ): Promise<DraftSaveResult> => {
+  const canonical = draftStorageKey(config)
+  // Never overwrite a stored draft's fileSources with an empty map (boot race /
+  // hydrate before Load) — without them commit thinks there is nothing to push.
+  let fileSources = draft.fileSources
+  let keyOwners = draft.keyOwners
+  if (!hasFileSources({ ...draft, v: 1, savedAt: 0 } as DraftSnapshot)) {
+    const existing = await idbGet(canonical) ?? loadDraftFromLocalStorage(config)
+    if (hasFileSources(existing)) {
+      fileSources = existing!.fileSources
+      keyOwners = existing!.keyOwners ?? keyOwners
+    }
+  }
+
   const payload: DraftSnapshot = {
     v: 1,
     savedAt: Date.now(),
     ...draft,
+    fileSources,
+    keyOwners,
   }
-  const canonical = draftStorageKey(config)
 
   const idbOk = await idbPut(canonical, payload)
   const lsOk = tryLocalStorageSave(canonical, payload)
@@ -304,7 +341,8 @@ export const isDraftDirty = (draft: DraftSnapshot): boolean => {
     const orig = draft.original[lang] ?? {}
     const keys = new Set([...Object.keys(current), ...Object.keys(orig)])
     for (const key of keys) {
-      if ((current[key] ?? '') !== (orig[key] ?? '')) return true
+      // New keys count as dirty even when still empty (same as getModifiedKeys).
+      if (!(key in orig) || (current[key] ?? '') !== (orig[key] ?? '')) return true
     }
   }
   for (const lang of Object.keys(draft.original)) {

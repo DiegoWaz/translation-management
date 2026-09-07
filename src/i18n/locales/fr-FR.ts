@@ -265,7 +265,7 @@ export const frFR: UiMessages = {
     "hintTable": "Locale\tclé.une\tclé.deux\nfr-FR\t…\t…",
     "hintJson": "{\"en\":{\"clé\":\"val\"},\"fr\":{\"clé\":\"val\"}}",
     "placeholderText": "EN\n\nHello {name}!\n\n10% off\n\nFR\n\nBonjour {name} !\n\n10% de réduction",
-    "placeholderTable": "Locale\tDiscover.Plp.allBrands.banner.title\tDiscover.Plp.allBrands.banner.subtitle\nfr-FR\tLes Marques de A à Z\tPlus de 200 marques de beauté, soin et parfum\nde-DE\tMarken von A bis Z\tÜber 150 Marken aus Beauty, Pflege und Parfüm",
+    "placeholderTable": "Locale\thome.banner.title\thome.banner.subtitle\nfr-FR\tBienvenue\tDécouvrez nos nouveautés\nde-DE\tWillkommen\tEntdecken Sie unsere Neuheiten",
     "placeholderJson": "{\n  \"en\": { \"clé\": \"valeur\" },\n  \"fr\": { \"clé\": \"valeur\" }\n}",
     "jsonInvalid": "JSON invalide — attendu : { \"en\": { \"clé\": \"valeur\" }, … }",
     "emptyHint": "Collez vos données pour commencer",

@@ -1,5 +1,5 @@
 import type { DuplicateKeyWarning, FileSource, StaleLangConflict, StaleSourceConflict } from '../types'
-import { flattenJson, unflattenJson } from './flattenJson'
+import { flattenJson, isNestedJson, unflattenJson } from './flattenJson'
 import { prepareCommitContent } from './github'
 
 /** Per-locale map: translation key → index in `fileSources[lang]`. */
@@ -84,6 +84,36 @@ export const splitFlatByFileSources = (
     perSource[idx][key] = value
   }
   return perSource
+}
+
+/** Build a minimal FileSource when a draft restored translations without fileSources. */
+export const synthesizeFileSource = (
+  path: string,
+  originalFlat: Record<string, string>,
+  sha = '',
+): FileSource => {
+  const rawContent = unflattenJson(originalFlat)
+  return {
+    path,
+    sha,
+    nested: isNestedJson(rawContent) || Object.keys(originalFlat).some(k => k.includes('.')),
+    originalFlat: { ...originalFlat },
+    rawContent,
+  }
+}
+
+/** True when two flats differ (missing key ≠ empty string for presence of new keys). */
+export const flatsDiffer = (
+  current: Record<string, string>,
+  baseline: Record<string, string>,
+): boolean => {
+  for (const key of Object.keys(current)) {
+    if (!(key in baseline) || (current[key] ?? '') !== (baseline[key] ?? '')) return true
+  }
+  for (const key of Object.keys(baseline)) {
+    if (!(key in current)) return true
+  }
+  return false
 }
 
 /** Sync nested `rawContent` + `originalFlat` after a successful commit. */

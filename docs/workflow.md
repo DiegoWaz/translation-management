@@ -10,6 +10,7 @@ Les données de travail (traductions, configs, schéma, SHAs, chemins source par
 - Les **langues découvertes** au Load sont persistées pour reconstruire la même liste au refresh.
 - La **branche chargée** (`sourceBranch`) est persistée entre les sessions. La **branche de base** (`branch`) reste la cible des Pull Requests.
 - Si l’enregistrement échoue complètement, un toast d’erreur s’affiche (plus d’échec silencieux).
+- Si un brouillon restaure les traductions **sans** `fileSources` (course au boot / miroir LS incomplet), LocaleHub recharge les chemins depuis GitHub et peut synthétiser les sources au commit pour ne pas afficher « Aucune modification ».
 
 ### Quand le brouillon est remplacé
 
