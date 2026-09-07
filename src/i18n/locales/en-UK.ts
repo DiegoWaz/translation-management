@@ -271,7 +271,7 @@ export const enUK: UiMessages = {
     "emptyHint": "Paste your data to get started",
     "emptyArrow": "⬅",
     "assignmentSummary": "{locales} locale{localesSuffix} · {columns} value{columnsSuffix} — assign each value to a key",
-    "column": "Value {index}",
+    "column": "Default value {index}",
     "targetKey": "Target key",
     "choose": "— choose —",
     "searchKey": "Search for a key…",

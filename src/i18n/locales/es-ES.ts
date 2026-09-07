@@ -271,7 +271,7 @@ export const esES: UiMessages = {
     "emptyHint": "Pegue sus datos para empezar",
     "emptyArrow": "⬅",
     "assignmentSummary": "{locales} locale{localesSuffix} · {columns} valor{columnsSuffix} — asigne cada valor a una clave",
-    "column": "Valor {index}",
+    "column": "Valor por defecto {index}",
     "targetKey": "Clave destino",
     "choose": "— elegir —",
     "searchKey": "Buscar una clave…",
