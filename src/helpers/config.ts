@@ -6,12 +6,16 @@ import { encryptForStorage, decryptFromStorage, isSecureStorageSupported } from 
 
 const UI_CONFIG_KEY = 'localehub:config:v1'
 const SOURCE_BRANCH_KEY = 'localehub:sourceBranch:v1'
+const LOADED_LANGS_KEY = 'localehub:loadedLangs:v1'
 const ENC_PREFIX = 'enc:'
 /** Refresh access token this many ms before expiry. */
 const REFRESH_SKEW_MS = 5 * 60_000
 
 const sourceBranchStorageKey = (owner: string, repo: string): string =>
   `${SOURCE_BRANCH_KEY}:${owner}/${repo}`
+
+const loadedLangsStorageKey = (owner: string, repo: string): string =>
+  `${LOADED_LANGS_KEY}:${owner}/${repo}`
 
 /** Persist load branch for env-only setups (no full UI config). */
 export const saveSourceBranch = (owner: string, repo: string, sourceBranch: string): void => {
@@ -29,6 +33,27 @@ const loadSourceBranchFromStorage = (owner: string, repo: string): string | null
   }
 }
 
+/** Persist discovered locale codes so refresh rebuilds the same `files` list. */
+export const saveLoadedLangs = (owner: string, repo: string, langs: string[]): void => {
+  if (!owner || !repo || langs.length === 0) return
+  try {
+    localStorage.setItem(loadedLangsStorageKey(owner, repo), JSON.stringify(langs))
+  } catch { /* ignore */ }
+}
+
+const loadLoadedLangsFromStorage = (owner: string, repo: string): string[] | null => {
+  if (!owner || !repo) return null
+  try {
+    const raw = localStorage.getItem(loadedLangsStorageKey(owner, repo))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    return parsed.filter((x): x is string => typeof x === 'string' && Boolean(x.trim()))
+  } catch {
+    return null
+  }
+}
+
 /** Config with `branch` set to the active load ref (for GitHub read APIs). */
 export const loadRefConfig = (config: GitHubConfig): GitHubConfig => ({
   ...config,
@@ -41,10 +66,28 @@ export const persistSourceBranch = (config: GitHubConfig, sourceBranch: string):
   if (ui) saveUiConfig({ ...ui, sourceBranch })
 }
 
-/** When loading from a non-base branch, commits should default to that branch. */
-export const preferExistingCommitBranch = (config: GitHubConfig): boolean =>
-  config.sourceBranch !== config.branch
+/** Persist branch + discovered langs after a successful GitHub load. */
+export const persistLoadedWorkspace = (config: GitHubConfig, sourceBranch: string): void => {
+  persistSourceBranch(config, sourceBranch)
+  const langs = config.files.map(f => f.lang).filter(Boolean)
+  saveLoadedLangs(config.owner, config.repo, langs)
+  const ui = loadUiConfig()
+  if (ui && langs.length > 0) {
+    saveUiConfig({ ...ui, sourceBranch, langs })
+  }
+}
 
+/** When loading from a non-base branch, commits should default to that branch.
+ * Also reuse when base was mis-set to the feature branch itself (not main/master/…). */
+const PROTECTED_BASE = /^(main|master|develop|dev|trunk)$/i
+
+export const preferExistingCommitBranch = (config: GitHubConfig): boolean => {
+  const source = config.sourceBranch?.trim()
+  if (!source) return false
+  if (source !== config.branch) return true
+  // source === branch: still reuse unless it's a protected integration branch
+  return !PROTECTED_BASE.test(source)
+}
 // Access + refresh tokens are encrypted at rest. Decryption is async; caches
 // keep synchronous reads working after the first waitForTokenReady().
 let tokenCache: string | null = null
@@ -270,16 +313,18 @@ export const loadConfig = (): GitHubConfig => {
   const ui = loadUiConfig()
 
   if (ui) {
+    const storedLangs = loadLoadedLangsFromStorage(ui.owner, ui.repo)
+    const langs = (storedLangs && storedLangs.length > 0) ? storedLangs : ui.langs
     let files: LangFile[]
     if (ui.translationsFolderName) {
-      files = ui.langs.map(code => ({
+      files = langs.map(code => ({
         lang: code,
         label: code,
         flag: '🌐',
         path: `${ui.translationsFolderName}/${code}.json`,
       }))
     } else if (ui.pathTemplate) {
-      files = ui.langs.map(code => buildLangFile(code, ui.pathTemplate!))
+      files = langs.map(code => buildLangFile(code, ui.pathTemplate!))
     } else {
       files = []
     }
@@ -290,7 +335,7 @@ export const loadConfig = (): GitHubConfig => {
       owner: ui.owner,
       repo: ui.repo,
       branch,
-      sourceBranch: ui.sourceBranch || branch,
+      sourceBranch: ui.sourceBranch || loadSourceBranchFromStorage(ui.owner, ui.repo) || branch,
       baseLang: ui.baseLang || files[0]?.lang || '',
       files,
       configPathTemplate: ui.configPathTemplate || DEFAULT_CONFIG_PATH_TEMPLATE,
@@ -298,10 +343,22 @@ export const loadConfig = (): GitHubConfig => {
       translationsFolderName: ui.translationsFolderName,
     }
   }
-  const files = filesFromEnv()
   const owner = envString('VITE_GH_OWNER') ?? ''
   const repo = envString('VITE_GH_REPO') ?? ''
   const branch = envString('VITE_GH_BRANCH') ?? 'main'
+  const storedLangs = loadLoadedLangsFromStorage(owner, repo)
+  const envFiles = filesFromEnv()
+  const files = storedLangs && storedLangs.length > 0
+    ? storedLangs.map(code => {
+        const existing = envFiles.find(f => f.lang === code)
+        return existing ?? {
+          lang: code,
+          label: code,
+          flag: '🌐',
+          path: `${envString('VITE_TRANSLATIONS_FOLDER_NAME') || 'translations'}/${code}.json`,
+        }
+      })
+    : envFiles
   return {
     token: envString('VITE_GH_TOKEN') ?? '',
     owner,

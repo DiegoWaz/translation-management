@@ -6,7 +6,8 @@ Les données de travail (traductions, configs, schéma, SHAs, chemins source par
 
 - **Recharger la page** : le brouillon non commité est restauré
 - Toast si des modifications non pushées étaient présentes
-- Clé de stockage liée à `owner/repo/sourceBranch` + liste des langues (préfixe `localehub:draft:v1`, voir `src/helpers/draftStorage.ts`). Inclut `fileSources` (chemins repo + JSON d’origine) pour l’export « fichiers d’origine » après rechargement, y compris quand plusieurs dossiers `translations/` existent.
+- Clé de stockage liée à `owner/repo/sourceBranch` (préfixe `localehub:draft:v1`, voir `src/helpers/draftStorage.ts`) — **sans** la liste des langues (sinon un refresh après découverte multi-locales ratissait le brouillon). Inclut `fileSources` (chemins repo + JSON d’origine) pour l’export « fichiers d’origine » après rechargement, y compris quand plusieurs dossiers `translations/` existent.
+- Les **langues découvertes** au Load sont persistées pour reconstruire la même liste au refresh.
 - La **branche chargée** (`sourceBranch`) est persistée entre les sessions (`localStorage`, ou `StoredConfig` après l’assistant OAuth). La **branche de base** (`branch`) reste la cible des Pull Requests.
 
 ### Quand le brouillon est remplacé
@@ -14,7 +15,7 @@ Les données de travail (traductions, configs, schéma, SHAs, chemins source par
 | Action | Effet |
 |---|---|
 | Édition locale | Sauvegarde continue |
-| **Charger** depuis GitHub | Remplace l’état local par le distant **sur la branche cible** ; le brouillon de la branche quittée reste en `localStorage`. Si la branche cible a déjà un brouillon sale, il est **restauré** (toast). |
+| **Charger** depuis GitHub | Remplace l’état local par le distant **sur la branche cible** ; le brouillon de la branche quittée reste en `localStorage`. Si vous rechargez **la même branche** avec des edits non commités, le brouillon en mémoire est **conservé** (toast). Si la branche cible a déjà un brouillon sale, il est **restauré** (toast). |
 | **Commit** réussi | Les « originaux » sont alignés sur l’état poussé ; brouillon mis à jour |
 
 Les brouillons sont **par branche** (`sourceBranch`). Changer de branche puis y revenir conserve vos edits non commités de chaque branche. Recharger la page restaure aussi le brouillon de la branche courante.
@@ -48,7 +49,7 @@ Contrairement à un PUT Contents par fichier (1 commit / fichier), l’app utili
 
 > En cas d’échec sur plusieurs fichiers, l’app **ne crée plus** une série de commits Contents API (un par fichier). Un message d’erreur explicite est affiché à la place.
 
-Les commits suivants s’ajoutent par défaut sur la **branche de la PR** (onglet « Branche existante »), pas sur une nouvelle branche.
+Les commits suivants s’ajoutent **automatiquement** sur la **branche chargée** (`sourceBranch`) quand elle diffère de la base — pas de choix « nouvelle branche », seulement le message de commit. Le sélecteur / titre de PR n’apparaît que depuis la branche de base (`main`, etc.), ou via le lien optionnel « Créer une nouvelle branche à la place… ».
 
 ### Message
 

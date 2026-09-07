@@ -205,8 +205,13 @@ export const enUK: UiMessages = {
     "branchModeNew": "New branch",
     "branchModeExisting": "Existing branch",
     "branchModeExistingHint": "Adds this commit to an already-open PR (or existing branch), instead of creating a new one.",
+    "existingOnSourceHint": "This commit will be added on {branch} (existing PR).",
+    "createNewBranchInstead": "Create a new branch instead…",
+    "backToSourceBranch": "Back to {branch}",
     "branchesLoading": "Loading branches…",
     "noOtherBranches": "No other branch found.",
+    "branchSearchPlaceholder": "Search branches…",
+    "noMatchingBranches": "No matching branches.",
     "prTitleLabel": "PR title",
     "prTitlePlaceholder": "feat(i18n): update translations",
     "createPr": "Create Pull Request",
@@ -222,7 +227,9 @@ export const enUK: UiMessages = {
     "confirm": "Load",
     "loading": "Loading…",
     "branchesLoading": "Loading branches…",
-    "noBranches": "No branches found."
+    "noBranches": "No branches found.",
+    "branchSearchPlaceholder": "Search branches…",
+    "noMatchingBranches": "No matching branches."
   },
   "settings": {
     "title": "Settings",
@@ -523,7 +530,7 @@ export const enUK: UiMessages = {
         "items": [
           "REST API + Git Data (multi-file commit)",
           "Loaded branch vs PR target branch, persisted",
-          "Load from a branch (dialog + full-screen loader)",
+          "Load from a branch (searchable dialog + full-screen loader)",
           "Discover translations/ folders in a monorepo",
           "Commit on a new or existing branch (follow-up PR)",
           "Switch to the PR branch after creation"

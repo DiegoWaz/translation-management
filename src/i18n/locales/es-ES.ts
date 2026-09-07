@@ -205,8 +205,13 @@ export const esES: UiMessages = {
     "branchModeNew": "Nueva rama",
     "branchModeExisting": "Rama existente",
     "branchModeExistingHint": "Añade este commit a una PR ya abierta (o una rama existente), en lugar de crear una nueva.",
+    "existingOnSourceHint": "Este commit se añadirá en {branch} (PR existente).",
+    "createNewBranchInstead": "Crear una nueva rama en su lugar…",
+    "backToSourceBranch": "Volver a {branch}",
     "branchesLoading": "Cargando ramas…",
     "noOtherBranches": "No se encontró ninguna otra rama.",
+    "branchSearchPlaceholder": "Buscar rama…",
+    "noMatchingBranches": "Ninguna rama coincide.",
     "prTitleLabel": "Título de la PR",
     "prTitlePlaceholder": "feat(i18n): update translations",
     "createPr": "Crear Pull Request",
@@ -222,7 +227,9 @@ export const esES: UiMessages = {
     "confirm": "Cargar",
     "loading": "Cargando…",
     "branchesLoading": "Cargando ramas…",
-    "noBranches": "No se encontraron ramas."
+    "noBranches": "No se encontraron ramas.",
+    "branchSearchPlaceholder": "Buscar rama…",
+    "noMatchingBranches": "Ninguna rama coincide."
   },
   "settings": {
     "title": "Configuración",
@@ -523,7 +530,7 @@ export const esES: UiMessages = {
         "items": [
           "API REST + Git Data (commit multi-archivo)",
           "Rama cargada vs rama destino de la PR, persistidas",
-          "Cargar desde una rama (diálogo + loader)",
+          "Cargar desde una rama (búsqueda + loader)",
           "Descubrimiento de carpetas translations/ en monorepo",
           "Commit en rama nueva o existente (PR de seguimiento)",
           "Cambio a la rama de la PR tras crearla"

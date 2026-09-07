@@ -30,7 +30,7 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 
 | Zone | Rôle |
 |---|---|
-| **Charger** | Relit tous les JSON depuis la branche source choisie (écrase le brouillon local par les données distantes) |
+| **Charger** | Relit les JSON depuis la branche source choisie. Le brouillon sale de la branche courante est **conservé** (rechargé tel quel) ; un brouillon sale déjà stocké sur la branche cible est **restauré**. Sinon, l’état local est remplacé par le distant. |
 | **Committer** | Ouvre le dialogue ; un seul commit pour les locales modifiées |
 | **Historique** | Commits du fichier de la locale active |
 | Sidebar / bande mobile | Locales, complétion, filtres |

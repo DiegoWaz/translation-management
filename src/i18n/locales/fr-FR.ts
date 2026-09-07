@@ -205,8 +205,13 @@ export const frFR: UiMessages = {
     "branchModeNew": "Nouvelle branche",
     "branchModeExisting": "Branche existante",
     "branchModeExistingHint": "Ajoute ce commit à une PR déjà ouverte (ou une branche existante), sans en créer une nouvelle.",
+    "existingOnSourceHint": "Le commit sera ajouté sur {branch} (PR existante).",
+    "createNewBranchInstead": "Créer une nouvelle branche à la place…",
+    "backToSourceBranch": "Revenir à {branch}",
     "branchesLoading": "Chargement des branches…",
     "noOtherBranches": "Aucune autre branche trouvée.",
+    "branchSearchPlaceholder": "Rechercher une branche…",
+    "noMatchingBranches": "Aucune branche ne correspond.",
     "prTitleLabel": "Titre de la PR",
     "prTitlePlaceholder": "feat(i18n): update translations",
     "createPr": "Créer une Pull Request",
@@ -222,7 +227,9 @@ export const frFR: UiMessages = {
     "confirm": "Charger",
     "loading": "Chargement…",
     "branchesLoading": "Chargement des branches…",
-    "noBranches": "Aucune branche trouvée."
+    "noBranches": "Aucune branche trouvée.",
+    "branchSearchPlaceholder": "Rechercher une branche…",
+    "noMatchingBranches": "Aucune branche ne correspond."
   },
   "settings": {
     "title": "Configuration",
@@ -523,7 +530,7 @@ export const frFR: UiMessages = {
         "items": [
           "API REST + Git Data (commit multi-fichiers)",
           "Branche chargée vs branche cible PR, persistées",
-          "Charger depuis une branche (dialogue + loader)",
+          "Charger depuis une branche (recherche + loader)",
           "Découverte des dossiers translations/ du mono-repo",
           "Commit sur nouvelle branche ou branche existante (PR de suivi)",
           "Bascule sur la branche de la PR après création"

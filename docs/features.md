@@ -41,7 +41,7 @@ Navigateur  →  GitHub API  →  votre dépôt
 
 - API REST + **Git Data** (commit multi-fichiers)
 - `sourceBranch` (lu) vs `branch` (cible PR), persistés
-- **Charger** depuis une branche (dialogue + loader plein écran)
+- **Charger** depuis une branche (dialogue avec recherche + loader plein écran)
 - Découverte de tous les dossiers `translations/` du mono-repo
 - Commit sur **nouvelle branche** ou **branche existante** (PR de suivi)
 - Bascule sur la branche de la PR après création

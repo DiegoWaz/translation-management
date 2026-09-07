@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { GitHubConfig } from '../types'
 import { cn } from '../helpers/cn'
-import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
+import { btnPrimaryClass, btnSecClass } from '../helpers/styles'
 import { listBranches } from '../helpers/githubBrowser'
 import { ui, t } from '../i18n/ui'
 import { Overlay } from './Overlay'
 import { Field } from './Field'
+import { BranchPicker } from './BranchPicker'
 import { GithubIcon, SpinnerIcon } from './Icons'
 
 export const LoadDialog = ({
@@ -31,7 +32,11 @@ export const LoadDialog = ({
     setLoadingBranches(true)
     listBranches(config.token, config.owner, config.repo)
       .then(list => {
-        const names = list.map(b => b.name).sort((a, b) => a.localeCompare(b))
+        const names = list.map(b => b.name)
+        // Always keep the currently loaded branch selectable (pagination / rename edge cases).
+        if (config.sourceBranch && !names.includes(config.sourceBranch)) {
+          names.unshift(config.sourceBranch)
+        }
         setBranches(names)
         if (names.includes(config.sourceBranch)) {
           setSelectedBranch(config.sourceBranch)
@@ -78,18 +83,17 @@ export const LoadDialog = ({
           ) : branches.length === 0 ? (
             <div className="text-xs text-fg-muted px-1 py-1.5">{ui.load.noBranches}</div>
           ) : (
-            <select
+            <BranchPicker
+              branches={branches}
               value={selectedBranch}
-              onChange={e => setSelectedBranch(e.target.value)}
+              onChange={setSelectedBranch}
               disabled={loading}
-              className={cn(inputClass, 'w-full font-mono text-xs', loading && 'opacity-60')}
-            >
-              {branches.map(b => (
-                <option key={b} value={b}>
-                  {b}{b === config.branch ? ` (${ui.load.baseBranchSuffix})` : ''}
-                </option>
-              ))}
-            </select>
+              placeholder={ui.load.branchSearchPlaceholder}
+              noMatchesLabel={ui.load.noMatchingBranches}
+              formatOption={b =>
+                b === config.branch ? `${b} (${ui.load.baseBranchSuffix})` : b
+              }
+            />
           )}
           {sourceDiffersFromBase && (
             <span className="text-[11px] text-fg-muted mt-1 block">

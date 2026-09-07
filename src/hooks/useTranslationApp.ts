@@ -26,7 +26,7 @@ import {
   DEMO_CONFIG_SCHEMA,
   makeDemoHistory,
 } from '../helpers/defaults'
-import { isGithubConfigured, loadConfig, saveUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
+import { isGithubConfigured, loadConfig, saveUiConfig, loadUiConfig, waitForTokenReady, loadRefConfig, persistSourceBranch, persistLoadedWorkspace, preferExistingCommitBranch, invalidateStoredToken, refreshGitHubSession, ensureFreshAccessToken } from '../helpers/config'
 import {
   clampWidth,
   DEFAULT_TRANSLATION_COLUMN_WIDTHS,
@@ -102,6 +102,29 @@ export const loadConfigOrDefault = () => {
   return c.files.length > 0 ? c : DEFAULT_DEMO_CONFIG
 }
 
+/** Expand `files` from a restored draft when storage langs were incomplete. */
+const hydrateConfigFromDraft = (
+  config: ReturnType<typeof loadConfigOrDefault>,
+  draft: ReturnType<typeof loadDraft>,
+) => {
+  if (!draft || draft.isDemoMode) return config
+  const draftLangs = Object.keys(draft.translations)
+  if (draftLangs.length === 0) return config
+  const known = new Set(config.files.map(f => f.lang))
+  if (draftLangs.every(l => known.has(l)) && config.files.length >= draftLangs.length) return config
+  const folder = config.translationsFolderName || 'translations'
+  const byLang = new Map(config.files.map(f => [f.lang, f]))
+  return {
+    ...config,
+    files: draftLangs.map(lang => byLang.get(lang) ?? {
+      lang,
+      label: lang,
+      flag: '🌐',
+      path: draft.fileSources?.[lang]?.[0]?.path ?? `${folder}/${lang}.json`,
+    }),
+  }
+}
+
 const PAGE_SIZE_KEY = 'localehub:pageSize:v1'
 const THEME_KEY = 'localehub:theme:v1'
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const
@@ -117,8 +140,14 @@ const loadStoredIsDark = (): boolean => {
 }
 
 export const useTranslationApp = () => {
-  const [config, setConfig] = useState(loadConfigOrDefault)
-  const [initialDraft] = useState(() => loadDraft(loadConfigOrDefault()))
+  const [boot] = useState(() => {
+    const base = loadConfigOrDefault()
+    const draft = loadDraft(base)
+    const config = hydrateConfigFromDraft(base, draft)
+    return { config, draft }
+  })
+  const [config, setConfig] = useState(boot.config)
+  const [initialDraft] = useState(() => boot.draft)
   const [showSetup, setShowSetup] = useState(() => hasOAuthCallback())
   const [oauthToken, setOauthToken] = useState<string | undefined>(undefined)
   const [oauthConnecting, setOauthConnecting] = useState(false)
@@ -180,7 +209,12 @@ export const useTranslationApp = () => {
   const [showCommit, setShowCommit] = useState(false)
   const [commitMsg, setCommitMsg] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isDemoMode, setIsDemoMode] = useState(() => initialDraft?.isDemoMode ?? true)
+  const [isDemoMode, setIsDemoMode] = useState(() => {
+    if (initialDraft) return initialDraft.isDemoMode
+    // Repo configured (env / OAuth) → not demo, even if token still decrypting.
+    const c = loadConfigOrDefault()
+    return !(c.owner && c.repo)
+  })
   const [addingKey, setAddingKey] = useState(false)
   const [newKey, setNewKey] = useState('')
   const [newConfigType, setNewConfigType] = useState<ConfigValueType>('text')
@@ -236,7 +270,16 @@ export const useTranslationApp = () => {
       const fresh = await ensureFreshAccessToken()
       const c = loadConfigOrDefault()
       if (fresh) {
-        setConfig(prev => ({ ...prev, ...c, token: fresh }))
+        // Never clobber the branch currently loaded in-session with a stale
+        // loadConfig() snapshot (that would force “new branch” on the next commit).
+        setConfig(prev => {
+          const base = c.branch || prev.branch
+          const sourceBranch =
+            prev.sourceBranch && prev.sourceBranch !== base
+              ? prev.sourceBranch
+              : (c.sourceBranch || base)
+          return { ...prev, ...c, token: fresh, sourceBranch }
+        })
       } else if (c.token) {
         setConfig(prev => (prev.token ? prev : c))
       }
@@ -381,8 +424,10 @@ export const useTranslationApp = () => {
   }, [])
 
   // Persist working copy so reload keeps uncommitted edits (per source branch).
+  // Wait for token decrypt so we don't write a demo snapshot under the real key first.
   useEffect(() => {
-    if (suppressDraftSaveRef.current) return
+    if (!githubReady && config.owner && config.repo) return
+    if (loading || suppressDraftSaveRef.current) return
     saveDraft(config, {
       isDemoMode,
       workspace,
@@ -400,6 +445,8 @@ export const useTranslationApp = () => {
       keyOwners,
     })
   }, [
+    githubReady,
+    loading,
     config,
     isDemoMode,
     workspace,
@@ -491,8 +538,9 @@ export const useTranslationApp = () => {
     const sourceBranch = branch ?? config.sourceBranch
     const previousConfig = config
 
-    // Flush current branch draft before switching so edits survive Load.
-    saveDraft(previousConfig, {
+    // Snapshot + flush before switching so in-memory edits survive Load even if
+    // localStorage keys differ (lang discovery order) or write fails.
+    const flushedDraft = {
       isDemoMode,
       workspace,
       activeLang,
@@ -507,7 +555,9 @@ export const useTranslationApp = () => {
       schemaSha,
       fileSources,
       keyOwners,
-    })
+    }
+    const leavingDirty = isDraftDirty({ v: 1, savedAt: 0, ...flushedDraft })
+    saveDraft(previousConfig, flushedDraft)
 
     setLoading(true)
     suppressDraftSaveRef.current = true
@@ -533,12 +583,17 @@ export const useTranslationApp = () => {
       const { schema, schemaSha: remoteSchemaSha, configs: newConfigs, configShas: newConfigShas } =
         await loadConfigBundle(draftConfig, updatedConfig.files)
 
-      const existingDraft = loadDraft(updatedConfig)
+      const sameBranch = sourceBranch === previousConfig.sourceBranch
+      const storedDraft = loadDraft(updatedConfig)
         ?? loadDraft({ ...updatedConfig, files: previousConfig.files })
-      const restoreDraft = Boolean(existingDraft && isDraftDirty(existingDraft))
+      // Same branch + dirty session: keep the flushed snapshot (not remote).
+      // Other branch: restore that branch's dirty draft from storage when present.
+      const draftToRestore = sameBranch && leavingDirty
+        ? flushedDraft
+        : (storedDraft && isDraftDirty(storedDraft) ? storedDraft : null)
 
       setConfig(updatedConfig)
-      persistSourceBranch(updatedConfig, sourceBranch)
+      persistLoadedWorkspace(updatedConfig, sourceBranch)
       resetHistoryCache()
       setIsDemoMode(false)
       setStaleConflicts([])
@@ -546,19 +601,35 @@ export const useTranslationApp = () => {
       setSessionLostReason(null)
       setShowLoad(false)
 
-      if (restoreDraft && existingDraft) {
-        setFileSources(existingDraft.fileSources ?? newFileSources)
-        setKeyOwners(existingDraft.keyOwners ?? buildKeyOwnersFromSources(existingDraft.fileSources ?? newFileSources))
-        setTranslations(existingDraft.translations)
-        setOriginal(existingDraft.original)
-        setShas(existingDraft.shas)
-        setConfigSchema(existingDraft.configSchema)
-        setConfigSchemaOriginal(existingDraft.configSchemaOriginal)
-        setSchemaSha(existingDraft.schemaSha)
-        setConfigs(existingDraft.configs)
-        setConfigsOriginal(existingDraft.configsOriginal)
-        setConfigShas(existingDraft.configShas)
-        if (existingDraft.activeLang) setActiveLang(existingDraft.activeLang)
+      if (draftToRestore) {
+        setFileSources(draftToRestore.fileSources ?? newFileSources)
+        setKeyOwners(draftToRestore.keyOwners ?? buildKeyOwnersFromSources(draftToRestore.fileSources ?? newFileSources))
+        setTranslations(draftToRestore.translations)
+        setOriginal(draftToRestore.original)
+        setShas(draftToRestore.shas)
+        setConfigSchema(draftToRestore.configSchema)
+        setConfigSchemaOriginal(draftToRestore.configSchemaOriginal)
+        setSchemaSha(draftToRestore.schemaSha)
+        setConfigs(draftToRestore.configs)
+        setConfigsOriginal(draftToRestore.configsOriginal)
+        setConfigShas(draftToRestore.configShas)
+        if (draftToRestore.activeLang) setActiveLang(draftToRestore.activeLang)
+        saveDraft(updatedConfig, {
+          isDemoMode: false,
+          workspace: draftToRestore.workspace ?? workspace,
+          activeLang: draftToRestore.activeLang ?? activeLang,
+          translations: draftToRestore.translations,
+          original: draftToRestore.original,
+          configs: draftToRestore.configs,
+          configsOriginal: draftToRestore.configsOriginal,
+          configSchema: draftToRestore.configSchema,
+          configSchemaOriginal: draftToRestore.configSchemaOriginal,
+          shas: draftToRestore.shas,
+          configShas: draftToRestore.configShas,
+          schemaSha: draftToRestore.schemaSha,
+          fileSources: draftToRestore.fileSources ?? newFileSources,
+          keyOwners: draftToRestore.keyOwners ?? buildKeyOwnersFromSources(draftToRestore.fileSources ?? newFileSources),
+        })
         showToast(ui.toast.draftRestoredOnBranch, 'info')
       } else {
         setFileSources(newFileSources)
@@ -774,13 +845,18 @@ export const useTranslationApp = () => {
           return
         }
 
+        // When already on a feature/PR branch, never fall back to a generated
+        // name if the dialog omitted branchName — always push onto sourceBranch.
+        const targetBranch = branchName?.trim()
+          || (preferExistingCommitBranch(config) ? config.sourceBranch : undefined)
+
         const { prNumber, prUrl, branchName: headBranch } = await withSessionRetry(token =>
           commitJsonFilesAsPR(
             { ...config, token },
             files,
             message,
             prTitle || message,
-            branchName,
+            targetBranch,
           ),
         )
         setOriginal(cloneTranslations(translations))
@@ -814,7 +890,7 @@ export const useTranslationApp = () => {
         }).catch(() => { /* shas refresh is best-effort */ })
         const updatedConfig = { ...config, token: loadConfig().token || config.token, sourceBranch: headBranch }
         setConfig(updatedConfig)
-        persistSourceBranch(updatedConfig, headBranch)
+        persistLoadedWorkspace(updatedConfig, headBranch)
         for (const lang of langs) {
           setHistoryStatus(prev => {
             const next = { ...prev }

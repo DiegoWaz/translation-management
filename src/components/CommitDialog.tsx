@@ -8,6 +8,7 @@ import { preferExistingCommitBranch } from '../helpers/config'
 import { listBranches } from '../helpers/githubBrowser'
 import { Overlay } from './Overlay'
 import { Field } from './Field'
+import { BranchPicker } from './BranchPicker'
 import { GithubIcon } from './Icons'
 
 export type CommitMode = 'pr'
@@ -42,44 +43,89 @@ export const CommitDialog = ({
   // every change lands as a reviewable PR the user merges (or discards)
   // themselves on GitHub.
   const mode: CommitMode = 'pr'
-  
-  // Auto-detect commit type
+
   const commitType = useMemo(() => detectCommitType(modifiedKeys, original), [modifiedKeys, original])
-  
-  // Auto-generate branch name and PR title
   const defaultBranchName = useMemo(() => generateBranchName(commitType), [commitType])
   const defaultPrTitle = useMemo(() => generatePrTitle(commitType, commitMsg), [commitType, commitMsg])
-  const defaultToExistingBranch = preferExistingCommitBranch(config)
+  /** Already reading a non-base branch (e.g. feat/x) — commit there by default. */
+  const onFeatureBranch = preferExistingCommitBranch(config)
 
   const [branchName, setBranchName] = useState(defaultBranchName)
   const [prTitle, setPrTitle] = useState(defaultPrTitle)
+  /** From base only: new vs pick existing. On a feature branch, stay on source unless user opts out. */
   const [branchMode, setBranchMode] = useState<'new' | 'existing'>(() =>
-    defaultToExistingBranch ? 'existing' : 'new',
+    onFeatureBranch ? 'existing' : 'new',
   )
+  /** On feature branch: optional escape hatch to open a brand-new PR branch. */
+  const [forceNewBranch, setForceNewBranch] = useState(false)
   const [branches, setBranches] = useState<string[]>([])
-  const [loadingBranches, setLoadingBranches] = useState(defaultToExistingBranch)
+  const [loadingBranches, setLoadingBranches] = useState(false)
   const [selectedExistingBranch, setSelectedExistingBranch] = useState(
-    defaultToExistingBranch ? config.sourceBranch : '',
+    () => config.sourceBranch || '',
   )
 
+  const reuseSourceBranch = onFeatureBranch && !forceNewBranch
+  const showBaseDestinationUi = !onFeatureBranch
+  const creatingNewBranch = reuseSourceBranch ? false : branchMode === 'new' || forceNewBranch
+
+  // From base/main only: list other branches when picking an existing target.
   useEffect(() => {
-    if (branchMode !== 'existing' || branches.length > 0 || loadingBranches) return
+    if (!showBaseDestinationUi || branchMode !== 'existing') return
+    if (branches.length > 0 || loadingBranches) return
     setLoadingBranches(true)
     listBranches(config.token, config.owner, config.repo)
       .then(list => {
-        const names = list.map(b => b.name).filter(n => n !== config.branch)
+        // Never drop the loaded branch — even if it equals the PR base, the user
+        // must be able to push follow-up commits onto it (existing open PR).
+        const names = list.map(b => b.name).filter(n => n !== config.branch || n === config.sourceBranch)
+        if (config.sourceBranch && !names.includes(config.sourceBranch)) {
+          names.unshift(config.sourceBranch)
+        }
         setBranches(names)
         const preferred = names.includes(config.sourceBranch)
           ? config.sourceBranch
           : names[0]
         if (preferred) setSelectedExistingBranch(preferred)
       })
-      .catch(() => setBranches([]))
+      .catch(() => {
+        // Still offer the loaded branch so commit is not blocked by list failures.
+        if (config.sourceBranch) {
+          setBranches([config.sourceBranch])
+          setSelectedExistingBranch(config.sourceBranch)
+        } else {
+          setBranches([])
+        }
+      })
       .finally(() => setLoadingBranches(false))
-  }, [branchMode, branches.length, loadingBranches, config.token, config.owner, config.repo, config.branch, config.sourceBranch])
+  }, [
+    showBaseDestinationUi,
+    branchMode,
+    branches.length,
+    loadingBranches,
+    config.token,
+    config.owner,
+    config.repo,
+    config.branch,
+    config.sourceBranch,
+  ])
 
-  const effectiveBranchName = branchMode === 'existing' ? selectedExistingBranch : branchName
-  const confirmLabel = commitType === 'fix' ? ui.commit.updatePr : ui.commit.createPr
+  const effectiveBranchName = reuseSourceBranch
+    ? config.sourceBranch
+    : creatingNewBranch
+      ? branchName
+      : selectedExistingBranch
+
+  const needsPrTitle = creatingNewBranch
+  const confirmLabel = reuseSourceBranch || (!creatingNewBranch && branchMode === 'existing') || commitType === 'fix'
+    ? ui.commit.updatePr
+    : ui.commit.createPr
+
+  const canConfirm = Boolean(
+    commitMsg.trim()
+    && effectiveBranchName.trim()
+    && (!needsPrTitle || prTitle.trim())
+    && !(showBaseDestinationUi && branchMode === 'existing' && (loadingBranches || !selectedExistingBranch.trim())),
+  )
 
   const byLang = modifiedKeys.reduce<Record<string, string[]>>((acc, { lang, key }) => {
     acc[lang] = acc[lang] ?? []
@@ -106,21 +152,18 @@ export const CommitDialog = ({
           <button type="button" onClick={onClose} className="bg-transparent border-none text-fg-muted cursor-pointer text-xl">{ui.common.close}</button>
         </div>
 
-        {/* Commit type badge */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-fg-tertiary">{ui.commit.type}:</span>
           <span className={cn(
             'px-2 py-1 rounded text-xs font-semibold',
-            commitType === 'feat' 
+            commitType === 'feat'
               ? 'bg-brand-soft-bg text-fg-brand'
-              : 'bg-warning-bg text-fg-warning'
+              : 'bg-warning-bg text-fg-warning',
           )}>
             {commitType === 'feat' ? '✨ feat' : '🔧 fix'}
           </span>
         </div>
 
-        {/* PR-only: LocaleHub never pushes directly to the base branch, so it
-            can't overwrite or delete repo content on its own. */}
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-soft-bg border border-border rounded-md text-xs text-fg-brand">
           <GithubIcon size={13} />
           <span className="font-semibold">{ui.commit.modePr}</span>
@@ -166,56 +209,90 @@ export const CommitDialog = ({
           })}
         </div>
 
-        <Field label={ui.commit.branchModeLabel}>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setBranchMode('new')}
-              className={cn(
-                'flex-1 px-2.5 py-1.5 rounded-md text-xs border cursor-pointer font-inherit',
-                branchMode === 'new' ? 'bg-brand-soft-bg border-border-brand-soft text-fg-brand font-semibold' : 'bg-elevated border-border text-fg-tertiary',
-              )}
-            >
-              {ui.commit.branchModeNew}
-            </button>
-            <button
-              type="button"
-              onClick={() => setBranchMode('existing')}
-              className={cn(
-                'flex-1 px-2.5 py-1.5 rounded-md text-xs border cursor-pointer font-inherit',
-                branchMode === 'existing' ? 'bg-brand-soft-bg border-border-brand-soft text-fg-brand font-semibold' : 'bg-elevated border-border text-fg-tertiary',
-              )}
-            >
-              {ui.commit.branchModeExisting}
-            </button>
-          </div>
-        </Field>
-
-        {branchMode === 'new' ? (
-          <Field label={ui.commit.branchNameLabel}>
-            <input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="fix/1234567890" className={inputClass} />
-          </Field>
-        ) : (
-          <Field label={ui.commit.branchNameLabel}>
-            {loadingBranches ? (
-              <div className="text-xs text-fg-muted px-1 py-1.5">{ui.commit.branchesLoading}</div>
-            ) : branches.length === 0 ? (
-              <div className="text-xs text-fg-muted px-1 py-1.5">{ui.commit.noOtherBranches}</div>
-            ) : (
-              <select
-                value={selectedExistingBranch}
-                onChange={e => setSelectedExistingBranch(e.target.value)}
-                className={cn(inputClass, 'w-full')}
+        {reuseSourceBranch ? (
+          <div className="flex flex-col gap-1.5">
+            <p className="m-0 text-[12px] text-fg leading-relaxed">
+              {t(ui.commit.existingOnSourceHint, { branch: config.sourceBranch })}
+            </p>
+            {!forceNewBranch && (
+              <button
+                type="button"
+                onClick={() => setForceNewBranch(true)}
+                className="self-start bg-transparent border-none p-0 text-[11px] text-fg-muted underline decoration-dotted cursor-pointer font-inherit"
               >
-                {branches.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
+                {ui.commit.createNewBranchInstead}
+              </button>
             )}
-            <span className="text-[11px] text-fg-muted mt-1 block">{ui.commit.branchModeExistingHint}</span>
-          </Field>
+          </div>
+        ) : (
+          <>
+            {showBaseDestinationUi && (
+              <Field label={ui.commit.branchModeLabel}>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setBranchMode('new')}
+                    className={cn(
+                      'flex-1 px-2.5 py-1.5 rounded-md text-xs border cursor-pointer font-inherit',
+                      branchMode === 'new' ? 'bg-brand-soft-bg border-border-brand-soft text-fg-brand font-semibold' : 'bg-elevated border-border text-fg-tertiary',
+                    )}
+                  >
+                    {ui.commit.branchModeNew}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBranchMode('existing')}
+                    className={cn(
+                      'flex-1 px-2.5 py-1.5 rounded-md text-xs border cursor-pointer font-inherit',
+                      branchMode === 'existing' ? 'bg-brand-soft-bg border-border-brand-soft text-fg-brand font-semibold' : 'bg-elevated border-border text-fg-tertiary',
+                    )}
+                  >
+                    {ui.commit.branchModeExisting}
+                  </button>
+                </div>
+              </Field>
+            )}
+
+            {creatingNewBranch ? (
+              <Field label={ui.commit.branchNameLabel}>
+                <input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="fix/1234567890" className={inputClass} />
+                {onFeatureBranch && forceNewBranch && (
+                  <button
+                    type="button"
+                    onClick={() => setForceNewBranch(false)}
+                    className="mt-1.5 bg-transparent border-none p-0 text-[11px] text-fg-muted underline decoration-dotted cursor-pointer font-inherit"
+                  >
+                    {t(ui.commit.backToSourceBranch, { branch: config.sourceBranch })}
+                  </button>
+                )}
+              </Field>
+            ) : (
+              <Field label={ui.commit.branchNameLabel}>
+                {loadingBranches ? (
+                  <div className="text-xs text-fg-muted px-1 py-1.5">{ui.commit.branchesLoading}</div>
+                ) : branches.length === 0 ? (
+                  <div className="text-xs text-fg-muted px-1 py-1.5">{ui.commit.noOtherBranches}</div>
+                ) : (
+                  <BranchPicker
+                    branches={branches}
+                    value={selectedExistingBranch}
+                    onChange={setSelectedExistingBranch}
+                    placeholder={ui.commit.branchSearchPlaceholder}
+                    noMatchesLabel={ui.commit.noMatchingBranches}
+                    allowFreeform
+                  />
+                )}
+                <span className="text-[11px] text-fg-muted mt-1 block">{ui.commit.branchModeExistingHint}</span>
+              </Field>
+            )}
+
+            {needsPrTitle && (
+              <Field label={ui.commit.prTitleLabel}>
+                <input value={prTitle} onChange={e => setPrTitle(e.target.value)} placeholder={ui.commit.prTitlePlaceholder} className={inputClass} />
+              </Field>
+            )}
+          </>
         )}
-        <Field label={ui.commit.prTitleLabel}>
-          <input value={prTitle} onChange={e => setPrTitle(e.target.value)} placeholder={ui.commit.prTitlePlaceholder} className={inputClass} />
-        </Field>
 
         <Field label={ui.commit.messageLabel}>
           <input value={commitMsg} onChange={e => onMsgChange(e.target.value)} placeholder={ui.commit.messagePlaceholder} className={inputClass} />
@@ -225,8 +302,12 @@ export const CommitDialog = ({
           <button type="button" onClick={onClose} className={btnSecClass}>{ui.common.cancel}</button>
           <button
             type="button"
-            onClick={() => onConfirm('pr', prTitle, effectiveBranchName)}
-            disabled={!commitMsg.trim() || !prTitle.trim() || !effectiveBranchName.trim()}
+            onClick={() => onConfirm(
+              mode,
+              needsPrTitle ? prTitle : defaultPrTitle,
+              effectiveBranchName,
+            )}
+            disabled={!canConfirm}
             className={cn(btnPrimaryClass, 'bg-success-bg border-border-success text-fg-success')}
           >
             <GithubIcon size={13} /> {confirmLabel}

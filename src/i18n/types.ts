@@ -92,13 +92,16 @@ export type UiMessages = {
     newFile: string; schemaFile: string
     modePr: string; prOnlyHint: string; securityLink: string; type: string; branchNameLabel: string
     branchModeLabel: string; branchModeNew: string; branchModeExisting: string; branchModeExistingHint: string
+    existingOnSourceHint: string; createNewBranchInstead: string; backToSourceBranch: string
     branchesLoading: string; noOtherBranches: string
+    branchSearchPlaceholder: string; noMatchingBranches: string
     prTitleLabel: string; prTitlePlaceholder: string; createPr: string; updatePr: string
   }
   load: {
     title: string; subtitle: string; branchLabel: string; baseBranchSuffix: string
     prTargetHint: string; draftWarning: string; confirm: string; loading: string
     branchesLoading: string; noBranches: string
+    branchSearchPlaceholder: string; noMatchingBranches: string
   }
   settings: {
     title: string; envConfigured: string; envMissing: string; envOnlyHint: string

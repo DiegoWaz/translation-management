@@ -44,9 +44,113 @@ export const listRepos = async (token: string): Promise<GhRepo[]> => {
   return ghFetch<GhRepo[]>(token, '/user/repos?per_page=100&sort=updated')
 }
 
-/** List branches for a repo. */
+type GhqlRefsPage = {
+  data?: {
+    repository?: {
+      refs?: {
+        nodes: Array<{ name: string } | null> | null
+        pageInfo: { hasNextPage: boolean; endCursor: string | null }
+      } | null
+    } | null
+  }
+  errors?: Array<{ message: string }>
+}
+
+/** Newest commit first via GraphQL refs orderBy TAG_COMMIT_DATE. */
+const listBranchesViaGraphql = async (
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<GhBranch[]> => {
+  const all: GhBranch[] = []
+  let cursor: string | null = null
+  const maxPages = 30
+
+  for (let page = 0; page < maxPages; page++) {
+    const res = await fetch(`${GH}/graphql`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `query($owner: String!, $name: String!, $cursor: String) {
+          repository(owner: $owner, name: $name) {
+            refs(
+              refPrefix: "refs/heads/"
+              first: 100
+              after: $cursor
+              orderBy: { field: TAG_COMMIT_DATE, direction: DESC }
+            ) {
+              nodes { name }
+              pageInfo { hasNextPage endCursor }
+            }
+          }
+        }`,
+        variables: { owner, name: repo, cursor },
+      }),
+    })
+    await assertGitHubResponseOk(res)
+    const json = await res.json() as GhqlRefsPage
+    if (json.errors?.length) {
+      throw new Error(json.errors[0]?.message || 'GitHub GraphQL error')
+    }
+    const refs = json.data?.repository?.refs
+    if (!refs) break
+    for (const node of refs.nodes ?? []) {
+      if (node?.name) all.push({ name: node.name })
+    }
+    if (!refs.pageInfo.hasNextPage || !refs.pageInfo.endCursor) break
+    cursor = refs.pageInfo.endCursor
+  }
+
+  return all
+}
+
+const listBranchesViaRest = async (
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<GhBranch[]> => {
+  const all: GhBranch[] = []
+  const perPage = 100
+  const maxPages = 30
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = await ghFetch<GhBranch[]>(
+      token,
+      `/repos/${owner}/${repo}/branches?per_page=${perPage}&page=${page}`,
+    )
+    all.push(...batch)
+    if (batch.length < perPage) break
+  }
+  return all
+}
+
+/** List branches newest-commit-first (GraphQL); REST fallback if GraphQL fails. */
 export const listBranches = async (token: string, owner: string, repo: string): Promise<GhBranch[]> => {
-  return ghFetch<GhBranch[]>(token, `/repos/${owner}/${repo}/branches?per_page=100`)
+  try {
+    const branches = await listBranchesViaGraphql(token, owner, repo)
+    if (branches.length > 0) return branches
+  } catch {
+    // fall through — older tokens / GraphQL outages
+  }
+  return listBranchesViaRest(token, owner, repo)
+}
+
+/** Resolve whether a branch ref exists (avoids relying on the branches list alone). */
+export const branchExists = async (
+  token: string,
+  owner: string,
+  repo: string,
+  branch: string,
+): Promise<boolean> => {
+  try {
+    await ghFetch(token, `/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Recursively list the full tree of a repo branch. */

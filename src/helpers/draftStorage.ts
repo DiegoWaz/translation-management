@@ -32,16 +32,27 @@ export type DraftSnapshot = {
   keyOwners?: Record<string, Record<string, number>>
 }
 
-const keyWithPrefix = (prefix: string, config: GitHubConfig): string => {
-  const langs = config.files.map(f => f.lang).join(',')
+/**
+ * Draft key is owner/repo/branch only — NOT langs.
+ * Including langs broke refresh: after Load, files = all discovered locales;
+ * on reload, env/setup langs differ → key miss → draft (and keys) vanished.
+ */
+const draftRefKey = (prefix: string, config: GitHubConfig): string => {
   const owner = config.owner || 'local'
   const repo = config.repo || 'demo'
   const ref = loadRefConfig(config).branch
-  return `${prefix}:${owner}/${repo}/${ref}:${langs}`
+  return `${prefix}:${owner}/${repo}/${ref}`
+}
+
+/** Older keys appended `:${langs}` — used only for migration. */
+const legacyLangsSuffix = (config: GitHubConfig): string => {
+  const sorted = [...config.files.map(f => f.lang)].sort().join(',')
+  const unsorted = config.files.map(f => f.lang).join(',')
+  return sorted || unsorted
 }
 
 export const draftStorageKey = (config: GitHubConfig): string =>
-  keyWithPrefix(STORAGE_PREFIX, config)
+  draftRefKey(STORAGE_PREFIX, config)
 
 const parseDraft = (raw: string | null): DraftSnapshot | null => {
   if (!raw) return null
@@ -57,21 +68,62 @@ const parseDraft = (raw: string | null): DraftSnapshot | null => {
   }
 }
 
+const readDraftRaw = (key: string): DraftSnapshot | null =>
+  parseDraft(localStorage.getItem(key))
+
+const migrateDraftKey = (fromKey: string, toKey: string, draft: DraftSnapshot): void => {
+  if (fromKey === toKey) return
+  try {
+    localStorage.setItem(toKey, JSON.stringify(draft))
+    localStorage.removeItem(fromKey)
+  } catch {
+    // keep readable at fromKey if migrate write fails
+  }
+}
+
+/** Find a draft stored under an old langs-suffixed key for this owner/repo/ref. */
+const findLegacyLangSuffixedDraft = (config: GitHubConfig): { key: string; draft: DraftSnapshot } | null => {
+  const base = draftRefKey(STORAGE_PREFIX, config)
+  const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
+  const langs = legacyLangsSuffix(config)
+
+  const candidates = [
+    langs ? `${base}:${langs}` : null,
+    langs ? `${legacyBase}:${langs}` : null,
+    legacyBase,
+  ].filter(Boolean) as string[]
+
+  for (const key of candidates) {
+    const draft = readDraftRaw(key)
+    if (draft) return { key, draft }
+  }
+
+  // Scan localStorage for any draft of this ref (langs unknown after refresh).
+  try {
+    const prefixes = [`${base}:`, `${legacyBase}:`]
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key) continue
+      if (!prefixes.some(p => key.startsWith(p))) continue
+      const draft = readDraftRaw(key)
+      if (draft) return { key, draft }
+    }
+  } catch {
+    // private mode
+  }
+  return null
+}
+
 export const loadDraft = (config: GitHubConfig): DraftSnapshot | null => {
-  const current = parseDraft(localStorage.getItem(draftStorageKey(config)))
+  const canonical = draftStorageKey(config)
+  const current = readDraftRaw(canonical)
   if (current) return current
 
-  const legacyKey = keyWithPrefix(LEGACY_STORAGE_PREFIX, config)
-  const legacy = parseDraft(localStorage.getItem(legacyKey))
+  const legacy = findLegacyLangSuffixedDraft(config)
   if (!legacy) return null
 
-  try {
-    localStorage.setItem(draftStorageKey(config), JSON.stringify(legacy))
-    localStorage.removeItem(legacyKey)
-  } catch {
-    // keep returning legacy even if migrate write fails
-  }
-  return legacy
+  migrateDraftKey(legacy.key, canonical, legacy.draft)
+  return legacy.draft
 }
 
 export const saveDraft = (config: GitHubConfig, draft: Omit<DraftSnapshot, 'v' | 'savedAt'>): void => {
@@ -81,8 +133,19 @@ export const saveDraft = (config: GitHubConfig, draft: Omit<DraftSnapshot, 'v' |
       savedAt: Date.now(),
       ...draft,
     }
-    localStorage.setItem(draftStorageKey(config), JSON.stringify(payload))
-    localStorage.removeItem(keyWithPrefix(LEGACY_STORAGE_PREFIX, config))
+    const canonical = draftStorageKey(config)
+    localStorage.setItem(canonical, JSON.stringify(payload))
+
+    // Drop old langs-suffixed keys for this ref so refresh can't pick a stale one.
+    const base = draftRefKey(STORAGE_PREFIX, config)
+    const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key || key === canonical) continue
+      if (key === legacyBase || key.startsWith(`${base}:`) || key.startsWith(`${legacyBase}:`)) {
+        localStorage.removeItem(key)
+      }
+    }
   } catch {
     // Quota / private mode — ignore
   }
@@ -90,8 +153,17 @@ export const saveDraft = (config: GitHubConfig, draft: Omit<DraftSnapshot, 'v' |
 
 export const clearDraft = (config: GitHubConfig): void => {
   try {
-    localStorage.removeItem(draftStorageKey(config))
-    localStorage.removeItem(keyWithPrefix(LEGACY_STORAGE_PREFIX, config))
+    const canonical = draftStorageKey(config)
+    localStorage.removeItem(canonical)
+    const base = draftRefKey(STORAGE_PREFIX, config)
+    const legacyBase = draftRefKey(LEGACY_STORAGE_PREFIX, config)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key) continue
+      if (key === legacyBase || key.startsWith(`${base}:`) || key.startsWith(`${legacyBase}:`)) {
+        localStorage.removeItem(key)
+      }
+    }
   } catch {
     // ignore
   }
