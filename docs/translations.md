@@ -61,7 +61,7 @@ Syntaxe `{variable}` détectée automatiquement. Si la locale de base contient `
 - **Clés dupliquées** : bannière d’avertissement si la même clé existe dans plusieurs fichiers d’une même locale.
 - **Conflits distants** : détection stale (poll 30 s) → bouton **Voir les différences** → résolution clé par clé (garder la mienne / prendre la distante) ou rechargement complet.
 - **Performance** : virtualisation du tableau (mode locale, > 40 lignes visibles sur la page courante).
-- **Importer** : texte libre, **tableau** (`locale` + une colonne par clé, ex. `fr-FR	Titre	Sous-titre`), ou JSON. Onglet Tableau par défaut ; collage auto-détecté. Assignez chaque colonne à une clé (existante ou créée).
+- **Importer** : texte libre, **tableau** (`locale` + une colonne par clé), ou JSON. Onglet Tableau par défaut ; collage auto-détecté. Formats tableau : **Notes/Excel** (une ligne TSV par locale) et **Teams** (une cellule par ligne). Une ligne d’en-tête `Locale	clé1	clé2` préremplit les clés. Assignez chaque colonne à une clé (existante ou créée).
 - **+ Clé** : ajoute la clé sur toutes les locales
 
 Voir aussi [workflow.md](workflow.md) pour brouillon et commit.

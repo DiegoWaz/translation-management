@@ -113,6 +113,12 @@ export interface ParsedImport {
   paragraphs: string[]
 }
 
+/** Result of parsing a table paste; columnKeys come from an optional Locale header row. */
+export interface TableImportResult {
+  rows: ParsedImport[]
+  columnKeys: string[]
+}
+
 export type ImportFormat = 'text' | 'table' | 'json'
 export type ExportFormat = 'json' | 'json-ns' | 'json-files' | 'csv' | 'tsv'
 

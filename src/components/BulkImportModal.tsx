@@ -164,16 +164,32 @@ export const BulkImportModal = ({ baseKeys, configFiles, onApplyParsed, onApplyJ
   const [creating, setCreating] = useState<Record<number, boolean>>({})
 
   const handleParse = (text: string, fmt: ImportFormat) => {
-    setRawText(text); setAssignments({}); setJsonError('')
-    if (!text.trim()) { setParsed([]); setJsonResult(null); return }
+    setRawText(text); setJsonError('')
+    if (!text.trim()) {
+      setParsed([])
+      setJsonResult(null)
+      setAssignments({})
+      return
+    }
     if (fmt === 'json') {
       const r = parseJsonText(text)
       if (r) setJsonResult(r); else setJsonError(ui.import.jsonInvalid)
       setParsed([])
-    } else {
-      const result = fmt === 'table' ? parseTableText(text) : parseFreeText(text)
-      setParsed(result); setJsonResult(null)
+      setAssignments({})
+      return
     }
+    if (fmt === 'table') {
+      const { rows, columnKeys } = parseTableText(text)
+      setParsed(rows)
+      setJsonResult(null)
+      const prefills: Record<number, string> = {}
+      columnKeys.forEach((key, i) => { if (key.trim()) prefills[i] = key.trim() })
+      setAssignments(prefills)
+      return
+    }
+    setParsed(parseFreeText(text))
+    setJsonResult(null)
+    setAssignments({})
   }
 
   const switchFormat = (fmt: ImportFormat) => { setFormat(fmt); handleParse(rawText, fmt) }
