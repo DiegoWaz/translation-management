@@ -150,7 +150,7 @@ export type UiMessages = {
   toast: {
     loadedFromGithub: string; loadedFromBranch: string; draftRestored: string; draftRestoredOnBranch: string
     draftSaveFailed: string; error: string; historyError: string
-    nothingToCommit: string; prCreated: string; prCreatedOnBranch: string
+    nothingToCommit: string; commitSourcesMissing: string; prCreated: string; prCreatedOnBranch: string
     keyRestored: string; keyAdded: string; configKeyAdded: string; keyRenamed: string
     keyExported: string; keyExportedAs: string; keyDuplicated: string
     valuesImported: string; valuesImportedJson: string; configsImported: string

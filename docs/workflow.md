@@ -10,7 +10,7 @@ Les données de travail (traductions, configs, schéma, SHAs, chemins source par
 - Les **langues découvertes** au Load sont persistées pour reconstruire la même liste au refresh.
 - La **branche chargée** (`sourceBranch`) est persistée entre les sessions. La **branche de base** (`branch`) reste la cible des Pull Requests.
 - Si l’enregistrement échoue complètement, un toast d’erreur s’affiche (plus d’échec silencieux).
-- Si un brouillon restaure les traductions **sans** `fileSources` (course au boot / miroir LS incomplet), LocaleHub recharge les chemins depuis GitHub et peut synthétiser les sources au commit pour ne pas afficher « Aucune modification ».
+- Si un brouillon restaure les traductions **sans** `fileSources` (course au boot / miroir LS incomplet), LocaleHub recharge les chemins depuis GitHub. Sans sources exploitables, le commit est **refusé** (pas de synthèse d’un baseline vide).
 
 ### Quand le brouillon est remplacé
 
@@ -41,6 +41,22 @@ Détail token : [setup.md](setup.md#session-github--reconnexion).
 ## Commit unique — toujours via Pull Request
 
 LocaleHub ne pousse jamais directement sur la branche de base : chaque commit crée une nouvelle branche puis ouvre une Pull Request à valider sur GitHub. Détails et garanties : [security.md](security.md).
+
+### Annuler un commit LocaleHub
+
+LocaleHub n’a pas de bouton « undo » intégré — le correctif se fait sur GitHub :
+
+| État | Action |
+|---|---|
+| PR **ouverte**, pas encore mergée | Fermer la PR et/ou supprimer la branche feature |
+| PR **déjà mergée** | `Revert` du merge commit sur GitHub (ou revert du commit sur la branche de base) |
+| Commit poussé sur une branche feature déjà utilisée | Nouveau commit correctif / revert sur cette branche (ou nouvelle PR) |
+
+Le brouillon local n’est pas rollback automatiquement : après un revert distant, utilisez **Charger** pour resynchroniser.
+
+### Contenu des fichiers au commit
+
+Le commit part toujours du **fichier source GitHub complet** (`originalFlat` / `rawContent`), puis applique uniquement les ajouts / modifications / suppressions intentionnelles. Un working copy incomplet ne doit plus écraser le reste du fichier.
 
 Contrairement à un PUT Contents par fichier (1 commit / fichier), l’app utilise l’**API Git Data** (`commitJsonFiles` dans `src/helpers/github.ts`) pour regrouper **tous les fichiers modifiés dans un seul commit** :
 

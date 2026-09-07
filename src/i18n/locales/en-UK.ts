@@ -347,6 +347,7 @@ export const enUK: UiMessages = {
     "error": "Error: {message}",
     "historyError": "History error: {message}",
     "nothingToCommit": "Nothing to commit",
+    "commitSourcesMissing": "Cannot commit without GitHub source files ({langs}). Reload the branch and try again.",
     "prCreated": "PR #{number} created",
     "prCreatedOnBranch": "PR #{number} created — active branch: {branch}",
     "keyRestored": "Key \"{key}\" restored",

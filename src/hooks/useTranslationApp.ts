@@ -75,15 +75,15 @@ import {
   schemasEqual,
 } from '../helpers/configValues'
 import { defaultPath, deriveLangMeta } from '../helpers/lang'
-import { splitFlatByFileSources } from '../helpers/commitHelpers'
 import {
   applyStaleResolutions,
   buildKeyOwnersFromSources,
+  buildSourceFlatForCommit,
   detectDuplicateKeys,
   flatsDiffer,
+  hasUsableFileSources,
   refreshFileSourceAfterCommit,
   resolveKeySourceIndex,
-  synthesizeFileSource,
   type KeyOwnerMap,
 } from '../helpers/fileSources'
 import { isDraftDirty, loadDraft, loadDraftAsync, saveDraft, saveDraftFireAndForget, type DraftSnapshot } from '../helpers/draftStorage'
@@ -717,8 +717,15 @@ export const useTranslationApp = () => {
       setShowLoad(false)
 
       if (draftToRestore) {
-        setFileSources(draftToRestore.fileSources ?? newFileSources)
-        setKeyOwners(draftToRestore.keyOwners ?? buildKeyOwnersFromSources(draftToRestore.fileSources ?? newFileSources))
+        const restoredSources = hasUsableFileSources(draftToRestore.fileSources)
+          ? draftToRestore.fileSources!
+          : newFileSources
+        const restoredOwners = draftToRestore.keyOwners
+          && Object.keys(draftToRestore.keyOwners).length > 0
+          ? draftToRestore.keyOwners
+          : buildKeyOwnersFromSources(restoredSources)
+        setFileSources(restoredSources)
+        setKeyOwners(restoredOwners)
         setTranslations(draftToRestore.translations)
         setOriginal(draftToRestore.original)
         setShas(draftToRestore.shas)
@@ -742,8 +749,8 @@ export const useTranslationApp = () => {
           shas: draftToRestore.shas,
           configShas: draftToRestore.configShas,
           schemaSha: draftToRestore.schemaSha,
-          fileSources: draftToRestore.fileSources ?? newFileSources,
-          keyOwners: draftToRestore.keyOwners ?? buildKeyOwnersFromSources(draftToRestore.fileSources ?? newFileSources),
+          fileSources: restoredSources,
+          keyOwners: restoredOwners,
         })
         showToast(ui.toast.draftRestoredOnBranch, 'info')
       } else {
@@ -923,40 +930,73 @@ export const useTranslationApp = () => {
       if (workspace === 'translations') {
       const langs = translationCommitLangs
         const currentFlats = translations
-        const files = langs.flatMap(lang => {
-          let sources = fileSources[lang] || []
 
-          // Draft may restore translations/original without fileSources (quota /
-          // boot race). Synthesize from the session baseline so we can still commit.
-          if (sources.length === 0) {
-            const path = config.files.find(f => f.lang === lang)?.path
-            if (!path) {
-              console.error(`[doCommit] No path for language ${lang}. Skipping.`)
-              return []
+        // Never commit against a synthesized empty baseline — that replaces the
+        // remote file with only the working-copy keys (wiping the rest).
+        let sourcesByLang = fileSources
+        let ownersByLang = keyOwners
+        const missingSourceLangs = langs.filter(lang => !(sourcesByLang[lang]?.length))
+        if (missingSourceLangs.length > 0) {
+          try {
+            const loadConfigRef = loadRefConfig({ ...config, token: loadConfig().token || config.token })
+            const folderName = config.translationsFolderName || 'translations'
+            const tree = await listTree(
+              loadConfigRef.token,
+              loadConfigRef.owner,
+              loadConfigRef.repo,
+              loadConfigRef.branch,
+            )
+            const filePaths = getTranslationFilePaths(tree, folderName)
+            const remote = await loadTranslationBundle(loadConfigRef, filePaths)
+            sourcesByLang = { ...sourcesByLang }
+            ownersByLang = { ...ownersByLang }
+            const nextShas = { ...shas }
+            for (const lang of missingSourceLangs) {
+              if (remote.fileSources[lang]?.length) {
+                sourcesByLang[lang] = remote.fileSources[lang]
+                if (remote.shas[lang]) nextShas[lang] = remote.shas[lang]
+                ownersByLang[lang] = buildKeyOwnersFromSources({ [lang]: remote.fileSources[lang] })[lang] ?? {}
+              }
             }
-            sources = [synthesizeFileSource(path, original[lang] ?? {}, shas[lang] ?? '')]
+            setFileSources(sourcesByLang)
+            setShas(nextShas)
+            setKeyOwners(ownersByLang)
+          } catch (e) {
+            showToast(t(ui.toast.error, { message: (e as Error).message }), 'error')
+            return
           }
+        }
 
+        const stillMissing = langs.filter(lang => !(sourcesByLang[lang]?.length))
+        if (stillMissing.length > 0) {
+          showToast(t(ui.toast.commitSourcesMissing, { langs: stillMissing.join(', ') }), 'error')
+          return
+        }
+
+        const committedFlats = new Map<string, Record<string, string>>()
+        const files = langs.flatMap(lang => {
+          const sources = sourcesByLang[lang] ?? []
           const current = currentFlats[lang] ?? {}
           const sessionOrig = original[lang] ?? {}
-          const perSource = splitFlatByFileSources(sources, current, keyOwners[lang])
-          const sessionPerSource = splitFlatByFileSources(sources, sessionOrig, keyOwners[lang])
+          const owners = ownersByLang[lang]
 
           return sources.flatMap((source, idx) => {
-            const relevantFlat = perSource[idx]
-            const sessionBaseline = sessionPerSource[idx] ?? {}
-            const vsSource = flatsDiffer(relevantFlat, source.originalFlat)
-            const vsSession = flatsDiffer(relevantFlat, sessionBaseline)
-            if (!vsSource && !vsSession) return []
+            const nextFlat = buildSourceFlatForCommit(
+              source,
+              idx,
+              sources,
+              current,
+              sessionOrig,
+              owners,
+            )
+            if (!flatsDiffer(nextFlat, source.originalFlat)) return []
 
-            // Prefer GitHub file baseline; fall back to session original if
-            // originalFlat was wrongly synced to the working copy.
-            const commitBaseline = vsSource ? source.originalFlat : sessionBaseline
+            committedFlats.set(`${lang}\0${source.path}`, nextFlat)
             const content = prepareCommitContent(
-              relevantFlat,
+              nextFlat,
               source.nested,
-              commitBaseline,
-              vsSource ? source.rawContent : undefined,
+              source.originalFlat,
+              source.rawContent,
             )
             return [{ path: source.path, content }]
           })
@@ -981,19 +1021,18 @@ export const useTranslationApp = () => {
           ),
         )
         setOriginal(cloneTranslations(translations))
+        // Align baselines to the exact flats we pushed — never rebuild with
+        // sessionOriginal=translations (that resurrects intentional deletes).
         setFileSources(prev => {
           const next: Record<string, FileSource[]> = { ...prev }
           for (const lang of langs) {
-            let sources = next[lang] ?? []
-            if (sources.length === 0) {
-              const path = config.files.find(f => f.lang === lang)?.path
-              if (!path) continue
-              sources = [synthesizeFileSource(path, original[lang] ?? {}, shas[lang] ?? '')]
-            }
-            const perSource = splitFlatByFileSources(sources, translations[lang] ?? {}, keyOwners[lang])
-            next[lang] = sources.map((source, idx) =>
-              refreshFileSourceAfterCommit(source, perSource[idx]),
-            )
+            const sources = sourcesByLang[lang] ?? next[lang] ?? []
+            if (sources.length === 0) continue
+            next[lang] = sources.map(source => {
+              const flat = committedFlats.get(`${lang}\0${source.path}`)
+              if (!flat) return source
+              return refreshFileSourceAfterCommit(source, flat)
+            })
           }
           return next
         })

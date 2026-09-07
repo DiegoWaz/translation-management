@@ -347,6 +347,7 @@ export const esES: UiMessages = {
     "error": "Error: {message}",
     "historyError": "Error de historial: {message}",
     "nothingToCommit": "Nada que confirmar",
+    "commitSourcesMissing": "No se puede confirmar sin los archivos fuente de GitHub ({langs}). Recargue la rama e inténtelo de nuevo.",
     "prCreated": "PR #{number} creada",
     "prCreatedOnBranch": "PR #{number} creada — rama activa: {branch}",
     "keyRestored": "Clave \"{key}\" restaurada",

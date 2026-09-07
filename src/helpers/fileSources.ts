@@ -5,6 +5,12 @@ import { prepareCommitContent } from './github'
 /** Per-locale map: translation key → index in `fileSources[lang]`. */
 export type KeyOwnerMap = Record<string, Record<string, number>>
 
+/** True when at least one locale has a tracked source file path. */
+export const hasUsableFileSources = (
+  fileSources?: Record<string, FileSource[]> | null,
+): boolean =>
+  Boolean(fileSources && Object.values(fileSources).some(sources => (sources?.length ?? 0) > 0))
+
 /** Pick the source file that should own a key (multi-folder repos). */
 export const resolveKeySourceIndex = (
   sources: FileSource[],
@@ -114,6 +120,42 @@ export const flatsDiffer = (
     if (!(key in current)) return true
   }
   return false
+}
+
+/**
+ * Build the flat map to commit for one source file.
+ *
+ * CRITICAL: start from `source.originalFlat` and overlay the working copy.
+ * Never commit a "only touched keys" map — `applyChangesToNested` deletes any
+ * original key missing from currentFlat, which wiped entire locale files.
+ *
+ * Intentional deletes: key was in the session merged original and is gone from
+ * the working copy. Keys missing from an incomplete working copy are preserved.
+ */
+export const buildSourceFlatForCommit = (
+  source: FileSource,
+  sourceIndex: number,
+  sources: FileSource[],
+  currentLangFlat: Record<string, string>,
+  sessionOriginalLangFlat: Record<string, string>,
+  keyOwners?: Record<string, number>,
+): Record<string, string> => {
+  const owns = (key: string) => resolveKeySourceIndex(sources, key, keyOwners) === sourceIndex
+  const next: Record<string, string> = {}
+
+  for (const [key, value] of Object.entries(source.originalFlat)) {
+    if (!owns(key)) continue
+    // Loaded in this session and removed from the working copy → delete.
+    if (!(key in currentLangFlat) && key in sessionOriginalLangFlat) continue
+    next[key] = key in currentLangFlat ? currentLangFlat[key] : value
+  }
+
+  for (const [key, value] of Object.entries(currentLangFlat)) {
+    if (!owns(key)) continue
+    if (!(key in next)) next[key] = value
+  }
+
+  return next
 }
 
 /** Sync nested `rawContent` + `originalFlat` after a successful commit. */
@@ -246,22 +288,24 @@ export const applyStaleResolutions = (
 
   for (const sourceConflict of conflict.sources) {
     const idx = sourceConflict.sourceIdx
-    const perSource = splitFlatByFileSources(nextSources, nextFlat, keyOwners)
-    const sourceFlat = { ...perSource[idx] }
-
-    for (const { key, remote } of sourceConflict.changedKeys) {
-      if ((resolutions[key] ?? 'remote') === 'remote') sourceFlat[key] = remote
+    // Re-baseline from the remote tip, then overlay the resolved working copy —
+    // never feed a split-only subset into refreshFileSourceAfterCommit (wipe).
+    const remoteSource: FileSource = {
+      ...nextSources[idx],
+      sha: sourceConflict.remoteSha,
+      nested: sourceConflict.remoteNested,
+      originalFlat: remoteFlatFromRaw(sourceConflict.remoteRaw, sourceConflict.remoteNested),
+      rawContent: structuredClone(sourceConflict.remoteRaw),
     }
-
-    nextSources[idx] = refreshFileSourceAfterCommit(
-      {
-        ...nextSources[idx],
-        sha: sourceConflict.remoteSha,
-        nested: sourceConflict.remoteNested,
-        rawContent: structuredClone(sourceConflict.remoteRaw),
-      },
-      sourceFlat,
+    const sourceFlat = buildSourceFlatForCommit(
+      remoteSource,
+      idx,
+      nextSources,
+      nextFlat,
+      langFlat,
+      keyOwners,
     )
+    nextSources[idx] = refreshFileSourceAfterCommit(remoteSource, sourceFlat)
   }
 
   return { translations: nextFlat, sources: nextSources }

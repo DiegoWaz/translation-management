@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import type { ConfigMap, ConfigSchema, ConfigValue, FileSource, LangFile } from '../types'
-import { splitFlatByFileSources } from './commitHelpers'
+import { buildSourceFlatForCommit } from './fileSources'
 import { pruneNestedToKeys } from './flattenJson'
 import { prepareCommitContent } from './github'
 import { serializeConfigValue } from './configValues'
@@ -109,10 +109,18 @@ export const collectOriginalExportFiles = (
     if (sources.length === 0) continue
 
     const langFlat = translations[lang] ?? {}
-    const perSource = splitFlatByFileSources(sources, langFlat, keyOwners?.[lang])
 
     sources.forEach((source, idx) => {
-      const currentFlat = perSource[idx]
+      // Empty session original → never treat missing WC keys as deletes (same
+      // wipe class as commit). Overlay working-copy values onto full file baseline.
+      const currentFlat = buildSourceFlatForCommit(
+        source,
+        idx,
+        sources,
+        langFlat,
+        {},
+        keyOwners?.[lang],
+      )
       let content: unknown = prepareCommitContent(
         currentFlat,
         source.nested,

@@ -347,6 +347,7 @@ export const frFR: UiMessages = {
     "error": "Erreur: {message}",
     "historyError": "Erreur historique: {message}",
     "nothingToCommit": "Aucune modification à committer",
+    "commitSourcesMissing": "Impossible de committer sans les fichiers source GitHub ({langs}). Rechargez la branche puis réessayez.",
     "prCreated": "PR #{number} créée",
     "prCreatedOnBranch": "PR #{number} créée — branche active : {branch}",
     "keyRestored": "Clé \"{key}\" restaurée",
