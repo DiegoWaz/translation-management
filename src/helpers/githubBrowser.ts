@@ -39,10 +39,84 @@ export const validateToken = async (token: string): Promise<string> => {
   return user.login
 }
 
-/** List repos the token can access (first 100). */
-export const listRepos = async (token: string): Promise<GhRepo[]> => {
-  return ghFetch<GhRepo[]>(token, '/user/repos?per_page=100&sort=updated')
+const REPOS_PER_PAGE = 100
+/** Cap pages so a huge GitHub identity cannot spin forever (~5k repos). */
+const REPOS_MAX_PAGES = 50
+
+export type ListReposOptions = {
+  /** Called after each page so the UI can show results while the rest loads. */
+  onPage?: (repos: GhRepo[], meta: { page: number; done: boolean }) => void
+  signal?: AbortSignal
 }
+
+const mapGhRepo = (r: GhRepo): GhRepo => ({
+  full_name: r.full_name,
+  owner: { login: r.owner.login },
+  name: r.name,
+  default_branch: r.default_branch,
+  private: r.private,
+})
+
+const mergeReposByFullName = (existing: GhRepo[], incoming: GhRepo[]): GhRepo[] => {
+  if (incoming.length === 0) return existing
+  const byName = new Map(existing.map(r => [r.full_name, r]))
+  for (const r of incoming) byName.set(r.full_name, r)
+  return Array.from(byName.values())
+}
+
+/** Resolve a single repo by owner/name (works even if it is outside the first list pages). */
+export const getRepo = async (token: string, owner: string, repo: string): Promise<GhRepo> => {
+  const data = await ghFetch<GhRepo>(
+    token,
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+  )
+  return mapGhRepo(data)
+}
+
+/**
+ * List every repo the token can access, paginated (100 / page).
+ * First page resolves quickly; further pages stream via `onPage`.
+ */
+export const listRepos = async (
+  token: string,
+  options?: ListReposOptions,
+): Promise<GhRepo[]> => {
+  const all: GhRepo[] = []
+  const { onPage, signal } = options ?? {}
+
+  for (let page = 1; page <= REPOS_MAX_PAGES; page++) {
+    if (signal?.aborted) break
+    const batch = await ghFetch<GhRepo[]>(
+      token,
+      `/user/repos?per_page=${REPOS_PER_PAGE}&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`,
+    )
+    const mapped = batch.map(mapGhRepo)
+    all.push(...mapped)
+    const done = batch.length < REPOS_PER_PAGE || page === REPOS_MAX_PAGES
+    onPage?.(all.slice(), { page, done })
+    if (done) break
+  }
+
+  return all
+}
+
+/**
+ * Search repos the authenticated user can see (private + public).
+ * Used when the local list is still loading or incomplete.
+ */
+export const searchRepos = async (token: string, query: string): Promise<GhRepo[]> => {
+  const q = query.trim()
+  if (!q) return []
+  // Prefer name matches; auth includes private repos the token can access.
+  const encoded = encodeURIComponent(`${q} in:name`)
+  const data = await ghFetch<{ items: GhRepo[] }>(
+    token,
+    `/search/repositories?q=${encoded}&per_page=30&sort=updated`,
+  )
+  return (data.items ?? []).map(mapGhRepo)
+}
+
+export { mergeReposByFullName }
 
 type GhqlRefsPage = {
   data?: {

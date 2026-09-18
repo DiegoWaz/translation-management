@@ -3,12 +3,15 @@ import { cn } from '../helpers/cn'
 import { btnPrimaryClass, btnSecClass, inputClass } from '../helpers/styles'
 import {
   detectAllLocaleFiles,
+  getRepo,
   getTranslationFilePaths,
   listBranches,
   listRepos,
   listTranslationFolderCandidates,
   listTree,
+  mergeReposByFullName,
   resolveFolderPaths,
+  searchRepos,
   validateToken,
   type GhRepo,
   type GhTreeEntry,
@@ -59,6 +62,8 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const [username, setUsername] = useState('')
   const [repos, setRepos] = useState<GhRepo[]>([])
   const [repoSearch, setRepoSearch] = useState('')
+  const [remoteRepoHits, setRemoteRepoHits] = useState<GhRepo[]>([])
+  const [reposLoadingMore, setReposLoadingMore] = useState(false)
   const [selectedRepo, setSelectedRepo] = useState<GhRepo | null>(null)
   const [branch, setBranch] = useState(savedPrefs?.branch ?? 'main')
   const [branchNames, setBranchNames] = useState<string[]>([])
@@ -73,6 +78,35 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const [error, setError] = useState('')
 
   const treeCacheRef = useRef<{ repo: string; branch: string; tree: GhTreeEntry[] } | null>(null)
+  const reposAbortRef = useRef<AbortController | null>(null)
+  const listedForTokenRef = useRef('')
+
+  const loadAllRepos = async (authToken: string): Promise<void> => {
+    reposAbortRef.current?.abort()
+    const ac = new AbortController()
+    reposAbortRef.current = ac
+    listedForTokenRef.current = authToken
+    setRepos([])
+    setRemoteRepoHits([])
+    setReposLoadingMore(false)
+    setLoading(true)
+    try {
+      await listRepos(authToken, {
+        signal: ac.signal,
+        onPage: (pageRepos, { done }) => {
+          if (ac.signal.aborted) return
+          setRepos(pageRepos)
+          setLoading(false)
+          setReposLoadingMore(!done)
+        },
+      })
+    } finally {
+      if (!ac.signal.aborted) {
+        setLoading(false)
+        setReposLoadingMore(false)
+      }
+    }
+  }
 
   const computeLangSelection = (langs: string[], prefs: SetupPreferences | null) => {
     const preferredActive = prefs?.langs.filter(l => langs.includes(l)) ?? []
@@ -154,17 +188,81 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   }, [oauthToken])
 
   useEffect(() => {
-    if (oauthToken && step === 'repo' && repos.length === 0) {
-      setLoading(true)
-      Promise.all([validateToken(oauthToken), listRepos(oauthToken)])
-        .then(([login, repoList]) => {
-          setUsername(login)
-          setRepos(repoList)
-        })
-        .catch((e: Error) => { setError(e.message); setStep('auth') })
-        .finally(() => setLoading(false))
+    if (!oauthToken || step !== 'repo') return
+    if (listedForTokenRef.current === oauthToken) return
+    setError('')
+    Promise.all([validateToken(oauthToken), loadAllRepos(oauthToken)])
+      .then(([login]) => setUsername(login))
+      .catch((e: Error) => {
+        listedForTokenRef.current = ''
+        setError(e.message)
+        setStep('auth')
+      })
+  }, [oauthToken, step])
+
+  useEffect(() => () => { reposAbortRef.current?.abort() }, [])
+
+  // Prefetch last-used repo so « Resume » works before the full list finishes.
+  useEffect(() => {
+    if (step !== 'repo' || !token || !savedPrefs) return
+    const { owner, repo } = savedPrefs
+    if (repos.some(r => r.owner.login === owner && r.name === repo)) return
+    let cancelled = false
+    void getRepo(token, owner, repo)
+      .then(found => {
+        if (!cancelled) setRemoteRepoHits(prev => mergeReposByFullName(prev, [found]))
+      })
+      .catch(() => { /* resume stays hidden if inaccessible */ })
+    return () => { cancelled = true }
+  }, [step, token, savedPrefs, repos])
+
+  // Remote search / owner/repo paste — covers repos still loading or outside the local list.
+  useEffect(() => {
+    if (step !== 'repo' || !token) {
+      setRemoteRepoHits([])
+      return
     }
-  }, [oauthToken, step, repos.length])
+    const q = repoSearch.trim()
+    if (q.length < 2) {
+      setRemoteRepoHits(prev => {
+        if (!savedPrefs) return []
+        return prev.filter(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+      })
+      return
+    }
+
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          if (q.includes('/')) {
+            const [owner, name, ...rest] = q.split('/')
+            if (owner && name && rest.length === 0) {
+              const repo = await getRepo(token, owner, name)
+              if (!cancelled) setRemoteRepoHits(prev => mergeReposByFullName(prev, [repo]))
+              return
+            }
+          }
+          const hits = await searchRepos(token, q)
+          if (!cancelled) {
+            setRemoteRepoHits(prev => {
+              const resumeHit = savedPrefs
+                ? prev.filter(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+                : []
+              return mergeReposByFullName(resumeHit, hits)
+            })
+          }
+        } catch {
+          /* keep local filter only */
+        }
+      })()
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [repoSearch, token, step, savedPrefs])
 
   const handleOAuthSignIn = () => {
     try {
@@ -182,8 +280,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
       const login = await validateToken(patInput.trim())
       setToken(patInput.trim())
       setUsername(login)
-      const repoList = await listRepos(patInput.trim())
-      setRepos(repoList)
+      await loadAllRepos(patInput.trim())
       setStep('repo')
     } catch (e) {
       setError((e as Error).message)
@@ -243,6 +340,7 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
   const handleResumeLastSetup = () => {
     if (!savedPrefs) return
     const repo = repos.find(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+      ?? remoteRepoHits.find(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
     if (!repo) {
       setError(t(ui.setup.resumeNotFound, { repo: `${savedPrefs.owner}/${savedPrefs.repo}` }))
       return
@@ -288,14 +386,21 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
     return next
   })
 
-  const filteredRepos = repoSearch
-    ? repos.filter(r => r.full_name.toLowerCase().includes(repoSearch.toLowerCase()))
+  const q = repoSearch.trim().toLowerCase()
+  const localFiltered = q
+    ? repos.filter(r => r.full_name.toLowerCase().includes(q))
     : repos
+  const filteredRepos = q.length >= 2
+    ? mergeReposByFullName(localFiltered, remoteRepoHits)
+    : localFiltered
 
   const canResumeLast = Boolean(
     savedPrefs
     && token
-    && repos.some(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo),
+    && (
+      repos.some(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+      || remoteRepoHits.some(r => r.owner.login === savedPrefs.owner && r.name === savedPrefs.repo)
+    ),
   )
 
   const stepIndex = { auth: 0, repo: 1, langs: 2 }[step]
@@ -421,7 +526,10 @@ export const SetupWizard = ({ oauthToken, onComplete, onSkip, isMobile }: Props)
                     {r.private && <span className="text-[10px] text-fg-muted bg-elevated px-1.5 py-0.5 rounded">private</span>}
                   </button>
                 ))}
-                {filteredRepos.length === 0 && !loading && (
+                {(reposLoadingMore || loading) && (
+                  <div className="text-[11px] text-fg-muted py-2 text-center">{ui.setup.loadingRepos}</div>
+                )}
+                {filteredRepos.length === 0 && !loading && !reposLoadingMore && (
                   <div className="text-xs text-fg-muted py-4 text-center">{ui.setup.noRepos}</div>
                 )}
               </div>

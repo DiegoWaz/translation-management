@@ -192,7 +192,7 @@ export type UiMessages = {
     signInGithub: string; usePatInstead: string; orPat: string
     tokenLabel: string; tokenHint: string
     connect: string; connecting: string
-    loggedAs: string; searchRepo: string; noRepos: string
+    loggedAs: string; searchRepo: string; noRepos: string; loadingRepos: string
     langsDetected: string; emptyFolder: string
     foldersSelected: string
     langsSummary: string; langsSummaryMulti: string
