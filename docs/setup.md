@@ -114,6 +114,12 @@ Si vous utilisez uniquement `VITE_GH_TOKEN` dans `.env`, un token expiré impose
 
 Lors d’une connexion OAuth (ou PAT via l’assistant), LocaleHub enregistre dans le navigateur la **dernière configuration** choisie : dépôt, branche, **dossier des traductions**, langue de base et langues actives (`localStorage`, clé `localehub:ui-config:v1`).
 
+### Liste des dépôts (étape Dépôt)
+
+- LocaleHub charge **tous** les dépôts accessibles au token (`/user/repos`, 100 par page, pagination progressive) — plus seulement les 100 plus récents.
+- La première page s’affiche tout de suite ; le reste continue en arrière-plan (« Chargement des dépôts… »).
+- La recherche filtre la liste locale **et** interroge l’API Search GitHub. Vous pouvez aussi coller un chemin exact `owner/repo` pour résoudre un dépôt hors liste (org, vieux projet, etc.).
+
 - **Dossier** : par défaut `translations` ; vous pouvez saisir un nom (tous les dossiers portant ce nom) ou un chemin complet (`apps/web/translations`). Des suggestions sont proposées à partir de l’arborescence GitHub.
 
 - À la **reconnexion** (session expirée **ou** déconnexion manuelle), ces choix restent disponibles : bouton **Reprendre …** sur l’étape Dépôt (termine la configuration en un clic), ou pré-remplissage automatique à l’étape Langues si vous sélectionnez le même dépôt manuellement.
